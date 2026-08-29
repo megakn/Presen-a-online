@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
   --bg:#f6f7f5; --panel:#ffffff; --border:#d6d9d4; --border-strong:#b9bdb6;
@@ -912,6 +913,554 @@ function safeInit(label, fn){
   catch(err){ console.error('[KN] falha ao inicializar "'+label+'":', err); }
 }
 
+// ---------- Supabase (banco compartilhado — mesmo projeto usado nos outros apps KN) ----------
+var SUPABASE_URL = 'https://cnpcsovjomonctbggbac.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNucGNzb3Zqb21vbmN0YmdnYmFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NjE4NzUsImV4cCI6MjEwMjAzNzg3NX0.lpumXh7HmzmhUcBqNSAhaR3S7Cd6TFg5sivWybjsra4';
+var TB_COLAB = 'kn_presenca_colaboradores';
+var TB_REG = 'kn_presenca_registros';
+var sb = null;
+var sbReady = false;
+
+function initSupabase(){
+  if(typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function'){
+    console.warn('[KN] Supabase indisponível agora (sem conexão ou CDN bloqueado) — app continua funcionando salvando localmente.');
+    return;
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sbReady = true;
+}
+safeInit('conexão com Supabase', initSupabase);
+
+// Envia o cadastro completo (ativos + inativos) pro Supabase. Nunca trava o
+// app: se der erro (sem internet, tabela não existe ainda, etc.) só avisa
+// no console — os dados continuam salvos localmente do jeito que já eram.
+function sbSaveRoster(){
+  if(!sbReady) return;
+  try{
+    var ativos = ALL.map(function(e){ return rosterRowFor(e, true); });
+    var inativos = INACTIVE.map(function(e){ return rosterRowFor(e, false); });
+    var rows = ativos.concat(inativos);
+    if(!rows.length) return;
+    sb.from(TB_COLAB).upsert(rows, {onConflict:'id'}).then(function(res){
+      if(res && res.error) console.error('[KN] Supabase: erro ao salvar cadastro:', res.error.message);
+    }).catch(function(err){ console.error('[KN] Supabase: erro ao salvar cadastro:', err); });
+  }catch(err){ console.error('[KN] Supabase: erro ao preparar cadastro pra salvar:', err); }
+}
+function rosterRowFor(e, ativo){
+  return {
+    id: String(e.id||''),
+    groot_id: e.grootId||null,
+    nome: e.nome||'',
+    matricula: e.matricula||null,
+    coordenador: e.coordenador||null,
+    escala: e.escala||null,
+    escala_antiga: e.escalaAntiga||null,
+    horario: e.horario||null,
+    telefone: contacts[e.id]||null,
+    sexo: e.sexo||null,
+    cargo: e.cargo||null,
+    origem: e.origem||null,
+    tipo: e.tipo||null,
+    setor: e.setor||null,
+    cpf: e.cpf||null,
+    ext: e.ext||null,
+    ativo: !!ativo,
+    inactivated_at: e.inactivatedAt || null,
+    dem_dates: e.demDates || []
+  };
+}
+// Envia um registro de presença (um colaborador, num dia) pro Supabase.
+function sbSaveRegistro(id, date, status, hora){
+  if(!sbReady) return;
+  try{
+    sb.from(TB_REG).upsert({
+      colaborador_id: String(id), data: date, status: status||'', hora: hora||''
+    }, {onConflict:'colaborador_id,data'}).then(function(res){
+      if(res && res.error) console.error('[KN] Supabase: erro ao salvar presença:', res.error.message);
+    }).catch(function(err){ console.error('[KN] Supabase: erro ao salvar presença:', err); });
+  }catch(err){ console.error('[KN] Supabase: erro ao preparar presença pra salvar:', err); }
+}
+// Busca o cadastro completo do Supabase (usado no carregamento inicial e
+// pra reconciliar quando um aparelho novo abre o app pela primeira vez).
+function sbLoadRoster(){
+  if(!sbReady) return Promise.resolve(null);
+  return sb.from(TB_COLAB).select('*').then(function(res){
+    if(res.error){ console.error('[KN] Supabase: erro ao buscar cadastro:', res.error.message); return null; }
+    return res.data || [];
+  }).catch(function(err){ console.error('[KN] Supabase: erro ao buscar cadastro:', err); return null; });
+}
+function sbLoadRegistros(date){
+  if(!sbReady) return Promise.resolve(null);
+  return sb.from(TB_REG).select('colaborador_id,status,hora').eq('data', date).then(function(res){
+    if(res.error){ console.error('[KN] Supabase: erro ao buscar presença do dia:', res.error.message); return null; }
+    return res.data || [];
+  }).catch(function(err){ console.error('[KN] Supabase: erro ao buscar presença do dia:', err); return null; });
+}
+function sbRowToEmp(row){
+  return {
+    id: row.id, grootId: row.groot_id||'', nome: row.nome||'', matricula: row.matricula||'',
+    coordenador: row.coordenador||'', escala: row.escala||'', escalaAntiga: row.escala_antiga||'',
+    horario: row.horario||'', sexo: row.sexo||'', cargo: row.cargo||'', origem: row.origem||'',
+    tipo: row.tipo||'', setor: row.setor||'', cpf: row.cpf||'', ext: row.ext||'',
+    inactivatedAt: row.inactivated_at||null, demDates: row.dem_dates||[]
+  };
+}
+
+// ---------- Identificação do operador (quem está editando) + histórico ----------
+// Pra editar (marcar presença, mexer no cadastro, importar planilha, etc.)
+// a pessoa se identifica pelo EXT dela + uma senha que ELA mesma cria no
+// primeiro acesso — não precisa digitar de novo nas próximas vezes nesse
+// mesmo aparelho, só se trocar de aparelho ou limpar os dados do navegador.
+// No primeiro acesso do sistema inteiro (ninguém aprovado ainda), quem
+// souber o código de administrador vira o administrador — é reservado,
+// não é "quem chegar primeiro".
+var OPERATOR_KEY = 'presenca:operador:v1';
+var TB_LOG = 'kn_presenca_log';
+var TB_OP = 'kn_presenca_operadores';
+var ACTIVITY_LOG_KEY = 'presenca:atividades:v1';
+var OPERATORS_CACHE_KEY = 'presenca:operadores_cache:v1';
+var currentOperator = null; // {id, nome, ext, isAdmin}
+var pendingOperatorActions = [];
+var localActivityLog = [];
+var localOperatorsCache = []; // fallback offline: [{ext,nome,password_hash,status,is_admin,colaborador_id}]
+
+try{
+  var savedOperator = JSON.parse(localStorage.getItem(OPERATOR_KEY) || 'null');
+  if(savedOperator && savedOperator.ext) currentOperator = savedOperator;
+}catch(e){}
+try{ localActivityLog = JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY) || '[]') || []; }catch(e){ localActivityLog = []; }
+try{ localOperatorsCache = JSON.parse(localStorage.getItem(OPERATORS_CACHE_KEY) || '[]') || []; }catch(e){ localOperatorsCache = []; }
+
+// Transforma a senha num hash (SHA-256) antes de guardar/comparar — nunca
+// guarda a senha em texto puro. Se o navegador não tiver Web Crypto (muito
+// raro, só em contexto inseguro), cai num hash mais simples pra não travar.
+function hashPassword(text){
+  text = String(text||'');
+  if(window.crypto && window.crypto.subtle && window.isSecureContext !== false){
+    try{
+      var enc = new TextEncoder().encode(text);
+      return window.crypto.subtle.digest('SHA-256', enc).then(function(buf){
+        return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+      }).catch(function(err){ console.error('[KN] falha ao gerar hash da senha, usando alternativa:', err); return simpleHash(text); });
+    }catch(err){ console.error('[KN] falha ao gerar hash da senha, usando alternativa:', err); return Promise.resolve(simpleHash(text)); }
+  }
+  return Promise.resolve(simpleHash(text));
+}
+function simpleHash(text){
+  var h = 0;
+  for(var i=0;i<text.length;i++){ h = ((h<<5)-h+text.charCodeAt(i))|0; }
+  return 'sh_'+(h>>>0).toString(16);
+}
+
+// Acha, no cadastro de colaboradores (Grupos), quem tem esse EXT. Isso só
+// prova que a pessoa é um colaborador real — não dá direito de editar
+// sozinho; o direito de editar vem da aprovação (kn_presenca_operadores).
+function findRosterEmployeeByExt(ext){
+  ext = String(ext||'').trim();
+  if(!ext) return null;
+  var pool = ALL.concat(INACTIVE);
+  for(var i=0;i<pool.length;i++){
+    if(String(pool[i].ext||'').trim().toLowerCase()===ext.toLowerCase()) return pool[i];
+  }
+  return null;
+}
+
+function findLocalOperatorRecord(ext){
+  return localOperatorsCache.find(function(o){ return o.ext===ext; }) || null;
+}
+function cacheOperatorRecordLocally(rec){
+  var idx = localOperatorsCache.findIndex(function(o){ return o.ext===rec.ext; });
+  if(idx>-1) localOperatorsCache[idx] = rec; else localOperatorsCache.push(rec);
+  try{ localStorage.setItem(OPERATORS_CACHE_KEY, JSON.stringify(localOperatorsCache)); }catch(e){}
+}
+// Busca o registro de operador (pendente/aprovado/rejeitado) desse EXT.
+function sbFindOperatorByExt(ext){
+  if(!sbReady) return Promise.resolve(findLocalOperatorRecord(ext));
+  try{
+    return sb.from(TB_OP).select('*').eq('ext', ext).then(function(res){
+      if(res.error){ console.error('[KN] Supabase: erro ao consultar operador:', res.error.message); return findLocalOperatorRecord(ext); }
+      var rows = res.data || [];
+      return rows[0] || null;
+    }).catch(function(err){ console.error('[KN] Supabase: erro ao consultar operador:', err); return findLocalOperatorRecord(ext); });
+  }catch(err){ console.error('[KN] Supabase: erro ao montar consulta de operador:', err); return Promise.resolve(findLocalOperatorRecord(ext)); }
+}
+// Existe algum administrador já aprovado? (decide se é "primeiro acesso do sistema")
+function sbAnyApprovedAdminExists(){
+  if(!sbReady) return Promise.resolve(localOperatorsCache.some(function(o){ return o.is_admin && o.status==='aprovado'; }));
+  try{
+    return sb.from(TB_OP).select('ext').eq('is_admin', true).eq('status','aprovado').limit(1).then(function(res){
+      if(res.error){ console.error('[KN] Supabase: erro ao checar administrador:', res.error.message); return localOperatorsCache.some(function(o){ return o.is_admin && o.status==='aprovado'; }); }
+      return (res.data||[]).length>0;
+    }).catch(function(err){ console.error('[KN] Supabase: erro ao checar administrador:', err); return localOperatorsCache.some(function(o){ return o.is_admin && o.status==='aprovado'; }); });
+  }catch(err){ console.error('[KN] Supabase: erro ao montar checagem de administrador:', err); return Promise.resolve(false); }
+}
+function sbUpsertOperatorRecord(rec){
+  cacheOperatorRecordLocally(rec);
+  if(!sbReady) return;
+  try{
+    sb.from(TB_OP).upsert([rec], {onConflict:'ext'}).then(function(res){
+      if(res && res.error) console.error('[KN] Supabase: erro ao salvar operador:', res.error.message);
+    }).catch(function(err){ console.error('[KN] Supabase: erro ao salvar operador:', err); });
+  }catch(err){ console.error('[KN] Supabase: erro ao montar upsert de operador:', err); }
+}
+function sbListPendingOperators(){
+  if(!sbReady) return Promise.resolve(localOperatorsCache.filter(function(o){ return o.status==='pendente'; }));
+  try{
+    return sb.from(TB_OP).select('*').eq('status','pendente').then(function(res){
+      if(res.error){ console.error('[KN] Supabase: erro ao listar pendentes:', res.error.message); return localOperatorsCache.filter(function(o){ return o.status==='pendente'; }); }
+      return res.data || [];
+    }).catch(function(err){ console.error('[KN] Supabase: erro ao listar pendentes:', err); return localOperatorsCache.filter(function(o){ return o.status==='pendente'; }); });
+  }catch(err){ console.error('[KN] Supabase: erro ao montar listagem de pendentes:', err); return Promise.resolve([]); }
+}
+
+// Chama isso no começo de qualquer ação que muda dados. Se já tem operador
+// aprovado neste aparelho, roda `action` na hora; se não, guarda a ação e
+// abre o formulário de identificação — só roda depois de aprovado.
+function ensureOperator(action){
+  if(currentOperator){ action(); return; }
+  pendingOperatorActions.push(action);
+  openOperatorModal();
+}
+
+function openOperatorModal(){
+  if(document.getElementById('operator-modal')) return;
+  var div = document.createElement('div');
+  div.id = 'operator-modal';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,17,.55);z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px';
+  document.body.appendChild(div);
+  renderOperatorStep1();
+}
+function closeOperatorModal(){
+  pendingOperatorActions = [];
+  var m = document.getElementById('operator-modal');
+  if(m) m.remove();
+}
+
+// Passo 1: só pede o EXT, pra descobrir se é gente voltando (pede senha)
+// ou gente nova (pede pra criar senha).
+function renderOperatorStep1(){
+  var div = document.getElementById('operator-modal');
+  if(!div) return;
+  div.innerHTML =
+    '<div style="background:#fff;max-width:360px;width:100%;border-radius:8px;padding:20px">'+
+      '<p style="margin:0 0 4px;font-weight:700;font-size:15px">Identifique-se pra continuar</p>'+
+      '<p class="muted" style="margin:0 0 14px;font-size:12.5px">Informe seu EXT pra editar ou marcar presença neste aparelho.</p>'+
+      '<label style="display:block;font-size:12px;font-weight:600;margin-bottom:3px">EXT</label>'+
+      '<input type="text" id="operator-ext" style="width:100%;margin-bottom:6px;padding:8px;border:1px solid var(--border-strong);border-radius:4px;font-size:14px">'+
+      '<p id="operator-modal-error" style="color:var(--danger);font-size:12px;min-height:16px;margin:4px 0 12px"></p>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button type="button" id="operator-modal-cancel">Cancelar</button>'+
+        '<button type="button" id="operator-step1-confirm" class="primary">Continuar</button>'+
+      '</div>'+
+    '</div>';
+  var xInput = document.getElementById('operator-ext');
+  var errEl = document.getElementById('operator-modal-error');
+  safeOn('operator-modal-cancel', 'click', closeOperatorModal);
+  function goNext(){
+    var ext = String(xInput.value||'').trim();
+    if(!ext){ errEl.textContent = 'Informe o EXT.'; return; }
+    errEl.style.color = 'var(--text-muted)';
+    errEl.textContent = 'Verificando…';
+    Promise.all([ sbFindOperatorByExt(ext), sbAnyApprovedAdminExists() ]).then(function(results){
+      if(!document.getElementById('operator-modal')) return; // cancelado enquanto carregava
+      var existing = results[0];
+      var hasAdmin = results[1];
+      if(existing){
+        renderOperatorLogin(existing);
+      }else if(!hasAdmin){
+        renderOperatorRegister(ext, true);
+      }else{
+        var emp = findRosterEmployeeByExt(ext);
+        if(!emp){ errEl.style.color = 'var(--danger)'; errEl.textContent = 'EXT não encontrado no cadastro.'; return; }
+        renderOperatorRegister(ext, false, emp.nome);
+      }
+    }).catch(function(err){
+      console.error('[KN] erro ao verificar EXT:', err);
+      errEl.style.color = 'var(--danger)'; errEl.textContent = 'Não consegui verificar agora. Tente de novo.';
+    });
+  }
+  safeOn('operator-step1-confirm', 'click', goNext);
+  xInput.addEventListener('keydown', function(ev){ if(ev.key==='Enter') goNext(); });
+  setTimeout(function(){ xInput.focus(); }, 0);
+}
+
+// Passo 2a: pessoa já tem senha cadastrada — só confirma a senha.
+function renderOperatorLogin(existing){
+  var div = document.getElementById('operator-modal');
+  if(!div) return;
+  div.innerHTML =
+    '<div style="background:#fff;max-width:360px;width:100%;border-radius:8px;padding:20px">'+
+      '<p style="margin:0 0 4px;font-weight:700;font-size:15px">Olá, '+esc(existing.nome||'')+'</p>'+
+      '<p class="muted" style="margin:0 0 14px;font-size:12.5px">Digite sua senha pra continuar neste aparelho.</p>'+
+      '<label style="display:block;font-size:12px;font-weight:600;margin-bottom:3px">Senha</label>'+
+      '<input type="password" id="operator-password" style="width:100%;margin-bottom:6px;padding:8px;border:1px solid var(--border-strong);border-radius:4px;font-size:14px">'+
+      '<p id="operator-modal-error" style="color:var(--danger);font-size:12px;min-height:16px;margin:4px 0 12px"></p>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button type="button" id="operator-modal-cancel">Cancelar</button>'+
+        '<button type="button" id="operator-login-confirm" class="primary">Entrar</button>'+
+      '</div>'+
+    '</div>';
+  var pInput = document.getElementById('operator-password');
+  var errEl = document.getElementById('operator-modal-error');
+  safeOn('operator-modal-cancel', 'click', closeOperatorModal);
+  function tryLogin(){
+    errEl.style.color = 'var(--text-muted)';
+    errEl.textContent = 'Verificando…';
+    hashPassword(pInput.value).then(function(hash){
+      if(hash !== existing.password_hash){
+        errEl.style.color = 'var(--danger)'; errEl.textContent = 'Senha incorreta.';
+        return;
+      }
+      if(existing.status==='pendente'){
+        errEl.style.color = 'var(--danger)'; errEl.textContent = 'Sua solicitação ainda está aguardando aprovação do administrador.';
+        return;
+      }
+      if(existing.status==='rejeitado'){
+        errEl.style.color = 'var(--danger)'; errEl.textContent = 'Seu acesso foi recusado pelo administrador.';
+        return;
+      }
+      finishLogin({id: existing.colaborador_id, nome: existing.nome, ext: existing.ext, isAdmin: !!existing.is_admin}, 'Identificação de operador neste aparelho');
+    });
+  }
+  safeOn('operator-login-confirm', 'click', tryLogin);
+  pInput.addEventListener('keydown', function(ev){ if(ev.key==='Enter') tryLogin(); });
+  setTimeout(function(){ pInput.focus(); }, 0);
+}
+
+// Passo 2b: primeiro acesso dessa pessoa — ela cria a própria senha.
+// `isFounderAdmin` = true quando ninguém no sistema foi aprovado como
+// administrador ainda (aí também pede o código de administrador).
+function renderOperatorRegister(ext, isFounderAdmin, nomeConhecido){
+  var div = document.getElementById('operator-modal');
+  if(!div) return;
+  div.innerHTML =
+    '<div style="background:#fff;max-width:360px;width:100%;border-radius:8px;padding:20px">'+
+      (isFounderAdmin
+        ? '<p style="margin:0 0 4px;font-weight:700;font-size:15px">Primeiro acesso do sistema</p>'+
+          '<p class="muted" style="margin:0 0 14px;font-size:12.5px">Ninguém foi aprovado como administrador ainda. Crie sua senha e informe o código de administrador pra assumir esse papel.</p>'
+        : '<p style="margin:0 0 4px;font-weight:700;font-size:15px">Primeiro acesso'+(nomeConhecido?(', '+esc(nomeConhecido)):'')+'</p>'+
+          '<p class="muted" style="margin:0 0 14px;font-size:12.5px">Crie sua senha. Sua solicitação vai pra aprovação do administrador antes de poder editar.</p>'
+      )+
+      '<label style="display:block;font-size:12px;font-weight:600;margin-bottom:3px">Criar senha</label>'+
+      '<input type="password" id="operator-newpass" style="width:100%;margin-bottom:10px;padding:8px;border:1px solid var(--border-strong);border-radius:4px;font-size:14px">'+
+      '<label style="display:block;font-size:12px;font-weight:600;margin-bottom:3px">Confirmar senha</label>'+
+      '<input type="password" id="operator-newpass2" style="width:100%;margin-bottom:'+(isFounderAdmin?'10px':'6px')+';padding:8px;border:1px solid var(--border-strong);border-radius:4px;font-size:14px">'+
+      (isFounderAdmin
+        ? '<label style="display:block;font-size:12px;font-weight:600;margin-bottom:3px">Código de administrador</label>'+
+          '<input type="password" id="operator-admincode" style="width:100%;margin-bottom:6px;padding:8px;border:1px solid var(--border-strong);border-radius:4px;font-size:14px">'
+        : '')+
+      '<p id="operator-modal-error" style="color:var(--danger);font-size:12px;min-height:16px;margin:4px 0 12px"></p>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button type="button" id="operator-modal-cancel">Cancelar</button>'+
+        '<button type="button" id="operator-register-confirm" class="primary">Confirmar</button>'+
+      '</div>'+
+    '</div>';
+  var p1 = document.getElementById('operator-newpass');
+  var p2 = document.getElementById('operator-newpass2');
+  var codeInput = document.getElementById('operator-admincode');
+  var errEl = document.getElementById('operator-modal-error');
+  safeOn('operator-modal-cancel', 'click', closeOperatorModal);
+  function tryRegister(){
+    if(!p1.value || p1.value.length<4){ errEl.style.color='var(--danger)'; errEl.textContent = 'A senha precisa ter pelo menos 4 caracteres.'; return; }
+    if(p1.value !== p2.value){ errEl.style.color='var(--danger)'; errEl.textContent = 'As senhas não são iguais.'; return; }
+    if(isFounderAdmin && codeInput.value !== ADMIN_PASSCODE){ errEl.style.color='var(--danger)'; errEl.textContent = 'Código de administrador incorreto.'; return; }
+    errEl.style.color = 'var(--text-muted)'; errEl.textContent = 'Salvando…';
+    hashPassword(p1.value).then(function(hash){
+      var emp = findRosterEmployeeByExt(ext);
+      var nome = emp ? emp.nome : (isFounderAdmin ? 'Administrador' : ext);
+      var rec = {
+        ext: ext, nome: nome, colaborador_id: emp ? emp.id : null, password_hash: hash,
+        status: isFounderAdmin ? 'aprovado' : 'pendente',
+        is_admin: !!isFounderAdmin,
+        solicitado_em: new Date().toISOString(),
+        decidido_em: isFounderAdmin ? new Date().toISOString() : null
+      };
+      sbUpsertOperatorRecord(rec);
+      if(isFounderAdmin){
+        finishLogin({id: rec.colaborador_id, nome: nome, ext: ext, isAdmin: true}, 'Cadastro do administrador (primeiro acesso do sistema)');
+      }else{
+        closeOperatorModal();
+        showAdminToast('Solicitação enviada! Aguarde a aprovação do administrador pra poder editar.');
+        pendingOperatorActions = [];
+      }
+    });
+  }
+  safeOn('operator-register-confirm', 'click', tryRegister);
+  setTimeout(function(){ p1.focus(); }, 0);
+}
+
+function finishLogin(operator, logDetail){
+  currentOperator = operator;
+  try{ localStorage.setItem(OPERATOR_KEY, JSON.stringify(currentOperator)); }catch(e){}
+  logActivity('login', logDetail || 'Identificação de operador neste aparelho');
+  var m = document.getElementById('operator-modal');
+  if(m) m.remove();
+  var queued = pendingOperatorActions.slice();
+  pendingOperatorActions = [];
+  queued.forEach(function(fn){ try{ fn(); }catch(err){ console.error('[KN] erro ao rodar ação pendente:', err); } });
+  if(currentOperator.isAdmin) safeInit('aviso de pendências pro admin', notifyAdminIfPending);
+}
+
+// Registra uma atividade (quem fez o quê e quando). Salva localmente
+// (sempre) e manda pro Supabase (se disponível) pra virar histórico
+// consultável de qualquer aparelho.
+function logActivity(tipo, detalhe){
+  try{
+    var entry = {
+      quando: new Date().toISOString(),
+      operador_nome: currentOperator ? currentOperator.nome : '(não identificado)',
+      operador_ext: currentOperator ? currentOperator.ext : '',
+      tipo: tipo,
+      detalhe: detalhe || ''
+    };
+    localActivityLog.push(entry);
+    if(localActivityLog.length > 500) localActivityLog = localActivityLog.slice(-500);
+    try{ localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(localActivityLog)); }catch(e){}
+    if(sbReady){
+      sb.from(TB_LOG).insert([entry]).then(function(res){
+        if(res && res.error) console.error('[KN] Supabase: erro ao salvar log de atividade:', res.error.message);
+      }).catch(function(err){ console.error('[KN] Supabase: erro ao salvar log de atividade:', err); });
+    }
+  }catch(err){ console.error('[KN] erro ao registrar atividade:', err); }
+}
+
+// Avisa o administrador (só ele vê isso) se tiver gente esperando aprovação.
+// Aparece como uma faixa discreta que some sozinha — ninguém mais nota.
+function notifyAdminIfPending(){
+  if(!currentOperator || !currentOperator.isAdmin) return;
+  sbListPendingOperators().then(function(pending){
+    if(pending && pending.length){
+      showAdminToast(pending.length+' solicitação(ões) de acesso aguardando aprovação. Toque 7x no título pra revisar.');
+    }
+  });
+}
+function showAdminToast(msg){
+  try{
+    var el = document.getElementById('admin-toast');
+    if(el) el.remove();
+    el = document.createElement('div');
+    el.id = 'admin-toast';
+    el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--accent-dark);color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;z-index:99997;max-width:90vw;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.25)';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function(){ if(el) el.remove(); }, 6000);
+  }catch(err){ console.error('[KN] erro ao mostrar aviso do admin:', err); }
+}
+
+// ---------- Painel de histórico + aprovações — só pro admin, sem nenhum botão visível ----------
+// Acesso: tocar/clicar 7 vezes seguidas no título do app (em até 2.5s) e
+// digitar o código quando pedido. Ninguém que não souber disso vai achar.
+var ADMIN_PASSCODE = 'kn2026admin'; // troque esse código pra um só seu
+var titleTapCount = 0, titleTapTimer = null;
+function setupAdminTrigger(){
+  var h1 = document.querySelector('header h1');
+  if(!h1) return;
+  h1.style.cursor = 'default';
+  h1.addEventListener('click', function(){
+    try{
+      titleTapCount++;
+      clearTimeout(titleTapTimer);
+      titleTapTimer = setTimeout(function(){ titleTapCount = 0; }, 2500);
+      if(titleTapCount >= 7){
+        titleTapCount = 0;
+        var pass = window.prompt('Código de acesso:');
+        if(pass === ADMIN_PASSCODE) showAdminPanel();
+        // senha errada não dá nenhuma pista — só não abre nada.
+      }
+    }catch(err){ console.error('[KN] erro no gatilho do histórico:', err); }
+  });
+}
+
+function showAdminPanel(){
+  Promise.all([
+    sbListPendingOperators().catch(function(){ return []; }),
+    (sbReady ? sb.from(TB_LOG).select('*').order('quando', {ascending:true}).limit(1000).then(function(res){
+      return res.error ? localActivityLog : (res.data||[]);
+    }).catch(function(){ return localActivityLog; }) : Promise.resolve(localActivityLog))
+  ]).then(function(results){
+    renderAdminPanel(results[0]||[], results[1]||[]);
+  }).catch(function(err){
+    console.error('[KN] erro ao carregar painel do admin:', err);
+    renderAdminPanel([], localActivityLog);
+  });
+}
+
+function renderAdminPanel(pending, historyRows){
+  var overlay = document.createElement('div');
+  overlay.id = 'admin-log-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,17,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  var pendingHtml = !pending.length ? '<p class="muted" style="margin:0 0 16px">Nenhuma solicitação pendente.</p>' :
+    '<div style="margin-bottom:18px">'+
+    pending.map(function(p, i){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px">'+
+        '<div style="font-size:12.5px"><b>'+esc(p.nome||'')+'</b> — EXT '+esc(p.ext||'')+'</div>'+
+        '<div style="display:flex;gap:6px;flex:none">'+
+          '<button type="button" class="primary" data-approve-idx="'+i+'" style="padding:5px 10px;font-size:12px">Aprovar</button>'+
+          '<button type="button" class="danger" data-reject-idx="'+i+'" style="padding:5px 10px;font-size:12px">Recusar</button>'+
+        '</div>'+
+      '</div>';
+    }).join('')+
+    '</div>';
+
+  var rowsHtml = historyRows.slice().reverse().map(function(r){
+    var quando = '';
+    try{ quando = new Date(r.quando).toLocaleString('pt-BR'); }catch(e){ quando = r.quando; }
+    return '<tr>'+
+      '<td style="padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap">'+esc(quando)+'</td>'+
+      '<td style="padding:5px 8px;border-bottom:1px solid var(--border)">'+esc(r.operador_nome||'')+'</td>'+
+      '<td style="padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap">'+esc(r.operador_ext||'')+'</td>'+
+      '<td style="padding:5px 8px;border-bottom:1px solid var(--border)">'+esc(r.tipo||'')+'</td>'+
+      '<td style="padding:5px 8px;border-bottom:1px solid var(--border)">'+esc(r.detalhe||'')+'</td>'+
+    '</tr>';
+  }).join('');
+
+  overlay.innerHTML =
+    '<div style="background:#fff;max-width:900px;width:100%;max-height:85vh;overflow:auto;border-radius:8px;padding:16px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+        '<b>Painel do administrador</b>'+
+        '<button type="button" id="admin-log-close">Fechar</button>'+
+      '</div>'+
+      '<p style="margin:0 0 8px;font-weight:700;font-size:13px">Solicitações de acesso pendentes ('+pending.length+')</p>'+
+      pendingHtml+
+      '<p style="margin:0 0 8px;font-weight:700;font-size:13px">Histórico de atividades ('+historyRows.length+')</p>'+
+      (historyRows.length ? (
+        '<div style="overflow:auto;max-height:50vh">'+
+        '<table style="width:100%;font-size:12px;border-collapse:collapse">'+
+          '<thead><tr>'+
+            '<th style="text-align:left;padding:5px 8px;border-bottom:2px solid var(--border-strong)">Quando</th>'+
+            '<th style="text-align:left;padding:5px 8px;border-bottom:2px solid var(--border-strong)">Operador</th>'+
+            '<th style="text-align:left;padding:5px 8px;border-bottom:2px solid var(--border-strong)">EXT</th>'+
+            '<th style="text-align:left;padding:5px 8px;border-bottom:2px solid var(--border-strong)">Ação</th>'+
+            '<th style="text-align:left;padding:5px 8px;border-bottom:2px solid var(--border-strong)">Detalhe</th>'+
+          '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
+      ) : '<p class="muted">Nenhuma atividade registrada ainda.</p>')+
+    '</div>';
+  document.body.appendChild(overlay);
+  safeOn('admin-log-close', 'click', function(){ overlay.remove(); });
+
+  overlay.querySelectorAll('[data-approve-idx]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      try{ decideOperator(pending[Number(btn.dataset.approveIdx)], true); overlay.remove(); showAdminPanel(); }
+      catch(err){ console.error('[KN] erro ao aprovar operador:', err); }
+    });
+  });
+  overlay.querySelectorAll('[data-reject-idx]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      try{ decideOperator(pending[Number(btn.dataset.rejectIdx)], false); overlay.remove(); showAdminPanel(); }
+      catch(err){ console.error('[KN] erro ao recusar operador:', err); }
+    });
+  });
+}
+
+function decideOperator(rec, approve){
+  var updated = Object.assign({}, rec, {status: approve?'aprovado':'rejeitado', decidido_em: new Date().toISOString()});
+  sbUpsertOperatorRecord(updated);
+  logActivity('aprovacao', (approve?'Aprovou':'Recusou')+' acesso de '+(rec.nome||'')+' (EXT '+rec.ext+')');
+}
+
+// ---------- Colaboradores editáveis (aba Grupos) + Inativos ----------
+
 // ---------- Colaboradores editáveis (aba Grupos) + Inativos ----------
 var ROSTER_KEY = 'presenca:roster:v1';
 var INACTIVE_KEY = 'presenca:inativos:v1';
@@ -948,10 +1497,12 @@ function dedupeRoster(){
 function saveRoster(){
   try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(ALL)); }catch(e){}
   if(window.storage){ try{ window.storage.set(ROSTER_KEY, JSON.stringify(ALL), false); }catch(e){} }
+  sbSaveRoster();
 }
 function saveInactiveList(){
   try{ localStorage.setItem(INACTIVE_KEY, JSON.stringify(INACTIVE)); }catch(e){}
   if(window.storage){ try{ window.storage.set(INACTIVE_KEY, JSON.stringify(INACTIVE), false); }catch(e){} }
+  sbSaveRoster();
 }
 function saveDemRecords(){
   try{ localStorage.setItem(DEMREC_KEY, JSON.stringify(demRecords)); }catch(e){}
@@ -1095,9 +1646,13 @@ function saveState(){
 }
 
 function setStatus(id, status, hora){
-  state[id] = {status: status, hora: hora || ''};
-  saveState();
-  renderAll();
+  ensureOperator(function(){
+    state[id] = {status: status, hora: hora || ''};
+    saveState();
+    sbSaveRegistro(id, currentDate, status, hora);
+    logActivity('presenca', (byId[id] ? byId[id].nome : id)+' -> '+status+(hora?(' às '+hora):'')+' ('+currentDate+')');
+    renderAll();
+  });
 }
 
 function initials(nome){
@@ -1576,24 +2131,28 @@ function openStatusPopover(btn){
 // Marcar DEM em 3 datas diferentes pra mesma pessoa move ela automaticamente
 // pra aba Inativos (some da Planilha e da aba Grupos).
 function applyDayStatus(id, date, val){
-  var ds = monthStates[date] || {};
-  var old = ds[id] || {status:'',hora:''};
-  ds[id] = {status:val, hora:val==='P' ? (old.hora || nowTime()) : ''};
-  monthStates[date] = ds;
-  saveDayState(date, ds);
-  if(date===currentDate) state = ds;
+  ensureOperator(function(){
+    var ds = monthStates[date] || {};
+    var old = ds[id] || {status:'',hora:''};
+    ds[id] = {status:val, hora:val==='P' ? (old.hora || nowTime()) : ''};
+    monthStates[date] = ds;
+    saveDayState(date, ds);
+    sbSaveRegistro(id, date, val, ds[id].hora);
+    logActivity('presenca-planilha', (byId[id] ? byId[id].nome : id)+' -> '+val+' ('+date+')');
+    if(date===currentDate) state = ds;
 
-  if(val==='DEM'){
-    var list = demRecords[id] || [];
-    if(list.indexOf(date)===-1){ list = list.concat([date]); demRecords[id] = list; saveDemRecords(); }
-    if(list.length>=3 && byId[id]){
-      moveToInactive(id, list);
-      return; // moveToInactive já faz um refresh completo
+    if(val==='DEM'){
+      var list = demRecords[id] || [];
+      if(list.indexOf(date)===-1){ list = list.concat([date]); demRecords[id] = list; saveDemRecords(); }
+      if(list.length>=3 && byId[id]){
+        moveToInactive(id, list);
+        return; // moveToInactive já faz um refresh completo
+      }
     }
-  }
-  // Atualização leve: só os cards do topo (a linha da planilha já foi
-  // atualizada na hora, direto no botão que foi clicado).
-  updateStatsCards();
+    // Atualização leve: só os cards do topo (a linha da planilha já foi
+    // atualizada na hora, direto no botão que foi clicado).
+    updateStatsCards();
+  });
 }
 
 function moveToInactive(id, demDates){
@@ -1616,6 +2175,7 @@ function moveToInactive(id, demDates){
 }
 
 function reactivateEmployee(id){
+ ensureOperator(function(){
   var idx = INACTIVE.findIndex(function(e){ return e.id===id; });
   if(idx===-1) return;
   var rec = Object.assign({}, INACTIVE[idx]);
@@ -1635,6 +2195,8 @@ function reactivateEmployee(id){
   renderAll();
   renderGroupsTable();
   renderInactiveTable();
+  logActivity('cadastro', 'Reativou '+(rec.nome||id));
+ });
 }
 
 // Fecha o popover de status ao tocar/clicar fora dele, rolar a tela ou trocar de aba.
@@ -2203,6 +2765,7 @@ function parseSheetRows(rows){
 }
 
 function runFileImport(file){
+ ensureOperator(function(){
   var statusEl = document.getElementById('import-file-status');
   var logEl = document.getElementById('import-file-log');
   logEl.style.display = 'none';
@@ -2254,6 +2817,7 @@ function runFileImport(file){
         // Atualiza a Planilha e os cards do topo com o que acabou de entrar.
         loadSpecificSheetDates();
         if(dateKeys.indexOf(currentDate)>-1){ loadState(currentDate); }
+        logActivity('importacao-excel', result.countCells+' status importados em '+dateKeys.length+' data(s) via planilha Excel/CSV');
         return;
       }
       var dateKey = dateKeys[i];
@@ -2278,6 +2842,7 @@ function runFileImport(file){
     processNext(0);
   };
   reader.readAsArrayBuffer(file);
+ });
 }
 
 safeOn('import-file', 'change', function(ev){
@@ -2306,6 +2871,7 @@ function parseImportLines(text){
 }
 
 function runImport(){
+ ensureOperator(function(){
   var text = document.getElementById('import-text').value;
   var statusEl = document.getElementById('import-status');
   var logEl = document.getElementById('import-log');
@@ -2336,6 +2902,7 @@ function runImport(){
     if(i >= dateKeys.length){
       statusEl.textContent = applied+' folgas aplicadas em '+dateKeys.length+' data(s).'+(res.errors.length ? (' '+res.errors.length+' linha(s) com problema.') : '');
       if(byDate[currentDate]){ loadState(currentDate); }
+      logActivity('importacao-folgas', applied+' folgas aplicadas em '+dateKeys.length+' data(s) via lista colada');
       return;
     }
     var dateKey = dateKeys[i];
@@ -2358,6 +2925,7 @@ function runImport(){
     });
   }
   processNext(0);
+ });
 }
 safeOn('btn-import', 'click', runImport);
 
@@ -2389,6 +2957,7 @@ function parseEscalaFolgaTable(text){
 }
 
 function runEscalaFolgaImport(){
+ ensureOperator(function(){
   var text = document.getElementById('escala-folga-text').value;
   var statusEl = document.getElementById('escala-folga-status');
   var logEl = document.getElementById('escala-folga-log');
@@ -2450,6 +3019,7 @@ function runEscalaFolgaImport(){
         (unmatched.length ? (' '+unmatched.length+' escala(s) não encontrada(s), veja abaixo.') : '');
       loadSpecificSheetDates();
       if(dateKeys.indexOf(currentDate)>-1){ loadState(currentDate); }
+      logActivity('importacao-folgas-escala', totalMarks+' folgas aplicadas em '+dateKeys.length+' data(s), '+matchedGroups+' escala(s)');
       return;
     }
     var dateKey = dateKeys[i];
@@ -2472,6 +3042,7 @@ function runEscalaFolgaImport(){
     });
   }
   processNext(0);
+ });
 }
 safeOn('btn-escala-folga-import', 'click', runEscalaFolgaImport);
 
@@ -2602,6 +3173,7 @@ function parseRosterLines(text){
 }
 
 function saveGroupsFromText(){
+ ensureOperator(function(){
   var text = document.getElementById('grupos-text').value;
   var statusEl = document.getElementById('grupos-status');
   var logEl = document.getElementById('grupos-log');
@@ -2651,10 +3223,13 @@ function saveGroupsFromText(){
     (res.errors.length ? (' '+res.errors.length+' linha(s) com problema.') : '');
   logEl.style.display = res.errors.length ? 'block' : 'none';
   logEl.innerHTML = res.errors.map(function(e){return '<div>'+e+'</div>';}).join('');
+  logActivity('cadastro', added+' adicionado(s), '+updated+' atualizado(s), '+movedInactive+' inativado(s) via colar planilha');
   document.getElementById('grupos-text').value = '';
+ });
 }
 
 function removeGroupsFromText(){
+ ensureOperator(function(){
   var text = document.getElementById('grupos-remove-text').value;
   var statusEl = document.getElementById('grupos-remove-status');
   var ids = text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
@@ -2672,7 +3247,9 @@ function removeGroupsFromText(){
   renderAll();
   renderGroupsTable();
   statusEl.textContent = removed+' colaborador(es) removido(s).';
+  logActivity('cadastro', removed+' colaborador(es) removido(s): '+ids.join(', '));
   document.getElementById('grupos-remove-text').value = '';
+ });
 }
 
 function exportRosterCsv(){
@@ -2725,6 +3302,7 @@ safeOn('btn-grupos-save', 'click', saveGroupsFromText);
 safeOn('btn-grupos-remove', 'click', removeGroupsFromText);
 safeOn('btn-grupos-export', 'click', exportRosterCsv);
 safeOn('btn-grupos-dedupe', 'click', function(){
+ ensureOperator(function(){
   var removed = dedupeRoster();
   var statusEl = document.getElementById('grupos-status');
   statusEl.textContent = removed>0 ? (removed+' duplicado(s) removido(s).') : 'Nenhum duplicado encontrado.';
@@ -2734,6 +3312,8 @@ safeOn('btn-grupos-dedupe', 'click', function(){
   generateSelectedCodes();
   renderAll();
   renderGroupsTable();
+  if(removed>0) logActivity('cadastro', removed+' duplicado(s) removido(s) via botão Deduplicar');
+ });
 });
 
 // ---------- Aba Inativos ----------
@@ -2766,6 +3346,7 @@ function renderInactiveTable(){
   });
 }
 
+safeInit('gatilho do histórico (admin)', setupAdminTrigger);
 safeInit('códigos de barras', generateBarcodes);
 safeInit('log de leitura', function(){ document.getElementById('scan-log').dataset.empty = '1'; });
 safeInit('tabela de presença do dia', function(){ loadState(currentDate); });
@@ -2808,6 +3389,48 @@ if(window.storage){
       safeInit('tabela de inativos (após sincronizar nuvem)', renderInactiveTable);
     }
   });
+}
+// Reconcilia com o Supabase (banco compartilhado entre todos os aparelhos/
+// usuários — essencial quando este app é hospedado fora do Claude, tipo
+// GitHub Pages, onde não existe window.storage). Isso nunca trava o app:
+// se o Supabase não responder, tudo continua funcionando com os dados
+// locais que já estavam carregados.
+if(sbReady){
+  Promise.all([ sbLoadRoster(), sbLoadRegistros(currentDate) ]).then(function(results){
+    var rosterRows = results[0];
+    var registroRows = results[1];
+    var changed = false;
+    try{
+      if(Array.isArray(rosterRows) && rosterRows.length){
+        var ativosRows = rosterRows.filter(function(r){ return r.ativo; });
+        var inativosRows = rosterRows.filter(function(r){ return !r.ativo; });
+        if(ativosRows.length){ ALL = ativosRows.map(sbRowToEmp); rebuildById(); changed = true; }
+        INACTIVE = inativosRows.map(sbRowToEmp);
+        var contactsFromDb = {};
+        rosterRows.forEach(function(r){ if(r.telefone) contactsFromDb[r.id] = r.telefone; });
+        contacts = Object.assign(contacts, contactsFromDb);
+        saveContacts();
+        changed = true;
+      }
+      if(Array.isArray(registroRows) && registroRows.length){
+        registroRows.forEach(function(r){
+          state[r.colaborador_id] = {status: r.status||'', hora: r.hora||''};
+        });
+        monthStates[currentDate] = state;
+        saveDayState(currentDate, state);
+        changed = true;
+      }
+    }catch(err){ console.error('[KN] Supabase: erro ao reconciliar dados recebidos:', err); }
+    if(changed){
+      safeInit('filtros (após sincronizar Supabase)', rebuildFilterLists);
+      safeInit('códigos de barras (após sincronizar Supabase)', generateBarcodes);
+      qrGenerated = false;
+      safeInit('geração de códigos (após sincronizar Supabase)', generateSelectedCodes);
+      safeInit('tabela de presença (após sincronizar Supabase)', renderAll);
+      safeInit('tabela de grupos (após sincronizar Supabase)', renderGroupsTable);
+      safeInit('tabela de inativos (após sincronizar Supabase)', renderInactiveTable);
+    }
+  }).catch(function(err){ console.error('[KN] Supabase: erro na reconciliação inicial:', err); });
 }
 })();
 </script>
