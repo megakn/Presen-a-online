@@ -1,0 +1,2817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presenca KN</title>
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f6f7f5; --panel:#ffffff; --border:#d6d9d4; --border-strong:#b9bdb6;
+  --text:#1f2421; --text-muted:#6b716b; --accent:#2f6b4f; --accent-dark:#204a37;
+  --danger:#b3432f; --warning:#a9741b; --success:#2f6b4f; --header:#e7ebe4;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px}
+h1{font-size:19px;margin:0;font-weight:700}
+.datebox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted)}
+input[type=date]{border:1px solid var(--border-strong);border-radius:4px;padding:5px 8px;font-size:13px}
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--border-strong);margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.tab{padding:9px 16px;background:none;border:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;flex:none}
+.tab.active{color:var(--accent-dark);border-bottom-color:var(--accent-dark)}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button{font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:4px;border:1px solid var(--border-strong);background:#fff;color:var(--text);cursor:pointer}
+button:hover{background:#f0f1ee}
+button.primary{background:var(--accent);border-color:var(--accent-dark);color:#fff}
+button.primary:hover{background:var(--accent-dark)}
+button.danger{background:#fff;border-color:var(--danger);color:var(--danger)}
+button:disabled{opacity:.5;cursor:not-allowed}
+#qr-reader{width:100%;max-width:480px;border-radius:6px;overflow:hidden;border:1px solid var(--border-strong)}
+.camera-box{position:relative;width:100%;max-width:560px;overflow:hidden;border:1px solid var(--border-strong);border-radius:8px;background:#111;aspect-ratio:4/3}
+#barcode-video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-guide{position:absolute;left:7%;right:7%;top:36%;height:28%;border:2px solid rgba(255,255,255,.92);border-radius:6px;box-shadow:0 0 0 999px rgba(0,0,0,.18);pointer-events:none}
+.scan-guide:before,.scan-guide:after{content:"";position:absolute;left:6%;right:6%;height:2px;background:rgba(255,255,255,.8)}
+.scan-guide:before{top:48%}.scan-guide:after{display:none}
+.scan-guide span{position:absolute;left:50%;bottom:-28px;transform:translateX(-50%);font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.6);padding:4px 8px;border-radius:4px;white-space:nowrap}
+
+/* Confirmação visual (tick) ao ler QR/código pela câmera do celular,
+   pra quando não tem leitor com bipe físico. */
+.scan-tick{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(15,20,17,.35);
+  opacity:0; pointer-events:none;
+  transition:opacity .12s ease;
+  z-index:5;
+}
+.scan-tick.show{opacity:1; transition:opacity .05s ease;}
+.scan-tick svg{width:34%; max-width:120px; overflow:visible}
+.scan-tick circle{fill:none; stroke:var(--success); stroke-width:3; opacity:.95}
+.scan-tick path{fill:none; stroke:var(--success); stroke-width:4; stroke-linecap:round; stroke-linejoin:round;
+  stroke-dasharray:40; stroke-dashoffset:40;
+}
+.scan-tick.show circle{
+  animation:scanTickCircle .35s ease-out forwards;
+}
+.scan-tick.show path{
+  animation:scanTickCheck .28s .12s ease-out forwards;
+}
+.scan-tick.error circle{stroke:var(--danger)}
+.scan-tick.error path{stroke:var(--danger)}
+#global-scan-toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-12px);
+  z-index:9999;padding:10px 18px;border-radius:8px;font-weight:700;font-size:14px;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);opacity:0;pointer-events:none;
+  transition:opacity .15s ease, transform .15s ease;max-width:90vw;text-align:center}
+#global-scan-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#global-scan-toast.ok{background:#eaf3ee;color:#1f6d3f;border:1px solid var(--success)}
+#global-scan-toast.err{background:#faece9;color:#a33;border:1px solid var(--danger)}
+@keyframes scanTickCircle{
+  0%{transform:scale(.6); opacity:0}
+  60%{transform:scale(1.08); opacity:1}
+  100%{transform:scale(1); opacity:1}
+}
+@keyframes scanTickCheck{
+  to{stroke-dashoffset:0}
+}
+.stat{display:flex;flex-direction:column;gap:1px;background:var(--header);border-radius:4px;padding:6px 12px;min-width:84px}
+.stat b{font-size:20px}
+.stat span{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
+.statgrid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.confirm{border:1px solid var(--success);background:#eaf3ee;border-radius:6px;padding:12px 14px;margin-top:12px;display:none}
+.confirm b{color:var(--accent-dark)}
+table{border-collapse:collapse;width:100%;font-size:12.5px;background:#fff}
+th,td{border:1px solid var(--border);padding:5px 8px;text-align:left;white-space:nowrap}
+th{background:var(--header);position:sticky;top:0;font-weight:700;cursor:default;z-index:1}
+tbody tr:nth-child(even){background:#fbfbfa}
+tbody tr:hover{background:#eef2ec}
+.tablewrap{max-height:560px;overflow:auto;border:1px solid var(--border-strong);border-radius:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700}
+.b-P{background:#d9f2df;color:#176b34}
+.b-F{background:#ff2b2b;color:#fff}
+.b-FO{background:#dcecff;color:#1457a6}
+.b-AT{background:#ffdede;color:#a52a2a}
+.b-DEM{background:#fff0a8;color:#735b00}
+.b-BH{background:#ffe0b2;color:#9a4f00}
+.b-TF{background:#eadcff;color:#6336a3}
+.b-FA{background:#ffdff0;color:#9b2d67}
+.b-{background:#efefec;color:var(--text-muted)}
+select.statusedit{font-size:12px;padding:4px 7px;font-weight:700}
+.status-P{background:#d9f2df;color:#176b34;border-color:#79bd8a}
+.status-F{background:#ff2b2b;color:#fff;border-color:#c70000}
+.status-FO{background:#dcecff;color:#1457a6;border-color:#7fb0ea}
+.status-AT{background:#ffdede;color:#a52a2a;border-color:#e8a0a0}
+.status-DEM{background:#fff0a8;color:#735b00;border-color:#dfc85e}
+.status-BH{background:#ffe0b2;color:#9a4f00;border-color:#e8aa55}
+.status-TF{background:#eadcff;color:#6336a3;border-color:#b596df}
+.status-FA{background:#ffdff0;color:#9b2d67;border-color:#e6a0c6}
+.stat.status-stat{border-width:2px}
+.stat-p{background:#e8f7ec;border-color:#79bd8a}.stat-p b{color:#176b34}
+.stat-f{background:#ffdddd;border-color:#ff2b2b}.stat-f b{color:#d40000}
+.stat-fo{background:#e7f1ff;border-color:#7fb0ea}.stat-fo b{color:#1457a6}
+.stat-at{background:#fff0f0;border-color:#e8a0a0}.stat-at b{color:#a52a2a}
+.stat-dem{background:#fff7cc;border-color:#dfc85e}.stat-dem b{color:#735b00}
+.stat-bh{background:#fff0d8;border-color:#e8aa55}.stat-bh b{color:#9a4f00}
+.stat-tf{background:#f1e9ff;border-color:#b596df}.stat-tf b{color:#6336a3}
+.stat-fa{background:#ffeaf5;border-color:#e6a0c6}.stat-fa b{color:#9b2d67}
+.toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.ms-filter{position:relative}
+.ms-filter-btn{
+  font-family:inherit;font-size:13px;padding:6px 28px 6px 9px;border-radius:4px;
+  border:1px solid var(--border-strong);background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%23666"/></svg>') no-repeat right 10px center;
+  cursor:pointer;color:var(--text);min-width:150px;text-align:left;
+}
+.ms-filter-panel{
+  display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:60;
+  min-width:260px;max-width:320px;background:#fff;border:1px solid #aeb6ad;
+  border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:8px;
+}
+.ms-filter-panel.open{display:block}
+.ms-filter-actions{display:flex;gap:6px;margin-bottom:6px}
+.ms-filter-actions button{font-size:11px;padding:4px 8px}
+.ms-filter-list{max-height:260px;overflow:auto;border-top:1px solid #eee;padding-top:6px}
+.ms-filter-list label{
+  display:flex;align-items:center;gap:7px;padding:4px 2px;font-size:12.5px;cursor:pointer;
+}
+.ms-filter-list label:hover{background:#f4f6f3}
+.ms-filter-list input[type=checkbox]{flex:none}
+input[type=text]{border:1px solid var(--border-strong);border-radius:4px;padding:6px 9px;font-size:13px}
+select{border:1px solid var(--border-strong);border-radius:4px;padding:6px 9px;font-size:13px}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.qrcard{border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center;background:#fff}
+.qrcard img,.qrcard canvas{margin:0 auto}
+.qrcard p{margin:6px 0 0;font-size:11px;font-weight:600;line-height:1.3}
+.qrcard span{font-size:10px;color:var(--text-muted)}
+.barcode-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.barcodegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.barcodecard{border:1px dashed #bfc3bd;border-radius:4px;padding:6px 8px;text-align:center;background:#fff;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.barcodecard svg{display:block;max-width:100%;height:42px}
+.barcodecard .barcode-id{font-size:10px;font-weight:700;letter-spacing:.08em;color:#333;margin-top:1px}
+
+
+.muted{color:var(--text-muted);font-size:12px}
+.pill{font-size:11px;background:var(--header);border-radius:12px;padding:3px 10px}
+.pill.ok{background:#dcefe3;color:var(--accent-dark)}
+.pill.warn{background:#faf0d0;color:var(--warning)}
+.scanmode{display:flex;gap:8px;margin-bottom:14px}
+.scanmodebtn{padding:6px 12px;border-radius:16px;font-size:12px}
+.scanmodebtn.active{background:var(--accent);color:#fff;border-color:var(--accent-dark)}
+input#code-input{font-size:16px;padding:10px 12px;width:100%;max-width:420px;border:2px solid var(--border-strong);border-radius:6px}
+input#code-input:focus{border-color:var(--accent);outline:none}
+textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-strong);border-radius:4px;padding:8px;width:100%;resize:vertical}
+.importlog{max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:4px;padding:8px;font-size:12px;margin-top:10px;background:#fafafa}
+.importlog div{padding:2px 0;border-bottom:1px solid #eee}
+
+.date-tabs-wrap{margin:0 0 12px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:9px}
+.date-tabs-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.date-tabs-head b{font-size:13px}
+.date-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin}
+.date-tab{min-width:44px;padding:6px 8px;border:1px solid var(--border-strong);background:#fff;border-radius:5px;font-size:11px;line-height:1.15;text-align:center}
+.date-tab span{display:block;font-weight:700;font-size:13px}
+.date-tab.active{background:var(--accent);color:#fff;border-color:var(--accent-dark)}
+.date-tab.today:not(.active){box-shadow:inset 0 0 0 1px var(--accent)}
+.contact-input{width:132px;min-width:132px;padding:5px 7px!important;font-size:12px!important}
+.whatsapp-btn{padding:5px 8px;font-size:11px;border-color:#98bca4;background:#eff8f1;color:#176b34;font-weight:700;white-space:nowrap}
+.whatsapp-btn:disabled{opacity:.4;cursor:not-allowed;background:#f3f3f1;color:#777;border-color:#ccc}
+@media (max-width:700px){
+  .contact-input{width:118px;min-width:118px}
+  .tab{padding:9px 11px;font-size:13px}
+}
+
+
+.day-head{min-width:88px;text-align:center;white-space:nowrap}
+.day-cell{padding:3px!important;text-align:center;background:#fafafa}
+.day-status{
+  width:76px;min-width:76px;padding:5px 3px!important;font-size:11px!important;
+  font-weight:700;text-align:center;border-radius:5px
+}
+.day-status.status-P{background:#d9f2df;color:#155d2a;border-color:#8bc79a}
+.day-status.status-FO{background:#dcecff;color:#174f91;border-color:#8bb8e8}
+.day-status.status-AT{background:#ffe1e1;color:#9f2525;border-color:#e9aaaa}
+.day-status.status-F{background:#ffb9b9;color:#8d0000;border-color:#df5757}
+.day-status.status-DEM{background:#fff2a8;color:#725b00;border-color:#d5bd43}
+.day-status.status-BH{background:#ffe0b2;color:#8a4b00;border-color:#e5a04d}
+.day-status.status-TF{background:#eadcff;color:#60349a;border-color:#b99be3}
+.day-status.status-FA{background:#ffdff0;color:#8b2f61;border-color:#e8a1c9}
+.day-status:not([class*="status-"]){background:#fff;color:#666}
+.today-col{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent)}
+.selected-col{background:#f1f6f3!important}
+.sheet-loading-days{font-size:12px;color:var(--muted);margin-left:6px}
+
+
+
+
+
+
+
+/* Planilha em tabela única — mais confiável que duas tabelas coladas.
+   ID e Nome ficam fixos (sticky) na rolagem horizontal, pra sempre saber
+   de quem é a linha; o resto (Contato...Horário e as 2 datas) rola junto,
+   com nada sendo cortado no meio — se não couber, rola, mas tudo é visível
+   por completo. O cabeçalho fica grudado (sticky) ao rolar verticalmente,
+   porque há uma única área de rolagem (#sheet-scroll) pra tudo. */
+#sheet-scroll{
+  max-height:min(70vh, 640px);
+  overflow:auto;
+  border:1px solid var(--border-strong);
+  border-radius:4px;
+}
+.scroll-hint{
+  display:none;
+  font-size:11.5px;
+  color:var(--text-muted);
+  margin:0 0 6px;
+}
+@media(max-width:820px){
+  .scroll-hint{display:block}
+}
+#panel-sheet .sheet-table{
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout:fixed;
+  font-size:12.5px;
+  /* Largura TOTAL explícita — precisa ser um valor fixo em px pra
+     table-layout:fixed respeitar a largura de cada coluna (ver
+     adjustSheetColumnWidths() no JS). Valor base = soma das colunas
+     (62+172+132+40+150+220+64+86+86 = 1012); o JS aumenta a coluna Nome
+     (e essa largura total) quando sobra espaço na tela, em vez de deixar
+     um vão em branco depois da última data. */
+  width:1012px;
+}
+#panel-sheet .sheet-table th,
+#panel-sheet .sheet-table td{
+  height:40px;
+  padding:5px 6px;
+  border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  background:#fff;
+  vertical-align:middle;
+  overflow:hidden;
+}
+#panel-sheet .sheet-table thead th{
+  position:sticky;
+  top:0;
+  z-index:6;
+  background:#e9eee7;
+  font-weight:700;
+}
+/* Colunas com largura suficiente pra caber o conteúdo numa linha só */
+#panel-sheet .col-id{width:62px}
+#panel-sheet .col-nome{width:var(--nome-w, 172px)}
+#panel-sheet .col-contato{width:132px}
+#panel-sheet .col-whats{width:40px;text-align:center;padding-left:2px!important;padding-right:2px!important}
+#panel-sheet .col-coord{width:150px}
+#panel-sheet .col-escala{width:220px}
+#panel-sheet .col-horario{width:64px;text-align:center}
+#panel-sheet .col-nome,
+#panel-sheet .col-coord,
+#panel-sheet .col-escala{
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+/* ID e Nome ficam grudados à esquerda ao rolar para o lado */
+#panel-sheet .col-id,
+#panel-sheet .col-nome{
+  position:sticky;
+  z-index:4;
+  background:#fff;
+}
+#panel-sheet thead .col-id,
+#panel-sheet thead .col-nome{
+  z-index:7;
+  background:#e9eee7;
+}
+#panel-sheet .col-id{left:0}
+#panel-sheet .col-nome{left:62px; box-shadow:2px 0 4px -2px rgba(0,0,0,.25)}
+#panel-sheet .sheet-table tbody tr:nth-child(even) td{background:#fafbf9}
+#panel-sheet .sheet-table tbody tr:hover td{background:#eef2ec}
+#panel-sheet .sheet-table tbody tr:nth-child(even) .col-id,
+#panel-sheet .sheet-table tbody tr:nth-child(even) .col-nome{background:#fafbf9}
+#panel-sheet .sheet-table tbody tr:hover .col-id,
+#panel-sheet .sheet-table tbody tr:hover .col-nome{background:#eef2ec}
+#panel-sheet .contact-input{
+  width:114px;
+  min-width:114px;
+  padding:4px 5px!important;
+  font-size:11px!important;
+}
+#panel-sheet .whatsapp-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  height:28px;
+  padding:0;
+  border-radius:50%;
+}
+#panel-sheet .date-head{
+  width:86px;
+  min-width:86px;
+  max-width:86px;
+  text-align:center;
+}
+#panel-sheet .status-cell{
+  width:86px;
+  min-width:86px;
+  max-width:86px;
+  text-align:center;
+  padding:4px!important;
+}
+#panel-sheet .status-chip{
+  width:76px;
+  min-height:28px;
+  border-radius:5px;
+  border:1px solid #c6cbc5;
+  background:#fff;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+}
+#panel-sheet .status-chip[data-status="P"]{background:#d9f2df;color:#155d2a;border-color:#8bc79a}
+#panel-sheet .status-chip[data-status="FO"]{background:#dcecff;color:#174f91;border-color:#8bb8e8}
+#panel-sheet .status-chip[data-status="AT"]{background:#ffe1e1;color:#9f2525;border-color:#e9aaaa}
+#panel-sheet .status-chip[data-status="F"]{background:#ffb9b9;color:#8d0000;border-color:#df5757}
+#panel-sheet .status-chip[data-status="DEM"]{background:#fff2a8;color:#725b00;border-color:#d5bd43}
+#panel-sheet .status-chip[data-status="BH"]{background:#ffe0b2;color:#8a4b00;border-color:#e5a04d}
+#panel-sheet .status-chip[data-status="TF"]{background:#eadcff;color:#60349a;border-color:#b99be3}
+#panel-sheet .status-chip[data-status="FA"]{background:#ffdff0;color:#8b2f61;border-color:#e8a1c9}
+
+#status-popover{
+  position:fixed;
+  z-index:9999;
+  display:none;
+  min-width:180px;
+  padding:8px;
+  border:1px solid #aeb6ad;
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+}
+#status-popover button{
+  display:block;
+  width:100%;
+  margin:3px 0;
+  padding:7px 9px;
+  text-align:left;
+  font-size:12px;
+}
+#status-popover button[data-v="P"]{background:#d9f2df}
+#status-popover button[data-v="FO"]{background:#dcecff}
+#status-popover button[data-v="AT"]{background:#ffe1e1}
+#status-popover button[data-v="F"]{background:#ffb9b9}
+#status-popover button[data-v="DEM"]{background:#fff2a8}
+#status-popover button[data-v="BH"]{background:#ffe0b2}
+#status-popover button[data-v="TF"]{background:#eadcff}
+#status-popover button[data-v="FA"]{background:#ffdff0}
+
+#panel-sheet .date-select{
+  width:78px;
+  min-width:78px;
+  max-width:78px;
+  padding:4px 16px 4px 5px;
+  font-size:11px;
+  font-weight:700;
+  border:1px solid #b9c0b8;
+  border-radius:5px;
+  background:#fff;
+}
+#panel-sheet .date-head.today-date{
+  background:#dff1e5 !important;
+  box-shadow:inset 0 -3px 0 #1c7a42;
+}
+#panel-sheet .date-head.today-date .date-select{
+  border-color:#1c7a42;
+  color:#155d2a;
+  background:#f1fbf4;
+}
+#panel-sheet .status-cell.today-date{
+  background:#f2faf4;
+}
+#panel-sheet .status-chip[data-status="ATEST"]{
+  background:#e7f0ff;
+  color:#274f8e;
+  border-color:#a7bfe6;
+}
+#status-popover button[data-v="ATEST"]{background:#e7f0ff}
+
+.sheet-filterbar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:10px 0 14px;
+}
+.sheet-filterbar label{
+  font-size:12px;
+  font-weight:700;
+}
+.sheet-filterbar select{
+  min-height:34px;
+  padding:5px 28px 5px 8px;
+  font-size:12px;
+}
+.sheet-filterbar .filter-hint{
+  font-size:11px;
+  color:var(--muted);
+}
+/* V13 - data sempre visível + consulta por data */
+#panel-sheet .sheet-filterbar input[type="date"]{
+  min-height:34px;
+  padding:5px 8px;
+  font-size:12px;
+  border:1px solid var(--border-strong);
+  border-radius:5px;
+  background:#fff;
+}
+#panel-sheet #sheet-date-today{
+  min-height:34px;
+  padding:5px 10px;
+  font-size:12px;
+}
+#panel-sheet .date-head{
+  height:40px;
+  vertical-align:middle;
+  padding:3px 4px!important;
+}
+#panel-sheet .date-visible-label{
+  display:block;
+  width:100%;
+  margin-bottom:2px;
+  text-align:center;
+  font-size:10px;
+  line-height:1.1;
+  font-weight:800;
+  color:#1d281f;
+  white-space:nowrap;
+}
+#panel-sheet .date-select{
+  display:block;
+  width:74px !important;
+  min-width:74px !important;
+  max-width:74px !important;
+  margin:0 auto;
+  height:18px;
+  padding:0 14px 0 4px !important;
+  font-size:9px !important;
+  line-height:18px;
+  color:#48524a;
+}
+#panel-sheet .date-head.today-date .date-visible-label{
+  color:#0d6b35;
+}
+
+
+.code-controls{
+  display:flex;
+  gap:9px;
+  align-items:end;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.code-controls label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:11px;
+  font-weight:700;
+}
+.code-controls select{
+  min-width:170px;
+}
+.code-controls input{
+  min-width:190px;
+}
+@media(max-width:700px){
+  .code-controls label,.code-controls select,.code-controls input{
+    width:100%;
+    min-width:0;
+  }
+}
+
+/* Impressão por tamanho escolhido */
+@media print{
+  #printarea .print-barcode.print-small .barcodegrid{
+    grid-template-columns:repeat(5,35mm) !important;
+    gap:1.5mm !important;
+  }
+  #printarea .print-barcode.print-small .barcodecard{
+    width:35mm;height:12mm;min-height:12mm;padding:0.8mm 1mm;
+  }
+  #printarea .print-barcode.print-small .barcodecard svg{
+    width:32mm !important;height:7mm !important;
+  }
+  #printarea .print-barcode.print-small .barcode-id{font-size:6pt}
+
+  #printarea .print-barcode.print-medium .barcodegrid{
+    grid-template-columns:repeat(4,45mm) !important;
+    gap:2mm !important;
+  }
+  #printarea .print-barcode.print-medium .barcodecard{
+    width:45mm;height:16mm;min-height:16mm;padding:1.2mm 1.5mm;
+  }
+  #printarea .print-barcode.print-medium .barcodecard svg{
+    width:41mm !important;height:10mm !important;
+  }
+  #printarea .print-barcode.print-medium .barcode-id{font-size:7pt}
+
+  #printarea .print-barcode.print-large .barcodegrid{
+    grid-template-columns:repeat(3,60mm) !important;
+    gap:3mm !important;
+  }
+  #printarea .print-barcode.print-large .barcodecard{
+    width:60mm;height:22mm;min-height:22mm;padding:1.5mm 2mm;
+  }
+  #printarea .print-barcode.print-large .barcodecard svg{
+    width:55mm !important;height:14mm !important;
+  }
+  #printarea .print-barcode.print-large .barcode-id{font-size:8pt}
+
+  #printarea .print-qr .qrgrid{
+    display:grid !important;
+    align-items:start;
+  }
+  #printarea .print-qr.print-small .qrgrid{
+    grid-template-columns:repeat(6,28mm) !important;
+    gap:2mm !important;
+  }
+  #printarea .print-qr.print-small .qrcard{
+    width:28mm;min-height:33mm;padding:1.5mm;
+  }
+  #printarea .print-qr.print-small .qrcard img,
+  #printarea .print-qr.print-small .qrcard canvas{
+    width:22mm !important;height:22mm !important;
+  }
+
+  #printarea .print-qr.print-medium .qrgrid{
+    grid-template-columns:repeat(5,36mm) !important;
+    gap:2.5mm !important;
+  }
+  #printarea .print-qr.print-medium .qrcard{
+    width:36mm;min-height:42mm;padding:2mm;
+  }
+  #printarea .print-qr.print-medium .qrcard img,
+  #printarea .print-qr.print-medium .qrcard canvas{
+    width:29mm !important;height:29mm !important;
+  }
+
+  #printarea .print-qr.print-large .qrgrid{
+    grid-template-columns:repeat(4,46mm) !important;
+    gap:3mm !important;
+  }
+  #printarea .print-qr.print-large .qrcard{
+    width:46mm;min-height:53mm;padding:2.5mm;
+  }
+  #printarea .print-qr.print-large .qrcard img,
+  #printarea .print-qr.print-large .qrcard canvas{
+    width:38mm !important;height:38mm !important;
+  }
+
+  #printarea .print-qr .qrcard{
+    border:0.2mm dashed #aaa;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  #printarea .print-qr .qrcard p{
+    margin:1mm 0 0;
+    font-size:7pt;
+  }
+  #printarea .print-qr .qrcard span{
+    display:none !important;
+  }
+}
+
+@media print{
+  header,.tabs,.toolbar,.camera-box,.statgrid,.no-print{display:none !important}
+  .panel{display:none !important}
+  #printarea{display:block !important}
+}
+#printarea{display:none}
+</style>
+</head>
+<body>
+<div id="global-scan-toast"></div>
+<div class="wrap">
+  <header>
+    <h1>Presenca KN</h1>
+    <div class="datebox">
+      Data <input type="date" id="datepick">
+      <span id="savedhint" class="pill">carregando…</span>
+    </div>
+  </header>
+
+  <div class="tabs no-print">
+    <button class="tab active" data-tab="scan">Bater presenca</button>
+    <button class="tab" data-tab="sheet">Planilha</button>
+    <button class="tab" data-tab="qr">Codigos QR</button>
+    <button class="tab" data-tab="import">Importar folgas</button>
+    <button class="tab" data-tab="grupos">Grupos</button>
+    <button class="tab" data-tab="inativos">Inativos</button>
+  </div>
+
+  <div id="stats-date-label" class="muted no-print" style="margin:-4px 0 6px;font-weight:700"></div>
+  <div class="statgrid no-print">
+    <div class="stat"><b id="st-total">0</b><span>Colaboradores</span></div>
+    <div class="stat status-stat stat-p"><b id="st-p">0</b><span>Presença</span></div>
+    <div class="stat status-stat stat-f"><b id="st-f">0</b><span>Falta</span></div>
+    <div class="stat status-stat stat-fo"><b id="st-fo">0</b><span>Folga</span></div>
+    <div class="stat status-stat stat-at"><b id="st-at">0</b><span>Atraso</span></div>
+    <div class="stat status-stat stat-dem"><b id="st-dem">0</b><span>Demissão</span></div>
+    <div class="stat status-stat stat-bh"><b id="st-bh">0</b><span>BH</span></div>
+    <div class="stat status-stat stat-tf"><b id="st-tf">0</b><span>Troca de folga</span></div>
+    <div class="stat status-stat stat-fa"><b id="st-fa">0</b><span>Folga aniversário</span></div>
+    <div class="stat"><b id="st-pend">0</b><span>Pendentes</span></div>
+  </div>
+
+  <div id="panel-scan" class="panel active">
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <button id="btn-start" class="primary">Ligar camera</button>
+        <button id="btn-stop" disabled>Desligar camera</button>
+        <span class="muted">Aponte o QR ou o codigo de barras do colaborador para a camera do celular ou notebook.</span>
+      </div>
+      <div class="camera-box">
+        <video id="barcode-video" playsinline muted></video>
+        <div class="scan-guide"><span>CODE 128 / QR</span></div>
+        <div id="scan-tick" class="scan-tick">
+          <svg id="scan-tick-icon" viewBox="0 0 52 52"><circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-16"/></svg>
+        </div>
+      </div>
+      <div id="scan-confirm" class="confirm"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13px">Leitor de codigo (USB ou manual)</p>
+      <p class="muted" style="margin:0 0 10px">Funciona com um leitor de codigo de barras/QR USB (ele digita como um teclado) ou digitando o ID e apertando Enter.</p>
+      <input type="text" id="code-input" placeholder="Bipe o leitor ou digite o ID e pressione Enter" autocomplete="off">
+    </div>
+    <div class="card" style="margin-top:14px">
+      <p style="margin:0 0 8px;font-weight:700;font-size:13px">Ultimos registros</p>
+      <div id="scan-log" class="muted">Nenhum registro nesta sessao ainda.</div>
+    </div>
+  </div>
+
+  <div id="panel-sheet" class="panel">
+    <div class="toolbar">
+      <input type="text" id="sheet-search" placeholder="Buscar por nome ou ID">
+      <select id="sheet-coord"></select>
+      <div class="ms-filter" id="escala-filter">
+        <button type="button" id="escala-filter-btn" class="ms-filter-btn">Todas as escalas</button>
+        <div id="escala-filter-panel" class="ms-filter-panel">
+          <div class="ms-filter-actions">
+            <button type="button" id="escala-select-all">Marcar todas</button>
+            <button type="button" id="escala-clear">Limpar</button>
+          </div>
+          <div id="escala-filter-list" class="ms-filter-list"></div>
+        </div>
+      </div>
+      <select id="sheet-horario"></select>
+      <button id="btn-export">Exportar CSV</button>
+    </div>
+    <div class="sheet-filterbar no-print">
+      <label for="sheet-status-filter">Status:</label>
+      <select id="sheet-status-filter">
+        <option value="">Todos</option>
+        <option value="P">Presença</option>
+        <option value="FO">Folga</option>
+        <option value="AT">Atraso</option>
+        <option value="F">Falta</option>
+        <option value="ATEST">Atestado</option>
+        <option value="F_ATEST">Falta + Atestado</option>
+        <option value="BH">BH - Banco de horas</option>
+        <option value="TF">Troca de folga</option>
+        <option value="FA">Folga de aniversário</option>
+        <option value="DEM">Demissão</option>
+        <option value="EMPTY">Sem registro</option>
+      </select>
+
+      <label for="sheet-date-filter">Pesquisar data:</label>
+      <input type="date" id="sheet-date-filter">
+
+      <button type="button" id="sheet-date-today">Hoje</button>
+      <span id="sheet-date-filter-label" class="filter-hint"></span>
+    </div>
+    <p class="scroll-hint no-print">↔ Arraste a tabela para o lado pra ver Contato, Escala, Horário e as datas</p>
+    <div id="sheet-scroll" class="sheet-scroll">
+      <table class="sheet-table">
+        <thead>
+          <tr>
+            <th class="col-id">ID</th>
+            <th class="col-nome">Nome</th>
+            <th class="col-contato">Contato</th>
+            <th class="col-whats">Whats</th>
+            <th class="col-coord">Coordenador</th>
+            <th class="col-escala">Escala</th>
+            <th class="col-horario">Horário</th>
+            <th id="date-head-1" class="date-head">
+              <div id="date-label-1" class="date-visible-label">01/09/2026</div>
+              <select id="date-select-1" class="date-select" aria-label="Escolher primeira data"></select>
+            </th>
+            <th id="date-head-2" class="date-head">
+              <div id="date-label-2" class="date-visible-label">02/09/2026</div>
+              <select id="date-select-2" class="date-select" aria-label="Escolher segunda data"></select>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="sheet-body"></tbody>
+      </table>
+    </div>
+    <div id="status-popover" class="no-print"></div>
+  </div>
+
+  <div id="panel-qr" class="panel">
+    <div class="card">
+      <p style="margin:0 0 5px;font-weight:700;font-size:14px">Códigos dos colaboradores</p>
+      <p class="muted" style="margin:0 0 10px">
+        Escolha QR Code ou Código de barras. Ambos contêm somente o ID/Groot ID.
+      </p>
+
+      <div class="code-controls">
+        <label>
+          Tipo de código
+          <select id="code-type">
+            <option value="barcode">Código de barras — CODE 128</option>
+            <option value="qr">QR Code</option>
+          </select>
+        </label>
+
+        <label>
+          Tamanho de impressão
+          <select id="print-size">
+            <option value="small">Pequeno</option>
+            <option value="medium" selected>Médio</option>
+            <option value="large">Grande</option>
+            <option value="custom">Personalizado (mm)</option>
+          </select>
+        </label>
+
+        <label id="custom-size-w-wrap" style="display:none">
+          <span id="custom-size-w-label">Largura (mm)</span>
+          <input type="number" id="custom-size-w" min="10" max="100" value="35" style="width:64px">
+        </label>
+        <label id="custom-size-h-wrap" style="display:none">
+          Altura (mm)
+          <input type="number" id="custom-size-h" min="8" max="100" value="14" style="width:64px">
+        </label>
+
+        <input type="text" id="qr-search" placeholder="Buscar por nome ou ID">
+
+        <button id="btn-generate-code" class="primary">Gerar códigos</button>
+        <button id="btn-print-code">🖨 Imprimir</button>
+
+        <span class="muted" id="code-hint">Somente ID/Groot ID.</span>
+      </div>
+
+      <div id="barcode-view">
+        <div id="barcode-grid" class="barcodegrid"></div>
+      </div>
+
+      <div id="qr-view" style="display:none">
+        <div id="qr-grid" class="qrgrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-import" class="panel">
+    <div class="card">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13px">Importar planilha (Excel/CSV)</p>
+      <p class="muted" style="margin:0 0 10px">
+        Envie a planilha com uma coluna <b>ID</b> e uma coluna pra cada data (setembro, outubro, novembro...).
+        Em cada célula, o status do colaborador naquele dia: <b>FO</b> (folga), <b>P</b> (presença), <b>F</b> (falta), <b>AT</b> (atraso), <b>DEM</b>, <b>BH</b>, <b>TF</b> ou <b>FA</b>. Células em branco são ignoradas.
+        Tudo o que for importado já aparece salvo direto na aba Planilha, na data correspondente.
+      </p>
+      <input type="file" id="import-file" accept=".xlsx,.xls,.csv">
+      <div class="row" style="margin-top:10px">
+        <span class="muted" id="import-file-status"></span>
+      </div>
+      <div id="import-file-log" class="importlog" style="display:none"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13px">Importar folgas por escala (tabela de dias do mês)</p>
+      <p class="muted" style="margin:0 0 10px">
+        Cole a tabela com a coluna <b>Escala</b> e uma coluna por mês, cada uma com os dias de folga separados por vírgula
+        (ex.: <b>01, 07, 08, 13...</b>). Marca <b>FO</b> nesses dias pra <b>todo mundo</b> que estiver naquela escala — em
+        Setembro, Outubro e Novembro de 2026. Cole exatamente como copiou da sua planilha (com tabulação entre as colunas).
+      </p>
+      <textarea id="escala-folga-text" rows="8" placeholder="SVC - B3 - 05H / 09H / 10H / 14H48	03, 08, 09, 13, 19, 20, 25, 28	01, 06, 07, 11, 17, 18, 23, 26, 29	03, 04, 08, 14, 15, 20"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="btn-escala-folga-import" class="primary">Importar por escala</button>
+        <span class="muted" id="escala-folga-status"></span>
+      </div>
+      <div id="escala-folga-log" class="importlog" style="display:none"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13px">Ou colar uma lista de folgas</p>
+      <p class="muted" style="margin:0 0 10px">
+        Cole abaixo uma lista no formato <b>ID,dd/mm/aaaa</b> (uma linha por folga) e clique em Importar.
+        Isso marca FO para cada colaborador na data indicada, em qualquer mes, sem precisar trocar a data manualmente la em cima.
+        Se voce tem o calendario de folgas em imagem/foto, envie essa imagem na conversa com o Claude que ele le e gera essa lista pra colar aqui.
+      </p>
+      <textarea id="import-text" rows="8" placeholder="149367,05/09/2026&#10;2636281,12/09/2026&#10;502018,20/10/2026"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="btn-import" class="primary">Importar</button>
+        <span class="muted" id="import-status"></span>
+      </div>
+      <div id="import-log" class="importlog" style="display:none"></div>
+    </div>
+  </div>
+
+  <div id="panel-grupos" class="panel">
+    <div class="card">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13px">Cadastro de colaboradores</p>
+      <p class="muted" style="margin:0 0 10px">
+        Quando precisar acrescentar ou tirar pessoas, é aqui — sem precisar mexer em código.
+        <b>Cole direto da sua planilha, com o cabeçalho no topo</b> (funciona com colunas separadas por tabulação ou vírgula):
+        <br><code>ID · Groot ID · Nome · Matrícula · Coordenador · Escala · Escala Antiga · Horário · Telefone · Sexo · Cargo · Origem · Tipo · Setor · CPF · EXT</code>
+        <br>Uma coluna <b>Status</b> (Ativo/Inativo) também é reconhecida, se tiver — quem não estiver "Ativo" já entra direto na aba Inativos.
+        Se o ID já existir no cadastro, os dados são atualizados; se não existir, é adicionado. Também aceita o formato simples
+        <b>ID,Nome,Coordenador,Escala,Horário,Telefone</b> se preferir digitar à mão.
+      </p>
+      <textarea id="grupos-text" rows="8" placeholder="ID	Groot ID	Nome	Matrícula	Coordenador	ESCALA	Escala Antiga	HORÁRIO	Telefone	SEXO	CARGO	ORIGEM	TIPO	Setor	CPF	EXT
+149367		Adriano Pereira Pires	39967	MARCELO MAGALHÂES	SVC - B3 - 05H / 09H / 10H / 14H48	2432	05:00:00			AUXILIAR LOGISTICO I	MERCADO LIVRE SC - RIO DE JANEIRO	Fixo		094.920.587-74	ext_adpires"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="btn-grupos-save" class="primary">Salvar/atualizar</button>
+        <button id="btn-grupos-export">Exportar cadastro atual (CSV)</button>
+        <button id="btn-grupos-dedupe">Remover duplicados</button>
+        <span class="muted" id="grupos-status"></span>
+      </div>
+      <div id="grupos-log" class="importlog" style="display:none"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13px">Remover colaboradores</p>
+      <p class="muted" style="margin:0 0 10px">Cole os IDs a remover, um por linha.</p>
+      <textarea id="grupos-remove-text" rows="4" placeholder="149367&#10;2636281"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="btn-grupos-remove" class="danger">Remover</button>
+        <span class="muted" id="grupos-remove-status"></span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <p style="margin:0 0 8px;font-weight:700;font-size:13px">Colaboradores cadastrados (<span id="grupos-count">0</span>)</p>
+      <p class="muted" style="margin:0 0 8px">Tabela com o cadastro completo. Arraste pros lados pra ver todas as colunas. Campo vazio = ainda não foi preenchido nessa pessoa; cole a linha atualizada dela que ele completa sozinho.</p>
+      <div class="tablewrap" style="max-height:420px">
+        <table>
+          <thead><tr><th>ID</th><th>Status</th><th>Groot ID</th><th>Nome</th><th>Matrícula</th><th>Coordenador</th><th>Escala</th><th>Escala Antiga</th><th>Horário</th><th>Telefone</th><th>Sexo</th><th>Cargo</th><th>Origem</th><th>Tipo</th><th>Setor</th><th>CPF</th><th>EXT</th></tr></thead>
+          <tbody id="grupos-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-inativos" class="panel">
+    <div class="card">
+      <p style="margin:0 0 6px;font-weight:700;font-size:13px">Colaboradores inativos</p>
+      <p class="muted" style="margin:0 0 10px">
+        Um colaborador cai aqui automaticamente — e some da Planilha e da aba Grupos — quando "Demissão" é marcado
+        pra ele em <b>3 datas diferentes</b> na Planilha (confirmação manual, pra evitar engano). Dá pra reativar a qualquer momento.
+      </p>
+      <div class="tablewrap" style="max-height:480px">
+        <table>
+          <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Demissões confirmadas</th><th>Inativado em</th><th></th></tr></thead>
+          <tbody id="inativos-table-body"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="inativos-empty" style="margin-top:10px;display:none">Nenhum colaborador inativo no momento.</p>
+    </div>
+  </div>
+
+  <div id="printarea"></div>
+</div>
+
+<script id="emp-data" type="application/json">
+[{"id":"149367","nome":"Adriano Pereira Pires","coordenador":"MARCELO MAGALHÂES","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2636281","nome":"Agatha Fernanda Saluci da Cruz","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"502018","nome":"ALAN JORGE CORREIA CARVALHO","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2411551","nome":"Alessandra de carvalho Teixeira carlos","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2613464","nome":"Aline do Carmo Olivera","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2613840","nome":"Aline Rodrigues Sousa dos Santos","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2613465","nome":"Alisson Reis Cardoso da Silva","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"2466695","nome":"Allan Jackson Alves Costa","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2457900","nome":"Allison Phelip Lima Da Silva","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2180394","nome":"ALOYZIO MARTINS DE SOUZA FILHO","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"2503074","nome":"Amanda de Souza da Silva Braz","coordenador":"DYENIS MENDES","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2111876","nome":"Amanda de Vasconcelos Teixeira","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2550358","nome":"Amanda faria Machado Camilo","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2415948","nome":"Ana Alexia Silva da paixão","coordenador":"MARIO SILVA","turno":"A3","horario":"14:00","escala":"SVC - A3 - 14H / 18H / 19H / 23H48"},{"id":"265236","nome":"Ana beatriz da Silva","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"1875241","nome":"Ana Carolina da Silva Torres","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2462943","nome":"Ana Carolina Maroz de Oliveira","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2096185","nome":"Ana carolina monteiro da silva","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2405168","nome":"Ana Caroline Rodrigues da Costa","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613441","nome":"Ana Clara Canário França","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2636251","nome":"Ana Luiza Muniz Santana","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2503267","nome":"Anderson Detrano Nunes","coordenador":"FILIPI DA MATA","turno":"A4","horario":"14:00","escala":"SVC - A4 - 14H / 18H / 19H / 23H48"},{"id":"2615451","nome":"André Luiz Costa Ansel","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2613764","nome":"André Luiz de Lima","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2564913","nome":"André Luiz de Oliveira Francisco","coordenador":"MARIANA BERNARDES","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2464181","nome":"Andre Roberto Ladislau melo","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"1926310","nome":"Andreia Santiago Teixeira","coordenador":"MARIO SILVA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2500229","nome":"Andreza de França Martins","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2503268","nome":"Anna Livia Almeida da Silva","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2202292","nome":"Antônio Carlos Filano da Silva","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2452467","nome":"Aparecida Melane Sales da Silva","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2405174","nome":"Ariana Souza Santos porto","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2650502","nome":"Aprigio de souza Lira","coordenador":"EDIO SANTOS","turno":"C4","horario":"05:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2564930","nome":"Beatriz da Silva Gonçalves","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2411554","nome":"Beatriz Germano da Silva Araújo","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"1967182","nome":"Augusto Lourenço Ferreira","coordenador":"JONATHAN LOUVISI","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2613469","nome":"Beatriz manso ribeiro de Almeida","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2564847","nome":"Bianca Regina Ferreira de Meira Lima Campos","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2613453","nome":"Beatriz Santos Silva","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2315963","nome":"Braian de Jesus Soares Rodrigues","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2542080","nome":"Bianca Teodoro de Souza Nascimento","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2629218","nome":"Bruna Caroline Mendonça sponton","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2503062","nome":"Bruna Cristina Aragao Miranda","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"1902807","nome":"Breno Martins Theodoro da Silva","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2076023","nome":"Bruna Gomes dos Santos.","coordenador":"MARCELO MAGALHÂES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2622029","nome":"Bruna Gomes dos Santos","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2132227","nome":"Bruno Lima","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2462935","nome":"Bruno Vital Pacheco Bianck","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2111748","nome":"Bruna Vitória De Souza Lima","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"1727533","nome":"Caio Thiago da Silva Martins Barbosa","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2411557","nome":"Caio vieira silva","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2503265","nome":"caíque belisario da silva campbell","coordenador":"FILIPI DA MATA","turno":"A4","horario":"14:00","escala":"SVC - A4 - 14H / 18H / 19H / 23H48"},{"id":"2040379","nome":"Camilla Castro de Souza Amaral","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613459","nome":"Caio Carvalho De Lima","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2613470","nome":"Carina Martins de Oliveira","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2636268","nome":"Caroline Carlos dos Santos Pinto Carvalho","coordenador":"FILIPI DA MATA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2500368","nome":"Carlos Eduardo de Souza","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2142140","nome":"Caroline da costa Fortunato silva","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"1858517","nome":"Cesar de Jesus dos Santos","coordenador":"JONATHAN LOUVISI","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2415951","nome":"CHRISTIAN ANDRES ROJAS BENAVIDES","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2315966","nome":"Christian Barcelos Oliveira","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"50345","nome":"Charles Lopes de Oliveira","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2361025","nome":"Cibele Maria Elias da Silva Sanches","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"153234","nome":"Claudia De Oliveira Torres","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2462936","nome":"Claudio Augusto dos Santos Silva","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2500194","nome":"Cleiton Dantas Andrade","coordenador":"MARIO SILVA","turno":"A1","horario":"14:00","escala":"SVC - A1 - 14H / 18H / 19H / 23H48"},{"id":"2462953","nome":"Christian haicony da Silva dos santos","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2646820","nome":"CLARICE MARIA RIBEIRO DANTAS DA SILVA","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2613738","nome":"CLAUDIA MARIA DE OLIVEIRA DE ALMEIDA SANTOS","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2613837","nome":"Cristiane Rodrigues lucas","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2120037","nome":"Daiana Cristina Soares Bispo Sudário","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2332315","nome":"Daniel Soares Pereira","coordenador":"MARIO SILVA","turno":"A2","horario":"13:00","escala":"SVC - A2 - 14H / 18H / 19H / 23H48"},{"id":"1964420","nome":"Danielle Andreina Mendes José","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2503263","nome":"Daiana Ferreira Nunes","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2432555","nome":"Dandara cristina ferreira","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2613829","nome":"Dandara Nascimento André","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2405277","nome":"Davidson Almeida Maia","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"1773088","nome":"Danilo Martins Silva Oliveira","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2114436","nome":"Davi Rosa Urbano Da Silva","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2415964","nome":"Davyse Andrade Rodrigues","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"2152960","nome":"David de Souza Freitas","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"2613819","nome":"Davidson Batista de Andrade","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2180396","nome":"Davyd Matias Honorato","coordenador":"JONATHAN LOUVISI","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2556000","nome":"Deivide William de Jesus Matos","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2613444","nome":"Dayana Rodrigues Dos Santos","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"1729941","nome":"Douglas Ferreira Anjos","coordenador":"FILIPI DA MATA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2636277","nome":"Douglas Santos de Oliveira","coordenador":"FILIPI DA MATA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"953776","nome":"Dayane de Paula e Silva","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2132324","nome":"Dulce Olinda cabral ribeiro ricio","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2613805","nome":"Débora Cristina Cardoso Neves","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2152160","nome":"Dejailson Valerio da silva","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"2303636","nome":"Eduarda de Freitas Lima","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2615447","nome":"Dryellen Almeida Pereira Cavalcanti","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2415978","nome":"Elidiane Freitas Octaviano Nieto","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2541170","nome":"Elisangela Ferreira da Silva","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613742","nome":"Emilly Luiza Anastacio Xavier","coordenador":"BRUNO NARDOTO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2462946","nome":"Ernani Junior de Paula Pinto","coordenador":"MARIO SILVA","turno":"A3","horario":"14:00","escala":"SVC - A3 - 14H / 18H / 19H / 23H48"},{"id":"2613799","nome":"Edinalva Bento da Silva","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2579679","nome":"Ester Cristina Santos de Menezes","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2550382","nome":"Euzilene vieira costa","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2542079","nome":"Edmilson Silva de Freitas","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"1921710","nome":"Eduardo Junior da Silva Araujo","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2646676","nome":"ERICA ALENCAR AMANCIO DE BRITO","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"1782237","nome":"Ewerton nascimento da Silva","coordenador":"MARCIO MARIANO","turno":"G3","horario":"23:00","escala":"SVC - G3 - 23H / 03H / 04H / 08H48"},{"id":"2195292","nome":"Fabiana dos Santos Guarda","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2613841","nome":"Esteffane Santana","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2613744","nome":"Evanice da silva ferreira","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2613767","nome":"Evelyn Souza de Oliveira","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2630464","nome":"Fabricio Goncalves de Oliveira","coordenador":"MARIO SILVA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"1312932","nome":"Fátima Luana da Silva Pires","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2405384","nome":"Fernando da Silva Ferreira","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2160320","nome":"Everton marcio dos santos","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2579647","nome":"Fábio Alves de Farias","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2564890","nome":"Flavia do nascimento Souza","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2613739","nome":"Flávia Martins Guimarães Agostinho","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2613834","nome":"Fábio Henrique da silva peres","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"1926339","nome":"Fábio Pereira Henrique Santos","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"1858520","nome":"Fernando dos Santos Ferreira","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2613748","nome":"Filipe Mendes da Silva","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2177221","nome":"Flavia Miguel Dos Santos","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2613833","nome":"Flavio dos Santos Mesquita","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"2213638","nome":"Gabriel de Oliveira Silva","coordenador":"DYENIS MENDES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613832","nome":"Francileide Valentim de Lima","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2555924","nome":"Fúlvio Heleno Sanches de Lima","coordenador":"JONATHAN LOUVISI","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2613776","nome":"Gabriel Silva Nicolau","coordenador":"MARCIO MARIANO","turno":"G2","horario":"23:00","escala":"SVC - G2 - 23H / 03H / 04H / 08H48"},{"id":"2613759","nome":"Gabriel da cruz machado","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2474808","nome":"Gabriella Navarro de Magalhães Brandão","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2552983","nome":"Gabriella pessoa de Lima da Conceição","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2555971","nome":"Gessica Pereira de Santana Machado","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613788","nome":"Giovana Botelho Barreto","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2364210","nome":"Gisele do Nascimento Castro","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2132294","nome":"Glauciene Silva de Sales","coordenador":"BRUNO NARDOTO","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2329964","nome":"Gracy Kelly Rodrigues Remer","coordenador":"MARIO SILVA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2413275","nome":"Graltiele Gonzaga de Araújo","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2613745","nome":"Guaraciara Seciliano","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2114438","nome":"Guilherme Davi Macedo de Souza","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2411565","nome":"Nathali Souza Ferreira","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2503277","nome":"Gustavo dos santos soares","coordenador":"MARIO SILVA","turno":"A3","horario":"14:00","escala":"SVC - A3 - 14H / 18H / 19H / 23H48"},{"id":"2177157","nome":"Gustavo Gomes Castro","coordenador":"ALINE ODOM","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613843","nome":"Heber Dos santos lima bastos","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2550414","nome":"Heloísa Silva","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2613750","nome":"Gabriel de Araujo Sanches","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2564929","nome":"Hugo Oliveira Monsores","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613735","nome":"Gabriel Domingos Chalef Cruz","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2636285","nome":"Indiara Miranda Perez","coordenador":"DYENIS MENDES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"366639","nome":"Isabella de Sousa Fonseca","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2613756","nome":"Isabelly Figueredo de Jesus","coordenador":"MARIO SILVA","turno":"A3","horario":"14:00","escala":"SVC - A3 - 14H / 18H / 19H / 23H48"},{"id":"2315970","nome":"Jackeline da Conceição dos santos de Oliveira","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2464094","nome":"Jalos Alexandre dos Santos de Jesus","coordenador":"MARIO SILVA","turno":"A4","horario":"14:00","escala":"SVC - A4 - 14H / 18H / 19H / 23H48"},{"id":"2613753","nome":"Janaina de lima Araújo","coordenador":"MARIO SILVA","turno":"A1","horario":"14:00","escala":"SVC - A1 - 14H / 18H / 19H / 23H48"},{"id":"2202370","nome":"Janiel Bezerra da Silva","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2500203","nome":"Jaqueline de Andrade dos Santos","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2503075","nome":"Jaqueline Lopes Barbosa da Silva","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2303635","nome":"Gabriel Procópio Da Silva","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"2503073","nome":"Jennifer Crystina Souza da Silva","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2503266","nome":"Jessica Mendes Pessanha Almeida","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613451","nome":"Joana Dias Salomão Santos do Nascimento","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613445","nome":"João Marcos da Silva Magalhães","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2613461","nome":"João Paulo da Silva","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2503275","nome":"Joao Victor da Silva Alves","coordenador":"MARIO SILVA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2613798","nome":"joão victor jimenes leitão","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"333082","nome":"Joice Vieira da Silva","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2500268","nome":"Jonas William Souza do Nascimento","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"2613462","nome":"Gabriel Souza Alves","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"2646655","nome":"GEOVANA GRASIELLY XAVIER MATOS","coordenador":"MARIANA BERNARDES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2315926","nome":"Jorge Alberto Silva Santos Junior","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2052361","nome":"José Roberto Ferreira Junior","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"1967457","nome":"Josimar Teixeira Rodrigues","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2613807","nome":"Joyce do nascimento Vieira","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2500201","nome":"Joyce Sampaio dos Santos","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2412983","nome":"Juan Alexandre Carvalho da Silva","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2177223","nome":"Júlia Célia Moura Da Silva","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2613813","nome":"Julia souza de Freitas Valle","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2613452","nome":"Guilherme Do Nascimento Vianna","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"437219","nome":"Ronei Franklin da Silva","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2636261","nome":"Hilary Alcantara da Silva","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2374589","nome":"Juliana Rodrigues de Campos christovao","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2462938","nome":"Juliane Silva Gouvea","coordenador":"FILIPI DA MATA","turno":"A2","horario":"14:00","escala":"SVC - A2 - 14H / 18H / 19H / 23H48"},{"id":"2464182","nome":"Kaique pereira de lima","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2155614","nome":"Kaique Victorio Dos Santos","coordenador":"MARIO SILVA","turno":"A3","horario":"14:00","escala":"SVC - A3 - 14H / 18H / 19H / 23H48"},{"id":"2500196","nome":"Karina da Silva Gouvêa","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2109434","nome":"Kauane da Silva Francisco Sousa de Sena","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2613733","nome":"KEROLAYNNE BEATRYZ FERREIRA DE LIMA","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2115602","nome":"Laís Carneiro Demetrio","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2613447","nome":"Lais Costa Dos Reis","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2613755","nome":"Lara Silva da Costa","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2613816","nome":"Larissa Adryelle Anastacio Da Silva Dos Reis","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2202430","nome":"Larissa Rodrigues Leoncio da Silva","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2550625","nome":"Larroana Lima Simões","coordenador":"MARIO SILVA","turno":"A1","horario":"14:00","escala":"SVC - A1 - 14H / 18H / 19H / 23H48"},{"id":"2613463","nome":"Leandro Bastos Duarte","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"144496","nome":"leiveti de lima sandes","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2555943","nome":"Leonardo Clementino de Souza","coordenador":"EDIO SANTOS","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"1886657","nome":"Leonardo José da Silva e Silva","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613793","nome":"Igor Nascimento de sousa","coordenador":"JONATHAN LOUVISI","turno":"C2","horario":"05:00","escala":"SVC - C2 - 05H / 09H / 10H / 14H48"},{"id":"2500228","nome":"Letícia da Silva Gonçalves","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2550354","nome":"Levi De Sousa Oliveira","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2214101","nome":"Lívia de Souza Lima","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2500225","nome":"Lorane Aguiar de Maria","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2462930","nome":"Lorrainy Caroliny Oliveira Martins de Andrade","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613826","nome":"Luan da Cruz Costa","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2564924","nome":"Luana Arouxa Coutinho de Sousa","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2416010","nome":"Luana da Silva dos Santos","coordenador":"ALINE ODOM","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613818","nome":"Luana Pires de Castro Freitas","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2613831","nome":"Lucas dos Santos Silva","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2416028","nome":"Lucas Freitas Lima da silva","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2613802","nome":"Lucas Rangel Samuel","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2503274","nome":"Lucas Raphael Brandão de Araújo","coordenador":"FILIPI DA MATA","turno":"A2","horario":"14:00","escala":"SVC - A2 - 14H / 18H / 19H / 23H48"},{"id":"2184237","nome":"Jeferson Rosa Queiroz","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2613835","nome":"Luis paulo Ferreira de Lima dos Santos","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2202450","nome":"Luís Rodrigues","coordenador":"MARCIO MARIANO","turno":"G4","horario":"23:00","escala":"SVC - G4 - 23H / 03H / 04H / 08H48"},{"id":"2452468","nome":"Luiz Carlos Anselmo de Oliveira","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2550417","nome":"Luiz Diogo Mairink","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2646658","nome":"JOANA DARC AUD","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2613801","nome":"Magno Igor de Melo Ferreira","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613828","nome":"Marcellyn Vitória dos Santos","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2256588","nome":"Marcilene do nascimento Basílio","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2340930","nome":"Marcilene vitória da Silva Miranda","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2303597","nome":"Jonathan Carlos Dias de Paula","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2503269","nome":"Marcio Jesus paixao","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2474760","nome":"Jonathan Luiz Marques do Nascimento","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2111743","nome":"Juliana Conceição de Azevedo","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"335409","nome":"Marcos Aurélio dos Santos correia","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"2504319","nome":"Juliana da Silva Benevides","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2500269","nome":"Marcos Vitor Moreira Gonçalves","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"2044261","nome":"Maria Eduarda da Costa Leal","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613765","nome":"Maria Eduarda Ferreira Almeida da Silva","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613442","nome":"Maria Eduarda Ramos de Souza","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613817","nome":"Maria Eduarda Rezende geraldelle","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2374587","nome":"Maria Luiza Assis Eugênio","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2315990","nome":"Mariana do Nascimento militao","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2503063","nome":"Mariana Marques Barbosa dos Reis","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2303626","nome":"Mariana Mendes de Lima Santos","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2500200","nome":"Juliana de Souza Matheus","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2646649","nome":"KETLEN GODOY MUNIZ VIANA DA SILVA","coordenador":"BRUNO NARDOTO","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2503272","nome":"mario alberto vieira junior","coordenador":"MARCIO MARIANO","turno":"G1","horario":"23:00","escala":"SVC - G1 - 23H / 03H / 04H / 08H48"},{"id":"2613796","nome":"Maristela da Silva","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613792","nome":"Marta Gomes da Silva","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2646651","nome":"LAYLA VIEIRA DA SILVA","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2556002","nome":"Matheus de Lima Reis Pinheiro","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2613458","nome":"Mayara Souza De Andrade","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2211403","nome":"Micael Marins souto","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2500177","nome":"Michel dos Santos da Silva","coordenador":"FILIPI DA MATA","turno":"A3","horario":"14:00","escala":"SVC - A3 - 14H / 18H / 19H / 23H48"},{"id":"2114466","nome":"Letícia Ângelo Iglecia de Almeida","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2579659","nome":"Michelle da Silva de Mendonca","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613754","nome":"Monique Domingos da Silva de Almeida","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"1791168","nome":"Lucila oliveira de Azevedo nascimento","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2177225","nome":"Myrela de Souza Molináro","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2550367","nome":"Natalia Francisco da Silva","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613787","nome":"Natalia Pereira da Silva","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2329952","nome":"William Thompson de Azevedo","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"1690680","nome":"NATIELLE BEZERRA DA SILVA","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"1967544","nome":"Luzinete Telles Teixeira Soares","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2615480","nome":"Nemicelia Rodrigues de Souza","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2503262","nome":"NICOLAS INACIO DA CONCEIÇÃO","coordenador":"MARIO SILVA","turno":"A1","horario":"14:00","escala":"SVC - A1 - 14H / 18H / 19H / 23H48"},{"id":"5487","nome":"Marcio Faria da silva","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2339737","nome":"Onildo Pereira dos Santos","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2117258","nome":"Otávio Luis Rezende Marcos","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2500195","nome":"Marco Aurélio Coco da Silva","coordenador":"JONATHAN LOUVISI","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2550409","nome":"Patricia Francisca dos Santos","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613457","nome":"Patrick michel do Nascimento Nogueira","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2177211","nome":"Marco Aurelio Dos Santos","coordenador":"JONATHAN LOUVISI","turno":"C4","horario":"05:00","escala":"SVC - C4 -05H / 09H / 10H / 14H48"},{"id":"2613777","nome":"Paulo Macedo Oliveira","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613821","nome":"Pedro Felipe Rodrigues Sousa Tavares Cahé","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2636288","nome":"Pedro Henrique de Souza Lima","coordenador":"EDIO SANTOS","turno":"C3","horario":"06:00","escala":"SVC - C3 - 06H / 10H / 11H / 15H48"},{"id":"2202498","nome":"Priscila Regiane Anastácio Rodrigues","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2550630","nome":"Priscila Souza da Silva Camilo","coordenador":"FILIPI DA MATA","turno":"A4","horario":"14:00","escala":"SVC - A4 - 14H / 18H / 19H / 23H48"},{"id":"2405393","nome":"Rafael da Silva exposito","coordenador":"DYENIS MENDES","turno":"A1","horario":"14:00","escala":"SVC - A1 - 14H / 18H / 19H / 23H48"},{"id":"59782","nome":"Rafael Neto De Amorim","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2613830","nome":"Rafaela de Morais lima","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613804","nome":"Rafaela Francisco Ribeiro","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2580016","nome":"Raiani Cristini Medeiros de Jesus","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2464093","nome":"Raphael Cardoso dos Santos","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"1888863","nome":"Marcos Vinicius Pereira Torres","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2413031","nome":"Raquel Natacia Souza Batista da Silva","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"1908859","nome":"Rayane Ferreira dos Santos","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613455","nome":"Renan bezerra de Souza","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613770","nome":"Rhenan Gomes Pereira","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2315931","nome":"Rildo da Costa Laurindo","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2452455","nome":"Mariana Milene Peçanha da Silva","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2040364","nome":"Marina Vaz da Silva","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2413282","nome":"Robson Vieira Pessoa","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2340663","nome":"Rodolfo Fernandes Blazio Junior","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2500217","nome":"Marta Regina da Silva Lopes","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2452473","nome":"Rogério oliveira de carvalho","coordenador":"FILIPI DA MATA","turno":"A4","horario":"14:00","escala":"SVC - A4 - 14H / 18H / 19H / 23H48"},{"id":"191212","nome":"Michel Nascimento da Conceição","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2613781","nome":"Roselaine Assumpção da Silva Saddock de Sá","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2363948","nome":"Rosilene Silva dos Santos","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613746","nome":"Samara Valéria Medeiros de Oliveira","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2549064","nome":"Samuel Jorge Silva Nascimento","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2339745","nome":"Samuel Oliveira da silva","coordenador":"MARIO SILVA","turno":"A2","horario":"13:00","escala":"SVC - A2 - 14H / 18H / 19H / 23H48"},{"id":"2142235","nome":"Santhye Marambaia dos Reis Lemos","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"1843873","nome":"Savio Carneiro da Costa","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"427668","nome":"Sergio ataide de Brito Junior","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"219347","nome":"Monique dos Santos Goudard","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2202582","nome":"Soraya Cesar Bastos","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2613763","nome":"Stefani Da Silva Astrolabio","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2268562","nome":"Sthefany de Souza da Silva","coordenador":"DYENIS MENDES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613456","nome":"Sthefany Morete Conceição","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2550375","nome":"Suzana Diniz Santos de Oliveira","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2503264","nome":"Tamela de Souza Silva","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2315986","nome":"Tania Regina de Paula","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2613803","nome":"Tayane Barcelos da Silva","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2631595","nome":"Thaciane Oazem Custódio","coordenador":"FILIPI DA MATA","turno":"A2","horario":"14:00","escala":"SVC - A2 - 14H / 18H / 19H / 23H48"},{"id":"2202630","nome":"thais costa dos reis","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2546014","nome":"Thais costa rosa","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2613758","nome":"Thais Oliveira dos Santos","coordenador":"MARIO SILVA","turno":"A3","horario":"14:00","escala":"SVC - A3 - 14H / 18H / 19H / 23H48"},{"id":"2152171","nome":"Thamyris Moreira Nunes de castro","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2555955","nome":"Nayara ribeiro de jesus","coordenador":"BRUNO NARDOTO","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2125429","nome":"Thayná Fernandes Dos Santos","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2613783","nome":"Thayná Lima dos Santos","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2303594","nome":"Thaynara Barcelos de Andrade","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2500202","nome":"Thayza Roberta Souza dos Santos","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2452475","nome":"Thiago Felipe Angelo Braga","coordenador":"FILIPI DA MATA","turno":"A4","horario":"14:00","escala":"SVC - A4 - 14H / 18H / 19H / 23H48"},{"id":"2184278","nome":"Thiago Ferreira da Silva","coordenador":"MARCIO MARIANO","turno":"G3","horario":"23:00","escala":"SVC - G3 - 23H / 03H / 04H / 08H48"},{"id":"139226","nome":"Nilson de Almeida Bello","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"1905593","nome":"Paloma Martins da Silva","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2416105","nome":"Valdir zaria da silva do Nascimento","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2405405","nome":"Vanderson Mendes Ferreira","coordenador":"FILIPI DA MATA","turno":"A2","horario":"14:00","escala":"SVC - A2 - 14H / 18H / 19H / 23H48"},{"id":"429696","nome":"Vanderson Spinelli da Silva","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"2555929","nome":"Vanessa Gabrielle silva","coordenador":"MARCIO MARIANO","turno":"C2","horario":"06:00","escala":"SVC - C2- 06H / 10H / 11H / 15H48"},{"id":"2503273","nome":"Vanessa Ribeiro da Silva","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2630402","nome":"Vânia Flores de Carvalho","coordenador":"FILIPI DA MATA","turno":"A2","horario":"14:00","escala":"SVC - A2 - 14H / 18H / 19H / 23H48"},{"id":"504003","nome":"Paula nunes de miranda","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2613747","nome":"Veronica juliano Bonavita da Silva","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2613760","nome":"Veronica Oliveira da Silva de Melo","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2268567","nome":"Victor Leandro Rolemberg da Silva","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2503278","nome":"Victória Silveira de Oliveira Pereira","coordenador":"ADNILSON TAVARES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2646833","nome":"PRISCILA DINIZ ALMEIDA","coordenador":"MARCELO MAGALHÂES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2613824","nome":"Vitória da Rocha Ferreira","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"550142","nome":"Vitória Nathalia Felipe Dias","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2457911","nome":"Vitoria Rodrigues Sousa dos Santos","coordenador":"ALINE ODOM","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"2382273","nome":"Vitória Soares do Nascimento","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2546034","nome":"Raquel Gabriele Silva da Conceição","coordenador":"EDIO SANTOS","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2315994","nome":"WAGNER SILVA DE OLIVEIRA","coordenador":"EDIO SANTOS","turno":"C4","horario":"06:00","escala":"SVC - C4 - 06H / 10H / 11H / 15H48"},{"id":"2613749","nome":"Wanderlei Evaristo de castro","coordenador":"FILIPI DA MATA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"413529","nome":"Roberto Carlos Monteiro pereira","coordenador":"MARIANA BERNARDES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"337324","nome":"Wedson soares Lourenço","coordenador":"MARCIO MARIANO","turno":"G2","horario":"23:00","escala":"SVC - G2 - 23H / 03H / 04H / 08H48"},{"id":"1701964","nome":"Wendel de Souza Moreira","coordenador":"MARCIO MARIANO","turno":"G4","horario":"23:00","escala":"SVC - G4 - 23H / 03H / 04H / 08H48"},{"id":"2303646","nome":"Wendel Pereira Gonçalves","coordenador":"DYENIS MENDES","turno":"G2","horario":"08:00","escala":"SVC - G2 - 08H / 12H / 13H / 17H48"},{"id":"1921715","nome":"Weverton dos Santos Moreira","coordenador":"JONATHAN LOUVISI","turno":"C1","horario":"05:00","escala":"SVC - C1 - 05H / 09H / 10H / 14H48"},{"id":"2452442","nome":"Roberto Luiz Gomes Miranda","coordenador":"BRUNO NARDOTO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2613757","nome":"Rogério luiz Santos do Nascimento","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2636264","nome":"Yago Lopes Santos da Silva","coordenador":"FILIPI DA MATA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"1690679","nome":"Yan dos Santos Lemos","coordenador":"MARCIO MARIANO","turno":"G1","horario":"23:00","escala":"SVC - G1 - 23H / 03H / 04H / 08H48"},{"id":"2564842","nome":"Yasmin Rufino de Souza","coordenador":"MARCIO MARIANO","turno":"C1","horario":"06:00","escala":"SVC - C1 - 06H / 10H / 11H / 15H48"},{"id":"2405418","nome":"Yolanda dos Santos","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2613743","nome":"Yuri Jimenes leitão","coordenador":"FILIPI DA MATA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2202647","nome":"Zoraide Juscelina da Costa","coordenador":"ADNILSON TAVARES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"},{"id":"2114471","nome":"Sidney Francisco Magalhaes Junior","coordenador":"MARIANA BERNARDES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2646643","nome":"ARETHA RAHYANE MARTINS CAVALCANTE AGUIAR","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2646645","nome":"FABIANA DA SILVA SANTOS","coordenador":"MARCELO MAGALHÂES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2646646","nome":"GEOVANNE DE SOUZA SOARES","coordenador":"MARIANA BERNARDES","turno":"B1","horario":"05:00","escala":"SVC - B1 - 05H / 09H / 10H / 14H48"},{"id":"2177932","nome":"Thaina Morais De Souza Paulo","coordenador":"","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"1791166","nome":"Thauana Cristina Da Silva De Almeida","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"1879791","nome":"Tiago da Conceicao da Silva","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2500226","nome":"Tiffani Julia Silva Rangel","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"2550411","nome":"Veronica Isidoro Lopes","coordenador":"MARIANA BERNARDES","turno":"B4","horario":"05:00","escala":"SVC - B4 - 05H / 09H / 10H / 14H48"},{"id":"2464179","nome":"Vinicius Ferreira da Silva","coordenador":"JONATHAN LOUVISI","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2564834","nome":"Vivian Correa Gonçalves de Farias","coordenador":"MARCIO MARIANO","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2646661","nome":"WAGNER LEITE DA SILVA","coordenador":"MARCELO MAGALHÂES","turno":"B3","horario":"05:00","escala":"SVC - B3 - 05H / 09H / 10H / 14H48"},{"id":"2646837","nome":"TAINARA RIBEIRO DA PAIXAO","coordenador":"MARIO SILVA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2646839","nome":"ANA CAROLINA RIBEIRO DE FREITAS","coordenador":"FILIPI DA MATA","turno":"G2","horario":"13:00","escala":"SVC - G2 - 13H / 17H / 18H / 22H48"},{"id":"2646841","nome":"SARA DE SOUZA PEIXOTO","coordenador":"MARIO SILVA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2646843","nome":"ANTONIA JULIANA RIBEIRO","coordenador":"FILIPI DA MATA","turno":"G3","horario":"13:00","escala":"SVC - G3 - 13H / 17H / 18H / 22H48"},{"id":"2646847","nome":"RODRIGO FARIA FERREIRA","coordenador":"MARIO SILVA","turno":"G4","horario":"13:00","escala":"SVC - G4 - 13H / 17H / 18H / 22H48"},{"id":"2646851","nome":"SERGIO BEZERRA PONCIANO","coordenador":"FILIPI DA MATA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2646852","nome":"LUAN GABRIEL DOS SANTOS MONTAN","coordenador":"MARIO SILVA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"2646853","nome":"MAYARA ALVES DE OLIVEIRA","coordenador":"FILIPI DA MATA","turno":"G1","horario":"13:00","escala":"SVC - G1 - 13H / 17H / 18H / 22H48"},{"id":"1967552","nome":"Wanderson Dos Santos Nogueira Fonseca","coordenador":"MARCELO MAGALHÂES","turno":"B2","horario":"05:00","escala":"SVC - B2 - 05H / 09H / 10H / 14H48"},{"id":"1888868","nome":"William Paulo Houtet Nascimento filho","coordenador":"JONATHAN LOUVISI","turno":"C3","horario":"05:00","escala":"SVC - C3 - 05H / 09H / 10H / 14H48"},{"id":"2040392","nome":"Marcos Vinicius Bastos dos Santos","coordenador":"DYENIS MENDES","turno":"G1","horario":"08:00","escala":"SVC - G1 - 08H / 12H / 13H / 17H48"}]
+</script>
+<script>
+(function(){
+var ALL = JSON.parse(document.getElementById('emp-data').textContent);
+var byId = {};
+ALL.forEach(function(e){ byId[e.id] = e; });
+
+// Registra um listener só se o elemento existir, e nunca deixa um erro
+// dentro do handler travar o resto do app (cada clique fica isolado).
+function safeOn(id, evt, fn){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener(evt, function(ev){
+    try{ fn.call(this, ev); }
+    catch(err){ console.error('[KN] erro no evento "'+evt+'" de #'+id+':', err); }
+  });
+}
+// Roda uma função de inicialização isolada: se ela quebrar, avisa no
+// console e deixa o resto do app (as próximas linhas) continuar normal.
+function safeInit(label, fn){
+  try{ fn(); }
+  catch(err){ console.error('[KN] falha ao inicializar "'+label+'":', err); }
+}
+
+// ---------- Colaboradores editáveis (aba Grupos) + Inativos ----------
+var ROSTER_KEY = 'presenca:roster:v1';
+var INACTIVE_KEY = 'presenca:inativos:v1';
+var DEMREC_KEY = 'presenca:demrecords:v1';
+var INACTIVE = [];
+var demRecords = {}; // { id: [dateISO, ...] } — datas em que "Demissão" foi confirmada
+
+function rebuildById(){
+  byId = {};
+  ALL.forEach(function(e){ byId[e.id] = e; });
+}
+function dedupeRoster(){
+  // Remove colaboradores duplicados (mesmo ID aparecendo mais de uma vez).
+  // Mantém a última ocorrência de cada ID. Retorna quantos duplicados tirou.
+  var seen = {};
+  var deduped = [];
+  var removed = 0;
+  ALL.forEach(function(e){
+    if(seen.hasOwnProperty(e.id)){
+      deduped[seen[e.id]] = e; // atualiza pra versão mais recente
+      removed++;
+    }else{
+      seen[e.id] = deduped.length;
+      deduped.push(e);
+    }
+  });
+  if(removed>0){
+    ALL = deduped;
+    rebuildById();
+    saveRoster();
+  }
+  return removed;
+}
+function saveRoster(){
+  try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(ALL)); }catch(e){}
+  if(window.storage){ try{ window.storage.set(ROSTER_KEY, JSON.stringify(ALL), false); }catch(e){} }
+}
+function saveInactiveList(){
+  try{ localStorage.setItem(INACTIVE_KEY, JSON.stringify(INACTIVE)); }catch(e){}
+  if(window.storage){ try{ window.storage.set(INACTIVE_KEY, JSON.stringify(INACTIVE), false); }catch(e){} }
+}
+function saveDemRecords(){
+  try{ localStorage.setItem(DEMREC_KEY, JSON.stringify(demRecords)); }catch(e){}
+  if(window.storage){ try{ window.storage.set(DEMREC_KEY, JSON.stringify(demRecords), false); }catch(e){} }
+}
+try{ var savedRosterLocal = JSON.parse(localStorage.getItem(ROSTER_KEY) || 'null'); if(Array.isArray(savedRosterLocal) && savedRosterLocal.length){ ALL = savedRosterLocal; rebuildById(); } }catch(e){}
+try{ var savedInactiveLocal = JSON.parse(localStorage.getItem(INACTIVE_KEY) || 'null'); if(Array.isArray(savedInactiveLocal)){ INACTIVE = savedInactiveLocal; } }catch(e){}
+try{ var savedDemLocal = JSON.parse(localStorage.getItem(DEMREC_KEY) || 'null'); if(savedDemLocal && typeof savedDemLocal==='object'){ demRecords = savedDemLocal; } }catch(e){}
+try{ dedupeRoster(); }catch(err){ console.error('[KN] falha ao remover duplicados no carregamento:', err); }
+
+var state = {}; // { id: {status, hora} }
+var currentDate = todayStr();
+var html5QrCode = null;
+var lastScan = {id:null, t:0};
+var qrGenerated = false;
+var sheetMonthCursor = (function(){
+  var fixedStart = new Date(2026,8,1);
+  var todayD = new Date(); todayD.setHours(0,0,0,0);
+  if(todayD < fixedStart){ return todayD.getFullYear()+'-'+String(todayD.getMonth()+1).padStart(2,'0'); }
+  return '2026-09';
+})();
+var monthStates = {};
+var monthLoadToken = 0;
+
+function parseStoredState(raw){
+  try{ return raw ? JSON.parse(raw) : {}; }catch(e){ return {}; }
+}
+function getLocalDayState(date){
+  try{ return parseStoredState(localStorage.getItem(storageKey(date))); }catch(e){ return {}; }
+}
+function saveDayState(date, dayState){
+  monthStates[date] = dayState || {};
+  try{ localStorage.setItem(storageKey(date), JSON.stringify(dayState || {})); }catch(e){}
+  if(window.storage){
+    try{ window.storage.set(storageKey(date), JSON.stringify(dayState || {}), false); }catch(e){}
+  }
+}
+function loadMonthStates(ym){
+  var token = ++monthLoadToken;
+  var info = monthInfo(ym);
+  var dates = [];
+  for(var d=1; d<=info.days; d++){
+    dates.push(info.y+'-'+String(info.m).padStart(2,'0')+'-'+String(d).padStart(2,'0'));
+  }
+  // mostra imediatamente o que já existir no localStorage
+  dates.forEach(function(date){
+    if(!monthStates[date]) monthStates[date] = getLocalDayState(date);
+  });
+  if(currentDate.slice(0,7)===ym) monthStates[currentDate] = state;
+  renderSheet();
+
+  if(!window.storage) return;
+  Promise.all(dates.map(function(date){
+    return window.storage.get(storageKey(date), false)
+      .then(function(res){ return [date, res && res.value ? parseStoredState(res.value) : monthStates[date] || {}]; })
+      .catch(function(){ return [date, monthStates[date] || {}]; });
+  })).then(function(items){
+    if(token !== monthLoadToken) return;
+    items.forEach(function(pair){ monthStates[pair[0]] = pair[1]; });
+    if(currentDate.slice(0,7)===ym) monthStates[currentDate] = state;
+    renderSheet();
+  });
+}
+var CONTACTS_KEY = 'presenca:contatos:v1';
+var contactsBase = {"502018": "21964669116", "2411551": "21989746304", "2613464": "75992388821", "2613840": "21965456339", "2613465": "71991196827", "2466695": "21981743665", "2457900": "21983341818", "2180394": "21986773238", "2503074": "21 98001-5647", "2111876": "21 98920 4068", "2415948": "21998597364", "265236": "22992855602", "1875241": "21985239067", "2462943": "21978174093", "2096185": "21981881071", "2405168": "21 97445-3012", "2613441": "21992617739", "2503267": "21973696505", "2615451": "21994503592", "2613764": "21969800428", "2564913": "21990036849", "2464181": "21968823396", "2500229": "(21)999681217", "2503268": "21960212117", "2202292": "21998825350", "2452467": "21969704134", "2405174": "21966255523", "2411554": "21983368926", "1967182": "21 99197-8079", "2613469": "21995217680", "2564847": "21969624459", "2613453": "21983404958", "2315963": "21976402982", "2542080": "21977147040", "2629218": "21969418878", "1902807": "21971127571", "2622029": "21990681677", "2132227": "21968245139", "2462935": "21995378344", "2111748": "21959149829", "1727533": "21973434586", "2411557": "21991657515", "2503265": "21999010237", "2040379": "21996811905", "2613459": "21976240234", "2613470": "21974964117", "2500368": "21981462286", "2142140": "21982889960", "2415951": "21998048612", "2315966": "21974623144", "50345": "21993867803", "2361025": "21974001219", "153234": "21994572791", "2500194": "21 96732-6334", "2462953": "21974627748", "2646820": "21990669498", "2613738": "21987222731", "2613837": "21968946708", "2120037": "21987550746", "2332315": "21968800611", "1964420": "21974252645", "2503263": "21994375583", "2432555": "21982221226", "2613829": "21991923850", "1773088": "21992641340", "2114436": "21982613626", "2415964": "21999171698", "2152960": "21979690655", "2613819": "21964614575", "2180396": "21976887869", "2556000": "21983772032", "2613444": "21992322297", "1729941": "21970323159", "953776": "21999506117", "2132324": "21960154066", "2613805": "21981459444", "2152160": "21966304616", "2303636": "21 989322744", "2615447": "21965743695", "2415978": "21987542179", "2541170": "21976745993", "2613742": "21959396580", "2462946": "21983182349", "2613799": "21 96950-0079", "2550382": "(21)974641860", "2542079": "21988260664", "1921710": "21994780221", "2646676": "21980496022", "1782237": "21977084784", "2195292": "21973363955", "2613841": "21982386686", "2613744": "75 991688770", "2613767": "21988746877", "2630464": "21965736614", "1312932": "21971972403", "2405384": "21975279997", "2160320": "21982026803", "2579647": "21982990226", "2564890": "21966875464", "2613834": "21986429648", "1926339": "21965187191", "1858520": "21980319071", "2613748": "21980996243", "2177221": "21 99297-8715", "2613833": "21997013856", "2613832": "21965290524", "2555924": "21992111717", "2613776": "21976274327", "2613759": "21971927503", "2474808": "21996547247", "2552983": "21965816882", "2555971": "21968481129", "2613788": "21981731953", "2364210": "21988290051", "2329964": "21987511482", "2413275": "21951001570", "2114438": "21970788236", "2411565": "21975218761", "2503277": "21979623712", "2613843": "21984044317", "2550414": "21968488897", "2613750": "21974114766", "2564929": "21975172796", "2613735": "21 965848527", "366639": "21981575773", "2613756": "21965606128", "2315970": "21 96813-9348", "2464094": "21966315232", "2613753": "21 99002-6684", "2202370": "21975029244", "2500203": "21992760796", "2503075": "21974639347", "2303635": "552000000000", "2503073": "21986625391", "2503266": "21971868877", "2613451": "21973017539", "2613445": "21972228412", "2613461": "21979981490", "2503275": "21975296310", "2613798": "51985325390", "333082": "21982614575", "2500268": "21979196292", "2613462": "21983149977", "2646655": "21988364010", "2315926": "21979686895", "2052361": "21 99097-0761 ou 21 98519-9794", "1967457": "21965254397", "2613807": "21965324971", "2500201": "21994111501", "2412983": "21979742709", "2177223": "21980949328", "2613813": "21969311339", "2613452": "21994598485", "437219": "21983228578", "2374589": "21976635695", "2462938": "21992816247", "2464182": "21959514743", "2155614": "21960175962", "2500196": "21992779481", "2109434": "21973583814", "2613733": "21988511221", "2115602": "21 98791-0472", "2613447": "21973992127", "2613755": "21971347736", "2613816": "21982766810", "2202430": "21975257600", "2550625": "21974221396", "2613463": "21969524013", "144496": "21964752978", "1886657": "21966478386", "2613793": "21969062479", "2500228": "21991157838", "2550354": "21979259680", "2214101": "21964965556", "2500225": "21985376699", "2462930": "21973570505", "2613826": "21992363871", "2564924": "21983104746", "2416010": "21982410789", "2613818": "21980995808", "2613831": "21998389005", "2416028": "21976762364", "2613802": "21977524255", "2503274": "21968844976", "2613835": "21991945291", "2202450": "21982709418", "2452468": "21966584941", "2550417": "21981260604", "2646658": "21969954731", "2613801": "14997511725", "2613828": "21983769908", "2256588": "21974661163", "2340930": "21990724100", "2303597": "21 987844377", "2503269": "21975287481", "2111743": "21974766538", "335409": "21 96888-8539", "2504319": "21990970442", "2500269": "21976367283", "2044261": "22988720823", "2613765": "21966672475", "2613442": "21985374438", "2613817": "21970832511", "2374587": "21982651674", "2315990": "21982566809", "2503063": "21970435983", "2303626": "21991206398", "2500200": "21995842742", "2646649": "21988799797", "2613796": "21981559355", "2613792": "21996908180", "2646651": "21983033485", "2556002": "21976750803", "2613458": "21981905040", "2211403": "21981698324", "2500177": "21965989821", "2114466": "21959046265", "2613754": "21969421229", "1791168": "21967127420", "2177225": "21996421127", "2550367": "21977047634", "2613787": "21994131571", "2329952": "21983667971", "1690680": "219 9044-1987", "1967544": "21 99280-8962", "2503262": "21974657617", "5487": "21987748694", "2339737": "21 980274278", "2117258": "21974663489", "2500195": "21976135113", "2550409": "21 9680-44054", "2613457": "21965302515", "2177211": "21985135098", "2613821": "21991853964", "2202498": "21970223869", "2550630": "21951007209", "2405393": "21974335707", "59782": "21973919351", "2613830": "21969718737", "2613804": "21977106201", "2464093": "21965452878", "1888863": "21971731026", "2413031": "21992363871", "1908859": "21986565649", "2613455": "21993217732", "2613770": "21976112972", "2315931": "21 98575-4160", "2452455": "22999576550", "2040364": "21987616794", "2413282": "21993841932", "2340663": "21968207653", "2500217": "21965878972", "2452473": "(21)997426627", "191212": "21970619313", "2613781": "21959266627", "2363948": "21965310371", "2613746": "21990036849", "2549064": "21969102661", "2339745": "21983385929", "2142235": "21969488096", "427668": "21984143108", "2202582": "21992141520", "2613763": "21966853377", "2613456": "21965738429", "2550375": "21980164588", "2503264": "21968076042", "2315986": "21964052838", "2613803": "21974655155", "2631595": "21988870206", "2202630": "21966996694", "2546014": "21993627433", "2613758": "21978995440", "2152171": "21968311666", "2125429": "21989838350", "2613783": "21993853081", "2303594": "21964019197", "2500202": "21973829020", "2452475": "21-988255593", "2184278": "21969483895", "139226": "21985369140", "1905593": "21974394638", "2416105": "21990000205", "2405405": "21994577928", "429696": "21968494842", "2503273": "21974980440", "2630402": "21983165510", "504003": "21965897198", "2613760": "21967425037", "2268567": "21978873796", "2503278": "21982324167", "2646833": "21968161756", "2613824": "21995541797", "550142": "21970318850", "2457911": "21976880347", "2382273": "21982443966", "2315994": "21981788322", "2613749": "21976714266", "413529": "21974089200", "337324": "21964334992", "1701964": "21998265972", "2303646": "21996745513", "1921715": "21 964846260", "2452442": "21981502101", "2613757": "21988832185", "2564842": "21990234980", "2405418": "21967285560", "2613743": "51984741698", "2202647": "21990370126", "2646643": "21995624401", "2646645": "21983202886", "2646646": "21969266485", "1791166": "21992183150", "2500226": "21970797514", "2550411": "21991199581", "2464179": "21969630985", "2564834": "21997344953", "2646661": "21990595071", "2646837": "21976974880", "2646839": "21988466334", "2646841": "21966576950", "2646843": "21998486936", "2646847": "21990766862", "2646851": "21977176900", "2646852": "21990550733", "2646853": "21966502570", "1967552": "21 990833975", "1888868": "21982984325", "2040392": "21968254656"};
+var contacts = Object.assign({}, contactsBase);
+try{
+  var savedContacts = JSON.parse(localStorage.getItem(CONTACTS_KEY) || '{}') || {};
+  contacts = Object.assign(contacts, savedContacts);
+}catch(e){}
+
+function saveContacts(){
+  try{ localStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts)); }catch(e){}
+}
+function cleanPhone(v){ return String(v||'').replace(/\D/g,''); }
+function whatsappPhone(v){
+  var p = cleanPhone(v);
+  if(!p) return '';
+  if(p.indexOf('55')===0 && p.length>=12) return p;
+  if(p.length===10 || p.length===11) return '55'+p;
+  return p;
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function formatDateBR(iso){
+  var a = String(iso).split('-');
+  return a.length===3 ? a[2]+'/'+a[1]+'/'+a[0] : iso;
+}
+
+function todayStr(){
+  var d = new Date();
+  var mm = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear()+'-'+mm+'-'+dd;
+}
+function nowTime(){
+  var d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function storageKey(date){ return 'presenca:'+date; }
+
+function loadState(date){
+  var hint = document.getElementById('savedhint');
+  hint.textContent = 'carregando…';
+  var localState = getLocalDayState(date);
+  if(!window.storage){
+    state = localState || {};
+    monthStates[date] = state;
+    hint.textContent = 'salvo neste navegador';
+    renderAll();
+    return;
+  }
+  window.storage.get(storageKey(date), false).then(function(res){
+    state = res && res.value ? parseStoredState(res.value) : (localState || {});
+    monthStates[date] = state;
+    try{ localStorage.setItem(storageKey(date), JSON.stringify(state)); }catch(e){}
+    hint.textContent = 'salvo neste navegador';
+    renderAll();
+  }).catch(function(){
+    state = localState || {};
+    monthStates[date] = state;
+    hint.textContent = Object.keys(state).length ? 'salvo neste navegador' : 'novo registro';
+    renderAll();
+  });
+}
+
+function saveState(){
+  var hint = document.getElementById('savedhint');
+  monthStates[currentDate] = state;
+  try{ localStorage.setItem(storageKey(currentDate), JSON.stringify(state)); }catch(e){}
+  if(!window.storage){
+    hint.textContent = 'salvo neste navegador';
+    return;
+  }
+  window.storage.set(storageKey(currentDate), JSON.stringify(state), false).then(function(res){
+    hint.textContent = res ? 'salvo neste navegador' : 'salvo localmente';
+  }).catch(function(){ hint.textContent = 'salvo localmente'; });
+}
+
+function setStatus(id, status, hora){
+  state[id] = {status: status, hora: hora || ''};
+  saveState();
+  renderAll();
+}
+
+function initials(nome){
+  var p = nome.trim().split(/\s+/);
+  return ((p[0]?p[0][0]:'') + (p.length>1?p[p.length-1][0]:'')).toUpperCase();
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab !== 'scan' && html5QrCode && html5QrCode.isScanning){
+      stopCamera();
+    }
+    if(btn.dataset.tab === 'qr' && !qrGenerated){
+      generateQrCodes();
+    }
+    if(btn.dataset.tab === 'scan'){
+      setTimeout(function(){ codeInput && codeInput.focus(); }, 50);
+    }
+    if(btn.dataset.tab === 'grupos' && typeof renderGroupsTable==='function'){
+      renderGroupsTable();
+    }
+    if(btn.dataset.tab === 'inativos' && typeof renderInactiveTable==='function'){
+      renderInactiveTable();
+    }
+    if(typeof renderAll==='function'){
+      // Isso também atualiza os cards do topo pra data certa: na Planilha,
+      // mostram a data em foco ali; nas outras abas, voltam pra data do
+      // campo "Data" (canto superior).
+      renderAll();
+    }
+  });
+});
+
+// ---------- Date ----------
+var datepick = document.getElementById('datepick');
+datepick.value = currentDate;
+datepick.addEventListener('change', function(){
+  currentDate = datepick.value || todayStr();
+  loadState(currentDate);
+  initDateSelectors();
+loadSpecificSheetDates();
+loadMonthStates(sheetMonthCursor);
+});
+
+// ---------- Camera scanning ----------
+var scanTickTimer = null;
+function flashScanTick(ok){
+  var tick = document.getElementById('scan-tick');
+  if(!tick) return;
+  var icon = document.getElementById('scan-tick-icon');
+  if(icon){
+    icon.innerHTML = ok
+      ? '<circle cx="26" cy="26" r="25"/><path d="M14 27l8 8 16-16"/>'
+      : '<circle cx="26" cy="26" r="25"/><path d="M16 16l20 20"/><path d="M36 16l-20 20"/>';
+  }
+  tick.classList.remove('show','error');
+  // força reflow pra reiniciar a animação mesmo em bipes seguidos rápidos
+  void tick.offsetWidth;
+  tick.classList.add('show');
+  if(!ok) tick.classList.add('error');
+  clearTimeout(scanTickTimer);
+  scanTickTimer = setTimeout(function(){ tick.classList.remove('show'); }, ok ? 700 : 900);
+}
+
+function onScanSuccess(decodedText){
+  var id = decodedText.trim();
+  var now = Date.now();
+  var emp = byId[id];
+  var confirmEl = document.getElementById('scan-confirm');
+  if(!emp){
+    flashScanTick(false);
+    if(lastScan.id === id && (now - lastScan.t) < 4000){ return; }
+    lastScan = {id:id, t:now};
+    confirmEl.style.display = 'block';
+    confirmEl.style.borderColor = 'var(--danger)';
+    confirmEl.style.background = '#faece9';
+    confirmEl.innerHTML = '<b style="color:var(--danger)">Codigo nao reconhecido:</b> '+id;
+    return;
+  }
+  // Mostra o "tick" verde toda vez que reconhece o crachá — mesmo em leituras
+  // repetidas rápidas — pra dar confirmação visual clara na câmera do celular.
+  flashScanTick(true);
+  if(lastScan.id === id && (now - lastScan.t) < 4000){ return; }
+  lastScan = {id:id, t:now};
+  var hora = nowTime();
+  setStatus(id, 'P', hora);
+  confirmEl.style.display = 'block';
+  confirmEl.style.borderColor = 'var(--success)';
+  confirmEl.style.background = '#eaf3ee';
+  confirmEl.innerHTML = '<b>'+emp.nome+'</b><br>'+emp.coordenador+' &middot; escala '+emp.turno+'<br>Presenca registrada as '+hora;
+  prependLog(emp, hora);
+}
+
+function prependLog(emp, hora){
+  var logEl = document.getElementById('scan-log');
+  if(logEl.dataset.empty){ logEl.innerHTML=''; delete logEl.dataset.empty; }
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)';
+  row.innerHTML = '<span class="badge b-P">P '+hora+'</span><span>'+emp.nome+'</span><span class="muted">'+emp.coordenador+'</span>';
+  logEl.prepend(row);
+}
+
+var codeReader = null;
+var cameraRunning = false;
+
+function startCamera(){
+  var confirmEl = document.getElementById('scan-confirm');
+  confirmEl.style.display = 'block';
+  confirmEl.style.background = '#f4f6f3';
+  confirmEl.innerHTML = '<b>Iniciando camera...</b><br>Aponte o codigo de barras na horizontal dentro do retangulo.';
+
+  if(!window.ZXing){
+    confirmEl.innerHTML = '<b style="color:var(--danger)">Leitor CODE 128 nao carregou.</b> Verifique a internet e recarregue a pagina.';
+    return;
+  }
+
+  try{
+    var hints = new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.QR_CODE
+    ]);
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    codeReader = new ZXing.BrowserMultiFormatReader(hints, 250);
+
+    codeReader.listVideoInputDevices().then(function(devices){
+      if(!devices || !devices.length){ throw new Error('Nenhuma camera encontrada'); }
+      var selectedId = null;
+      for(var i=0;i<devices.length;i++){
+        var label=(devices[i].label||'').toLowerCase();
+        if(label.includes('back') || label.includes('rear') || label.includes('traseira') || label.includes('environment')){
+          selectedId=devices[i].deviceId;
+          break;
+        }
+      }
+      if(!selectedId) selectedId=devices[devices.length-1].deviceId;
+
+      cameraRunning = true;
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-stop').disabled = false;
+      confirmEl.style.display='none';
+
+      return codeReader.decodeFromVideoDevice(selectedId, 'barcode-video', function(result, err){
+        if(result){
+          var text = String(result.getText ? result.getText() : result.text || '').trim();
+          if(text){ onScanSuccess(text); }
+        }
+      });
+    }).catch(function(err){
+      cameraRunning=false;
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+      confirmEl.style.display = 'block';
+      confirmEl.innerHTML = '<b style="color:var(--danger)">Nao foi possivel acessar a camera.</b> Abra pelo HTTPS no Chrome e permita a camera. ('+err+')';
+    });
+  }catch(err){
+    confirmEl.style.display='block';
+    confirmEl.innerHTML='<b style="color:var(--danger)">Erro ao iniciar leitor CODE 128.</b> '+err;
+  }
+}
+
+function stopCamera(){
+  cameraRunning=false;
+  if(codeReader){
+    try{ codeReader.reset(); }catch(e){}
+    codeReader=null;
+  }
+  var video=document.getElementById('barcode-video');
+  if(video && video.srcObject){
+    try{ video.srcObject.getTracks().forEach(function(t){t.stop();}); }catch(e){}
+    video.srcObject=null;
+  }
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').disabled = true;
+}
+safeOn('btn-start', 'click', startCamera);
+safeOn('btn-stop', 'click', stopCamera);
+
+// ---------- Leitor de codigo USB / manual ----------
+var codeInput = document.getElementById('code-input');
+codeInput.addEventListener('keydown', function(ev){
+  if(ev.key === 'Enter'){
+    ev.preventDefault();
+    var val = codeInput.value.trim();
+    codeInput.value = '';
+    if(val){ onScanSuccess(val); }
+  }
+});
+
+// Mostra um aviso no topo da tela (funciona em qualquer aba) quando o bipe
+// é lido fora da aba "Bater presença", já que ali não tem o card de
+// confirmação visível.
+function showGlobalScanToast(ok, msg){
+  var el = document.getElementById('global-scan-toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = ok ? 'ok show' : 'err show';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.remove('show'); }, ok ? 2200 : 2800);
+}
+
+// Bipes USB (leitor físico) se comportam como teclado: digitam os
+// caracteres do código muito rápido e terminam com Enter. Isso só
+// funcionava antes se o campo da aba "Bater presença" estivesse com foco.
+// Este listener global captura esse padrão em QUALQUER aba, então o bipe
+// sempre registra presença, esteja você na Planilha, Grupos etc.
+(function(){
+  var buffer = '';
+  var lastTime = 0;
+  var FAST_GAP_MS = 60; // teclado humano normal é bem mais lento que isso
+  document.addEventListener('keydown', function(ev){
+    // Se o foco já está no campo dedicado da aba de leitura, deixa o
+    // handler acima cuidar disso sozinho (evita processar 2x).
+    if(document.activeElement === codeInput) return;
+
+    var now = Date.now();
+    var gap = now - lastTime;
+    lastTime = now;
+
+    if(ev.key === 'Enter'){
+      if(buffer.length >= 3 && gap < FAST_GAP_MS){
+        var code = buffer.trim();
+        buffer = '';
+        ev.preventDefault();
+        var scanPanel = document.getElementById('panel-scan');
+        if(scanPanel && scanPanel.classList.contains('active')){
+          // Aba "Bater presença" está aberta (mas o campo perdeu o foco):
+          // usa o mesmo fluxo de sempre, com o card de confirmação e o log.
+          onScanSuccess(code);
+        } else {
+          var emp = byId[code];
+          if(emp){
+            var hora = nowTime();
+            setStatus(code, 'P', hora);
+            showGlobalScanToast(true, 'Presença registrada: '+emp.nome+' às '+hora);
+          } else {
+            showGlobalScanToast(false, 'Código não reconhecido: '+code);
+          }
+        }
+      } else {
+        buffer = '';
+      }
+      return;
+    }
+
+    if(ev.key.length === 1){
+      buffer = (gap < FAST_GAP_MS) ? (buffer + ev.key) : ev.key;
+    }
+  });
+})();
+
+// ---------- Sheet ----------
+var coordList = [], escalaList = [], horarioList = [];
+var coordSel = document.getElementById('sheet-coord');
+var selectedEscalas = new Set(); // vazio = todas as escalas
+var horarioSel = document.getElementById('sheet-horario');
+
+function rebuildFilterLists(){
+  // Recalcula as listas de filtro (coordenador/escala/horário) a partir do
+  // cadastro atual (ALL). Chamada de novo sempre que o cadastro mudar
+  // (aba Grupos, ou alguém virar inativo).
+  coordList = Array.from(new Set(ALL.filter(function(e){return e.coordenador;}).map(function(e){return e.coordenador;}))).sort();
+  coordSel.innerHTML = '<option value="">Todos os coordenadores</option>' + coordList.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join('');
+
+  escalaList = Array.from(new Set(ALL.filter(function(e){return e.escala;}).map(function(e){return e.escala;}))).sort();
+  selectedEscalas.clear();
+  var escList = document.getElementById('escala-filter-list');
+  escList.innerHTML = escalaList.map(function(esVal, i){
+    return '<label><input type="checkbox" data-escala-i="'+i+'"> '+esc(esVal)+'</label>';
+  }).join('');
+  escList.querySelectorAll('input[type=checkbox]').forEach(function(chk){
+    chk.addEventListener('change', function(){
+      var esVal = escalaList[Number(chk.dataset.escalaI)];
+      if(chk.checked) selectedEscalas.add(esVal); else selectedEscalas.delete(esVal);
+      updateEscalaBtnLabel();
+      renderSheet();
+    });
+  });
+  updateEscalaBtnLabel();
+
+  horarioList = Array.from(new Set(ALL.filter(function(e){return e.horario;}).map(function(e){return e.horario;}))).sort();
+  horarioSel.innerHTML = '<option value="">Todos os horários</option>' + horarioList.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join('');
+}
+
+function updateEscalaBtnLabel(){
+  var btn = document.getElementById('escala-filter-btn');
+  if(selectedEscalas.size===0){
+    btn.textContent = 'Todas as escalas';
+  }else if(selectedEscalas.size===1){
+    btn.textContent = escalaList.find(function(e){return selectedEscalas.has(e);});
+  }else{
+    btn.textContent = selectedEscalas.size+' escalas selecionadas';
+  }
+}
+
+(function(){
+  // Abrir/fechar o painel de escalas — montado uma única vez.
+  var btn = document.getElementById('escala-filter-btn');
+  var panel = document.getElementById('escala-filter-panel');
+  var selectAllBtn = document.getElementById('escala-select-all');
+  var clearBtn = document.getElementById('escala-clear');
+
+  selectAllBtn.addEventListener('click', function(){
+    escalaList.forEach(function(e){ selectedEscalas.add(e); });
+    document.querySelectorAll('#escala-filter-list input[type=checkbox]').forEach(function(chk){ chk.checked = true; });
+    updateEscalaBtnLabel();
+    renderSheet();
+  });
+  clearBtn.addEventListener('click', function(){
+    selectedEscalas.clear();
+    document.querySelectorAll('#escala-filter-list input[type=checkbox]').forEach(function(chk){ chk.checked = false; });
+    updateEscalaBtnLabel();
+    renderSheet();
+  });
+
+  btn.addEventListener('click', function(ev){
+    ev.stopPropagation();
+    panel.classList.toggle('open');
+  });
+  document.addEventListener('click', function(ev){
+    if(panel.classList.contains('open') && !panel.contains(ev.target) && ev.target!==btn){
+      panel.classList.remove('open');
+    }
+  });
+})();
+
+safeInit('listas de filtro (coordenador/escala)', rebuildFilterLists);
+
+var STATUS_OPTIONS = [
+  {v:'', label:'Sem registro'},
+  {v:'P', label:'Presença'},
+  {v:'FO', label:'Folga'},
+  {v:'AT', label:'Atraso'},
+  {v:'F', label:'Falta'},
+  {v:'ATEST', label:'Atestado'},
+  {v:'DEM', label:'Demissão'},
+  {v:'BH', label:'BH - Banco de horas'},
+  {v:'TF', label:'Troca de folga'},
+  {v:'FA', label:'Folga de aniversário'}
+];
+function applyStatusColor(sel){
+  sel.className = 'statusedit' + (sel.value ? ' status-'+sel.value : '');
+}
+
+function monthInfo(ym){
+  var p = ym.split('-');
+  var y = Number(p[0]), m = Number(p[1]);
+  return {y:y,m:m,days:new Date(y,m,0).getDate()};
+}
+function shiftMonth(delta){
+  var p = sheetMonthCursor.split('-');
+  var d = new Date(Number(p[0]), Number(p[1])-1+delta, 1);
+  sheetMonthCursor = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  loadMonthStates(sheetMonthCursor);
+}
+function renderDateTabs(){
+  var box = document.getElementById('sheet-date-tabs');
+  var label = document.getElementById('sheet-month-label');
+  if(!box || !label) return;
+  var info = monthInfo(sheetMonthCursor);
+  var monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  label.textContent = monthNames[info.m-1]+' '+info.y;
+  var today = todayStr();
+  var dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  var parts = [];
+  for(var d=1; d<=info.days; d++){
+    var iso = info.y+'-'+String(info.m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var dow = dayNames[new Date(info.y,info.m-1,d).getDay()];
+    parts.push('<button type="button" class="date-tab'+(iso===currentDate?' active':'')+(iso===today?' today':'')+'" data-date="'+iso+'">'+dow+'<span>'+String(d).padStart(2,'0')+'</span></button>');
+  }
+  box.innerHTML = parts.join('');
+  box.querySelectorAll('.date-tab').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      currentDate = btn.dataset.date;
+      datepick.value = currentDate;
+      sheetMonthCursor = currentDate.slice(0,7);
+      loadState(currentDate);
+      loadMonthStates(sheetMonthCursor);
+    });
+  });
+  var active = box.querySelector('.date-tab.active');
+  if(active){ setTimeout(function(){ active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); },0); }
+}
+var prevMonthBtn = document.getElementById('sheet-prev-month');
+var nextMonthBtn = document.getElementById('sheet-next-month');
+if(prevMonthBtn) prevMonthBtn.addEventListener('click', function(){ shiftMonth(-1); });
+if(nextMonthBtn) nextMonthBtn.addEventListener('click', function(){ shiftMonth(1); });
+
+function firstName(nome){
+  var p = String(nome||'').trim().split(/\s+/);
+  return p[0] || '';
+}
+
+function openWhatsApp(emp){
+  var phone = whatsappPhone(contacts[emp.id] || '');
+  if(!phone){
+    alert('Cadastre o contato deste colaborador primeiro.');
+    return;
+  }
+  var msg = 'Olá, '+firstName(emp.nome)+', tudo bem? Aqui é da operação KN.\n'+
+    'Notamos a sua ausência no expediente de hoje e gostaríamos de saber se está tudo bem com você.\n'+
+    'Por favor, assim que puder, entre em contato conosco para nos dar um retorno e, caso tenha ocorrido algum imprevisto, lembre-se de nos enviar o comprovante ou atestado médico correspondente.\n'+
+    'Ficamos no aguardo!';
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg), '_blank', 'noopener');
+}
+
+function shortStatusOptions(selected){
+  var labels = {'':'—','P':'P','FO':'FO','AT':'AT','F':'F','DEM':'DEM','BH':'BH','TF':'TF','FA':'FA'};
+  return STATUS_OPTIONS.map(function(opt){
+    return '<option value="'+opt.v+'"'+(selected===opt.v?' selected':'')+'>'+labels[opt.v]+'</option>';
+  }).join('');
+}
+
+function monthDates(ym){
+  var info = monthInfo(ym), arr = [];
+  for(var d=1; d<=info.days; d++){
+    arr.push(info.y+'-'+String(info.m).padStart(2,'0')+'-'+String(d).padStart(2,'0'));
+  }
+  return arr;
+}
+
+function statusShort(v){
+  return ({'':'—','P':'P','FO':'FO','AT':'AT','F':'F','ATEST':'ATEST','DEM':'DEM','BH':'BH','TF':'TF','FA':'FA'})[v] || '—';
+}
+function filteredEmployees(){
+  var search = document.getElementById('sheet-search').value.trim().toLowerCase();
+  var coordFilter = coordSel.value;
+  var horarioFilter = horarioSel.value;
+  return ALL.filter(function(e){
+    var phone = contacts[e.id] || '';
+    var matchSearch = !search || e.nome.toLowerCase().indexOf(search)>-1 || e.id.indexOf(search)>-1 || phone.indexOf(search)>-1;
+    var matchCoord = !coordFilter || e.coordenador===coordFilter;
+    var matchEscala = selectedEscalas.size===0 || selectedEscalas.has(e.escala);
+    var matchHorario = !horarioFilter || e.horario===horarioFilter;
+    return matchSearch && matchCoord && matchEscala && matchHorario;
+  });
+}
+
+var statusPopoverTarget = null;
+function closeStatusPopover(){
+  var pop = document.getElementById('status-popover');
+  if(pop) pop.style.display='none';
+  statusPopoverTarget = null;
+}
+function openStatusPopover(btn){
+  var pop = document.getElementById('status-popover');
+  if(!pop) return;
+  statusPopoverTarget = btn;
+  pop.innerHTML = STATUS_OPTIONS.map(function(opt){
+    return '<button type="button" data-v="'+opt.v+'">'+(opt.label||'Sem registro')+'</button>';
+  }).join('');
+  var r = btn.getBoundingClientRect();
+  pop.style.left = Math.min(window.innerWidth-195, Math.max(8, r.left))+'px';
+  pop.style.top = Math.min(window.innerHeight-330, r.bottom+4)+'px';
+  pop.style.display='block';
+  pop.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click', function(){
+      if(!statusPopoverTarget) return;
+      var id = statusPopoverTarget.dataset.id;
+      var date = statusPopoverTarget.dataset.day;
+      var val = b.dataset.v;
+      statusPopoverTarget.dataset.status = val;
+      statusPopoverTarget.textContent = statusShort(val);
+      closeStatusPopover();
+      applyDayStatus(id, date, val);
+    });
+  });
+}
+
+// Aplica um status (id + data) e cuida da contagem de "Demissão".
+// Marcar DEM em 3 datas diferentes pra mesma pessoa move ela automaticamente
+// pra aba Inativos (some da Planilha e da aba Grupos).
+function applyDayStatus(id, date, val){
+  var ds = monthStates[date] || {};
+  var old = ds[id] || {status:'',hora:''};
+  ds[id] = {status:val, hora:val==='P' ? (old.hora || nowTime()) : ''};
+  monthStates[date] = ds;
+  saveDayState(date, ds);
+  if(date===currentDate) state = ds;
+
+  if(val==='DEM'){
+    var list = demRecords[id] || [];
+    if(list.indexOf(date)===-1){ list = list.concat([date]); demRecords[id] = list; saveDemRecords(); }
+    if(list.length>=3 && byId[id]){
+      moveToInactive(id, list);
+      return; // moveToInactive já faz um refresh completo
+    }
+  }
+  // Atualização leve: só os cards do topo (a linha da planilha já foi
+  // atualizada na hora, direto no botão que foi clicado).
+  updateStatsCards();
+}
+
+function moveToInactive(id, demDates){
+  var emp = byId[id];
+  if(!emp) return;
+  ALL = ALL.filter(function(e){ return e.id!==id; });
+  INACTIVE = INACTIVE.filter(function(e){ return e.id!==id; }); // evita duplicar
+  var record = Object.assign({}, emp, {demDates: demDates, inactivatedAt: todayStr()});
+  INACTIVE.push(record);
+  rebuildById();
+  saveRoster();
+  saveInactiveList();
+  rebuildFilterLists();
+  generateBarcodes();
+  qrGenerated = false;
+  generateSelectedCodes();
+  renderAll();
+  renderGroupsTable();
+  renderInactiveTable();
+}
+
+function reactivateEmployee(id){
+  var idx = INACTIVE.findIndex(function(e){ return e.id===id; });
+  if(idx===-1) return;
+  var rec = Object.assign({}, INACTIVE[idx]);
+  delete rec.demDates;
+  delete rec.inactivatedAt;
+  INACTIVE.splice(idx,1);
+  ALL.push(rec);
+  rebuildById();
+  delete demRecords[id];
+  saveRoster();
+  saveInactiveList();
+  saveDemRecords();
+  rebuildFilterLists();
+  generateBarcodes();
+  qrGenerated = false;
+  generateSelectedCodes();
+  renderAll();
+  renderGroupsTable();
+  renderInactiveTable();
+}
+
+// Fecha o popover de status ao tocar/clicar fora dele, rolar a tela ou trocar de aba.
+// Sem isso, o popover ficava aberto e "roubava" o toque em qualquer botão embaixo dele.
+document.addEventListener('click', function(ev){
+  var pop = document.getElementById('status-popover');
+  if(!pop || pop.style.display==='none' || !statusPopoverTarget) return;
+  if(ev.target===statusPopoverTarget || pop.contains(ev.target)) return;
+  closeStatusPopover();
+}, true);
+document.addEventListener('keydown', function(ev){
+  if(ev.key==='Escape') closeStatusPopover();
+});
+document.addEventListener('scroll', function(){ closeStatusPopover(); }, true);
+
+var selectedSheetDates = ['2026-09-01','2026-09-02'];
+
+function availableSheetDates(){
+  var fixedStart = new Date(2026,8,1); // 01/09/2026
+  var todayD = new Date(); todayD.setHours(0,0,0,0);
+  // se hoje for antes de 01/09/2026 (ex: testes), a janela passa a começar
+  // no dia 1 do mês atual, garantindo que a data de hoje sempre apareça
+  var start = todayD < fixedStart ? new Date(todayD.getFullYear(), todayD.getMonth(), 1) : fixedStart;
+  var end = new Date(2026,11,31); // allow future navigation through Dec 2026
+  var arr = [];
+  for(var d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
+    arr.push(
+      d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')
+    );
+  }
+  return arr;
+}
+
+function updateVisibleDateLabels(){
+  var l1 = document.getElementById('date-label-1');
+  var l2 = document.getElementById('date-label-2');
+  if(l1) l1.textContent = formatDateBR(selectedSheetDates[0]);
+  if(l2) l2.textContent = formatDateBR(selectedSheetDates[1]);
+
+  var filter = document.getElementById('sheet-date-filter');
+  var filterLabel = document.getElementById('sheet-date-filter-label');
+  if(filter) filter.value = selectedSheetDates[0];
+  if(filterLabel){
+    filterLabel.textContent = 'Consultando: ' + formatDateBR(selectedSheetDates[0]);
+  }
+}
+
+function initDateSelectors(){
+  var dates = availableSheetDates();
+  var s1 = document.getElementById('date-select-1');
+  var s2 = document.getElementById('date-select-2');
+  if(!s1 || !s2) return;
+
+  // If today is in the supported range, show today and next day.
+  var today = todayStr();
+  var todayIdx = dates.indexOf(today);
+  if(todayIdx >= 0){
+    selectedSheetDates[0] = today;
+    selectedSheetDates[1] = dates[Math.min(todayIdx+1, dates.length-1)];
+  }
+
+  var opts = dates.map(function(date){
+    return '<option value="'+date+'">'+formatDateBR(date)+'</option>';
+  }).join('');
+  s1.innerHTML = opts;
+  s2.innerHTML = opts;
+  s1.value = selectedSheetDates[0];
+  s2.value = selectedSheetDates[1];
+  updateVisibleDateLabels();
+
+  s1.addEventListener('change', function(){
+    selectedSheetDates[0] = s1.value;
+    updateVisibleDateLabels();
+    loadSpecificSheetDates();
+  });
+  s2.addEventListener('change', function(){
+    selectedSheetDates[1] = s2.value;
+    updateVisibleDateLabels();
+    loadSpecificSheetDates();
+  });
+}
+
+function loadSpecificSheetDates(){
+  var dates = selectedSheetDates.slice();
+  dates.forEach(function(date){
+    if(!monthStates[date]) monthStates[date] = getLocalDayState(date);
+  });
+  if(!window.storage){
+    renderAll();
+    return;
+  }
+  Promise.all(dates.map(function(date){
+    return window.storage.get(storageKey(date), false)
+      .then(function(res){
+        return [date, res && res.value ? parseStoredState(res.value) : (monthStates[date] || {})];
+      })
+      .catch(function(){ return [date, monthStates[date] || {}]; });
+  })).then(function(items){
+    items.forEach(function(pair){ monthStates[pair[0]] = pair[1]; });
+    renderAll();
+  });
+}
+
+function rowMatchesStatusFilter(emp){
+  var filterEl = document.getElementById('sheet-status-filter');
+  var filter = filterEl ? filterEl.value : '';
+  if(!filter) return true;
+
+  var sts = selectedSheetDates.map(function(date){
+    var ds = monthStates[date] || {};
+    return (ds[emp.id] && ds[emp.id].status) ? ds[emp.id].status : '';
+  });
+
+  if(filter === 'EMPTY') return sts.some(function(v){ return !v; });
+  if(filter === 'F_ATEST') return sts.some(function(v){ return v === 'F' || v === 'ATEST'; });
+  return sts.some(function(v){ return v === filter; });
+}
+
+var sheetNeedsRender = false;
+function renderSheet(){
+  // A planilha tem centenas de linhas; só vale a pena redesenhá-la
+  // quando a aba "Planilha" está de fato visível. Isso evita travar o
+  // app (ex.: durante leituras rápidas de crachá) redesenhando uma
+  // tabela grande que o usuário nem está vendo.
+  var panel = document.getElementById('panel-sheet');
+  if(!panel || !panel.classList.contains('active')){
+    sheetNeedsRender = true;
+    return;
+  }
+  sheetNeedsRender = false;
+  updateVisibleDateLabels();
+  var dates = selectedSheetDates.slice();
+  var rows = filteredEmployees().filter(rowMatchesStatusFilter);
+  var body = document.getElementById('sheet-body');
+  if(!body) return;
+
+  var today = todayStr();
+  var h1 = document.getElementById('date-head-1');
+  var h2 = document.getElementById('date-head-2');
+  if(h1) h1.className = 'date-head'+(dates[0]===today?' today-date':'');
+  if(h2) h2.className = 'date-head'+(dates[1]===today?' today-date':'');
+
+  body.innerHTML = rows.map(function(e){
+    var phone = contacts[e.id] || '';
+    var canWhats = !!cleanPhone(phone);
+    var dateCells = dates.map(function(date){
+      var ds = monthStates[date] || {};
+      if(date===currentDate) ds = state;
+      var rec = ds[e.id] || {status:''};
+      return '<td class="status-cell'+(date===today?' today-date':'')+'"><button type="button" class="status-chip" data-id="'+esc(e.id)+'" data-day="'+date+'" data-status="'+esc(rec.status||'')+'">'+statusShort(rec.status||'')+'</button></td>';
+    }).join('');
+    return '<tr>'+
+      '<td class="col-id">'+esc(e.id)+'</td>'+
+      '<td class="col-nome" title="'+esc(e.nome)+'">'+esc(e.nome)+'</td>'+
+      '<td class="col-contato"><input class="contact-input" type="tel" inputmode="tel" data-contact-id="'+esc(e.id)+'" value="'+esc(phone)+'" placeholder="(21) 99999-9999"></td>'+
+      '<td class="col-whats"><button type="button" class="whatsapp-btn" data-whats-id="'+esc(e.id)+'" '+(canWhats?'':'disabled')+' title="WhatsApp" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.44 9.9-9.9 0-2.64-1.03-5.12-2.9-6.99A9.82 9.82 0 0 0 12.04 2zm5.8 14.14c-.24.68-1.4 1.32-1.93 1.4-.5.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.85-1.23-4.71-4.1-4.85-4.29-.14-.19-1.16-1.55-1.16-2.95 0-1.4.73-2.09 1-2.38.26-.28.57-.35.76-.35h.55c.18 0 .42-.07.65.5.24.58.81 2 .88 2.14.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.16-.29.36-.42.49-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.44.12.61-.07.16-.19.7-.81.89-1.09.19-.28.37-.23.62-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.68-.17 1.36z"/></svg></button></td>'+
+      '<td class="col-coord" title="'+esc(e.coordenador)+'">'+esc(e.coordenador)+'</td>'+
+      '<td class="col-escala" title="'+esc(e.escala)+'">'+esc(e.escala)+'</td>'+
+      '<td class="col-horario">'+esc(e.horario)+'</td>'+
+      dateCells+
+      '</tr>';
+  }).join('');
+
+  body.querySelectorAll('.contact-input').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var id = inp.dataset.contactId;
+      var val = inp.value.trim();
+      if(val) contacts[id]=val; else delete contacts[id];
+      saveContacts();
+      renderSheet();
+    });
+  });
+
+  body.querySelectorAll('.whatsapp-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var emp = byId[btn.dataset.whatsId];
+      if(emp) openWhatsApp(emp);
+    });
+  });
+
+  body.querySelectorAll('.status-chip').forEach(function(btn){
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      openStatusPopover(btn);
+    });
+  });
+
+  adjustSheetColumnWidths();
+}
+
+// Quando sobra espaço em branco depois da última coluna de data (tela
+// larga), aproveita esse espaço alargando a coluna Nome — em vez de
+// deixar um vão vazio à direita e continuar cortando nomes compridos.
+var SHEET_BASE_NOME_WIDTH = 172;
+var SHEET_OTHER_COLS_SUM = 62+132+40+150+220+64+86+86; // tudo menos o Nome
+function adjustSheetColumnWidths(){
+  var scrollEl = document.getElementById('sheet-scroll');
+  var table = document.querySelector('#panel-sheet .sheet-table');
+  if(!scrollEl || !table) return;
+  var available = scrollEl.clientWidth;
+  var nomeWidth = Math.max(SHEET_BASE_NOME_WIDTH, available - SHEET_OTHER_COLS_SUM);
+  nomeWidth = Math.min(nomeWidth, 420); // não deixa ficar absurdamente largo em telas gigantes
+  table.style.setProperty('--nome-w', Math.round(nomeWidth)+'px');
+  table.style.width = Math.round(SHEET_OTHER_COLS_SUM + nomeWidth)+'px';
+}
+window.addEventListener('resize', function(){
+  clearTimeout(window._sheetResizeTimer);
+  window._sheetResizeTimer = setTimeout(adjustSheetColumnWidths, 150);
+});
+(function(){
+  var searchTimer = null;
+  document.getElementById('sheet-search').addEventListener('input', function(){
+    // Pequeno atraso pra não redesenhar centenas de linhas a cada tecla digitada.
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(renderSheet, 150);
+  });
+})();
+coordSel.addEventListener('change', renderSheet);
+horarioSel.addEventListener('change', renderSheet);
+var sheetStatusFilter = document.getElementById('sheet-status-filter');
+if(sheetStatusFilter) sheetStatusFilter.addEventListener('change', renderSheet);
+
+var sheetDateFilter = document.getElementById('sheet-date-filter');
+var sheetDateTodayBtn = document.getElementById('sheet-date-today');
+
+function isoNextDay(iso){
+  var p = iso.split('-');
+  var d = new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+  d.setDate(d.getDate()+1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function showDateInPresenceTable(iso){
+  if(!iso) return;
+  selectedSheetDates[0] = iso;
+  selectedSheetDates[1] = isoNextDay(iso);
+
+  var s1 = document.getElementById('date-select-1');
+  var s2 = document.getElementById('date-select-2');
+
+  // If selected date is beyond existing dropdown options, append it.
+  [ [s1,selectedSheetDates[0]], [s2,selectedSheetDates[1]] ].forEach(function(pair){
+    var sel = pair[0], date = pair[1];
+    if(!sel) return;
+    var exists = Array.from(sel.options).some(function(o){ return o.value===date; });
+    if(!exists){
+      var opt = document.createElement('option');
+      opt.value = date;
+      opt.textContent = formatDateBR(date);
+      sel.appendChild(opt);
+    }
+    sel.value = date;
+  });
+
+  updateVisibleDateLabels();
+  loadSpecificSheetDates();
+}
+
+if(sheetDateFilter){
+  if(!sheetDateFilter.value) sheetDateFilter.value = selectedSheetDates[0];
+  sheetDateFilter.addEventListener('change', function(){
+    showDateInPresenceTable(sheetDateFilter.value);
+  });
+}
+if(sheetDateTodayBtn){
+  sheetDateTodayBtn.addEventListener('click', function(){
+    var t = todayStr();
+    if(sheetDateFilter) sheetDateFilter.value = t;
+    showDateInPresenceTable(t);
+  });
+}
+
+
+safeOn('btn-export', 'click', function(){
+  var lines = ['ID,Nome,Contato,Coordenador,Escala,Horario,Status,Hora,Data'];
+  ALL.forEach(function(e){
+    var rec = state[e.id] || {status:'', hora:''};
+    var vals = [
+      e.id, e.nome, contacts[e.id]||'', e.coordenador, e.turno, e.horario, rec.status, rec.hora, currentDate
+    ].map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; });
+    lines.push(vals.join(','));
+  });
+  var blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'presenca_'+currentDate+'.csv';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+});
+
+loadMonthStates(sheetMonthCursor);
+
+// ---------- QR / Código de barras ----------
+function generateQrCodes(){
+  qrGenerated = true;
+  var grid = document.getElementById('qr-grid');
+  grid.innerHTML = '';
+
+  if(typeof QRCode === 'undefined'){
+    grid.innerHTML = '<p class="muted">Não foi possível carregar a biblioteca de QR Code agora (sem conexão?). O resto do app continua funcionando normalmente — tente de novo mais tarde ou recarregue a página.</p>';
+    return;
+  }
+
+  ALL.forEach(function(e){
+    try{
+      var card = document.createElement('div');
+      card.className = 'qrcard';
+      card.dataset.name = (e.nome||'').toLowerCase();
+      card.dataset.id = e.id;
+
+      var qrDiv = document.createElement('div');
+      card.appendChild(qrDiv);
+
+      var idLabel = document.createElement('p');
+      idLabel.textContent = e.id;
+      card.appendChild(idLabel);
+
+      grid.appendChild(card);
+
+      new QRCode(qrDiv, {
+        text: String(e.id||''),
+        width: 110,
+        height: 110,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }catch(err){
+      console.error('[KN] falha ao gerar QR de', e && e.id, err);
+    }
+  });
+
+  applyCodeFilter();
+}
+
+function generateBarcodes(){
+  var grid = document.getElementById('barcode-grid');
+  grid.innerHTML = '';
+
+  if(typeof JsBarcode === 'undefined'){
+    grid.innerHTML = '<p class="muted">Não foi possível carregar a biblioteca de código de barras agora (sem conexão?). O resto do app continua funcionando normalmente — tente de novo mais tarde ou recarregue a página.</p>';
+    return;
+  }
+
+  ALL.forEach(function(e){
+    try{
+      if(!e || !e.id) return;
+      var card = document.createElement('div');
+      card.className = 'barcodecard';
+      card.dataset.name = (e.nome||'').toLowerCase();
+      card.dataset.id = e.id;
+
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      card.appendChild(svg);
+
+      var idLabel = document.createElement('div');
+      idLabel.className = 'barcode-id';
+      idLabel.textContent = e.id;
+      card.appendChild(idLabel);
+
+      grid.appendChild(card);
+
+      JsBarcode(svg, String(e.id), {
+        format: 'CODE128',
+        displayValue: false,
+        width: 1.25,
+        height: 34,
+        margin: 1,
+        background: '#ffffff',
+        lineColor: '#000000'
+      });
+    }catch(err){
+      console.error('[KN] falha ao gerar código de barras de', e && e.id, err);
+    }
+  });
+
+  applyCodeFilter();
+}
+
+function applyCodeFilter(){
+  var q = document.getElementById('qr-search').value.trim().toLowerCase();
+  document.querySelectorAll('.qrcard, .barcodecard').forEach(function(c){
+    var show = !q || c.dataset.name.indexOf(q)>-1 || c.dataset.id.indexOf(q)>-1;
+    c.style.display = show ? '' : 'none';
+  });
+}
+
+function selectedCodeType(){
+  return document.getElementById('code-type').value;
+}
+
+function updateCodeView(){
+  var type = selectedCodeType();
+  document.getElementById('barcode-view').style.display = type==='barcode' ? '' : 'none';
+  document.getElementById('qr-view').style.display = type==='qr' ? '' : 'none';
+
+  var hint = document.getElementById('code-hint');
+  hint.textContent = type==='barcode'
+    ? 'Código de barras CODE 128 · somente ID/Groot ID.'
+    : 'QR Code · somente ID/Groot ID.';
+}
+
+function generateSelectedCodes(){
+  var type = selectedCodeType();
+
+  if(type==='barcode'){
+    generateBarcodes();
+    document.getElementById('code-hint').textContent =
+      ALL.length+' códigos de barras gerados · somente ID/Groot ID.';
+  }else{
+    generateQrCodes();
+    document.getElementById('code-hint').textContent =
+      ALL.length+' QR Codes gerados · somente ID/Groot ID.';
+  }
+
+  updateCodeView();
+}
+
+function buildCustomPrintCss(type, wMM, hMM){
+  // Gera o CSS de impressão pro tamanho digitado pelo usuário (em mm),
+  // seguindo o mesmo padrão dos tamanhos prontos (pequeno/médio/grande).
+  var gap = 2, marginPad = 1.5;
+  if(type==='barcode'){
+    var cardW = wMM, cardH = hMM;
+    var svgW = Math.max(4, cardW - marginPad*2);
+    var svgH = Math.max(3, cardH - 5);
+    var cols = Math.max(1, Math.floor(180/(cardW+gap)));
+    return '@media print{'+
+      '#printarea .print-barcode.print-custom .barcodegrid{grid-template-columns:repeat('+cols+','+cardW+'mm) !important;gap:'+gap+'mm !important}'+
+      '#printarea .print-barcode.print-custom .barcodecard{width:'+cardW+'mm;height:'+cardH+'mm;min-height:'+cardH+'mm;padding:'+marginPad+'mm}'+
+      '#printarea .print-barcode.print-custom .barcodecard svg{width:'+svgW+'mm !important;height:'+svgH+'mm !important}'+
+      '#printarea .print-barcode.print-custom .barcode-id{font-size:7pt}'+
+    '}';
+  }
+  var side = wMM;
+  var cardW = side + marginPad*2;
+  var cardMinH = side + 11;
+  var imgSide = side;
+  var cols = Math.max(1, Math.floor(180/(cardW+gap)));
+  return '@media print{'+
+    '#printarea .print-qr.print-custom .qrgrid{grid-template-columns:repeat('+cols+','+cardW+'mm) !important;gap:'+gap+'mm !important}'+
+    '#printarea .print-qr.print-custom .qrcard{width:'+cardW+'mm;min-height:'+cardMinH+'mm;padding:'+marginPad+'mm}'+
+    '#printarea .print-qr.print-custom .qrcard img,#printarea .print-qr.print-custom .qrcard canvas{width:'+imgSide+'mm !important;height:'+imgSide+'mm !important}'+
+  '}';
+}
+
+function printSelectedCodes(){
+  var type = selectedCodeType();
+  var size = document.getElementById('print-size').value;
+
+  if(type==='barcode' && !document.getElementById('barcode-grid').children.length){
+    generateBarcodes();
+  }
+  if(type==='qr' && !document.getElementById('qr-grid').children.length){
+    generateQrCodes();
+  }
+
+  var source = type==='barcode'
+    ? document.getElementById('barcode-grid')
+    : document.getElementById('qr-grid');
+
+  var printarea = document.getElementById('printarea');
+  var customStyle = '';
+  if(size==='custom'){
+    var wMM = Math.max(1, Number(document.getElementById('custom-size-w').value) || (type==='qr'?35:35));
+    var hMM = Math.max(1, Number(document.getElementById('custom-size-h').value) || 14);
+    customStyle = '<style>'+buildCustomPrintCss(type, wMM, hMM)+'</style>';
+  }
+  printarea.innerHTML = customStyle +
+    '<div class="print-'+type+' print-'+size+'">'+source.outerHTML+'</div>';
+
+  window.print();
+}
+
+function updateCustomSizeFields(){
+  var type = selectedCodeType();
+  var size = document.getElementById('print-size').value;
+  var wWrap = document.getElementById('custom-size-w-wrap');
+  var hWrap = document.getElementById('custom-size-h-wrap');
+  var isCustom = size==='custom';
+  wWrap.style.display = isCustom ? '' : 'none';
+  hWrap.style.display = (isCustom && type==='barcode') ? '' : 'none';
+  document.getElementById('custom-size-w-label').textContent = type==='qr' ? 'Tamanho do QR (mm)' : 'Largura (mm)';
+}
+
+safeOn('print-size', 'change', updateCustomSizeFields);
+
+safeOn('code-type', 'change', function(){
+  updateCodeView();
+  updateCustomSizeFields();
+  generateSelectedCodes();
+});
+
+safeOn('btn-generate-code', 'click', generateSelectedCodes);
+safeOn('btn-print-code', 'click', printSelectedCodes);
+safeOn('qr-search', 'input', applyCodeFilter);
+
+safeInit('view de código', updateCodeView);
+safeInit('campos de tamanho personalizado', updateCustomSizeFields);
+safeInit('geração de códigos', generateSelectedCodes);
+
+// ---------- Importar planilha (Excel/CSV) ----------
+var VALID_IMPORT_STATUSES = ['P','FO','AT','F','ATEST','DEM','BH','TF','FA'];
+
+function excelDateToISO(v){
+  // Aceita: número de série do Excel, ou texto "dd/mm/aaaa" / "dd-mm-aaaa" / "aaaa-mm-dd".
+  if(v==null || v==='') return null;
+  if(typeof v === 'number'){
+    if(typeof XLSX !== 'undefined' && XLSX.SSF && XLSX.SSF.parse_date_code){
+      var d = XLSX.SSF.parse_date_code(v);
+      if(d && d.y) return d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');
+    }
+    return null;
+  }
+  var s = String(v).trim();
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m){ return m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m){ return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0'); }
+  return null;
+}
+
+function parseSheetRows(rows){
+  // rows: array de arrays (linha 0 = cabeçalho). Detecta a coluna do ID e
+  // todas as colunas cujo cabeçalho seja uma data — o resto é ignorado.
+  var errors = [];
+  if(!rows.length){ return {byDate:{}, errors:['Planilha vazia.'], countRows:0, countCells:0}; }
+  var header = rows[0];
+  var idCol = -1;
+  header.forEach(function(h, i){
+    if(idCol<0 && String(h||'').trim().toLowerCase()==='id') idCol = i;
+  });
+  if(idCol<0) idCol = 0; // se não achar coluna "ID" pelo nome, assume a primeira
+
+  var dateCols = [];
+  header.forEach(function(h, i){
+    if(i===idCol) return;
+    var iso = excelDateToISO(h);
+    if(iso) dateCols.push({i:i, iso:iso});
+  });
+  if(!dateCols.length){
+    errors.push('Não encontrei nenhuma coluna de data no cabeçalho da planilha.');
+  }
+
+  var byDate = {};
+  var countCells = 0, countRows = 0;
+  for(var r=1; r<rows.length; r++){
+    var row = rows[r];
+    if(!row || !row.length) continue;
+    var id = String(row[idCol]==null ? '' : row[idCol]).trim();
+    if(!id) continue;
+    if(!byId[id]){
+      errors.push('Linha '+(r+1)+': ID não encontrado no cadastro ("'+id+'")');
+      continue;
+    }
+    countRows++;
+    dateCols.forEach(function(dc){
+      var raw = row[dc.i];
+      var val = String(raw==null ? '' : raw).trim().toUpperCase();
+      if(!val || val==='-' || val==='—') return;
+      if(VALID_IMPORT_STATUSES.indexOf(val)===-1) return;
+      if(!byDate[dc.iso]) byDate[dc.iso] = {};
+      byDate[dc.iso][id] = {status:val, hora: val==='P' ? nowTime() : ''};
+      countCells++;
+    });
+  }
+  return {byDate:byDate, errors:errors, countRows:countRows, countCells:countCells};
+}
+
+function runFileImport(file){
+  var statusEl = document.getElementById('import-file-status');
+  var logEl = document.getElementById('import-file-log');
+  logEl.style.display = 'none';
+  logEl.innerHTML = '';
+  statusEl.textContent = 'Lendo arquivo…';
+
+  var reader = new FileReader();
+  reader.onerror = function(){
+    statusEl.textContent = 'Não consegui ler o arquivo.';
+  };
+  reader.onload = function(ev){
+    if(typeof XLSX === 'undefined'){
+      statusEl.textContent = 'Biblioteca de planilha não carregou (sem conexão?). Recarregue a página e tente de novo.';
+      return;
+    }
+    var result;
+    try{
+      var wb = XLSX.read(ev.target.result, {type:'array', cellDates:false});
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true, defval:''});
+      result = parseSheetRows(rows);
+    }catch(err){
+      statusEl.textContent = 'Não consegui ler essa planilha. Confira o formato e tente novamente.';
+      return;
+    }
+
+    var dateKeys = Object.keys(result.byDate);
+    if(!dateKeys.length){
+      statusEl.textContent = 'Nada para importar.';
+      logEl.style.display = 'block';
+      logEl.innerHTML = (result.errors.map(function(e){return '<div>'+e+'</div>';}).join('')) ||
+        '<div>Não encontrei status reconhecidos (P, FO, AT, F, ATEST, DEM, BH, TF, FA) nas células.</div>';
+      return;
+    }
+    if(!window.storage){
+      statusEl.textContent = 'Armazenamento indisponível neste navegador.';
+      return;
+    }
+
+    var doneCount = 0;
+    statusEl.textContent = 'Importando 0 / '+dateKeys.length+' datas…';
+    logEl.style.display = 'block';
+    logEl.innerHTML = result.errors.map(function(e){return '<div>'+e+'</div>';}).join('');
+
+    function processNext(i){
+      if(i >= dateKeys.length){
+        statusEl.textContent = result.countCells+' status importados em '+dateKeys.length+' data(s), pra '+result.countRows+' colaborador(es).'+
+          (result.errors.length ? (' '+result.errors.length+' linha(s) com problema (veja abaixo).') : '');
+        // Atualiza a Planilha e os cards do topo com o que acabou de entrar.
+        loadSpecificSheetDates();
+        if(dateKeys.indexOf(currentDate)>-1){ loadState(currentDate); }
+        return;
+      }
+      var dateKey = dateKeys[i];
+      window.storage.get(storageKey(dateKey), false).then(function(r){
+        return r && r.value ? JSON.parse(r.value) : {};
+      }).catch(function(){ return {}; }).then(function(dayState){
+        var updates = result.byDate[dateKey];
+        Object.keys(updates).forEach(function(id){ dayState[id] = updates[id]; });
+        monthStates[dateKey] = dayState;
+        try{ localStorage.setItem(storageKey(dateKey), JSON.stringify(dayState)); }catch(e){}
+        return window.storage.set(storageKey(dateKey), JSON.stringify(dayState), false);
+      }).then(function(){
+        doneCount++;
+        statusEl.textContent = 'Importando '+doneCount+' / '+dateKeys.length+' datas…';
+        setTimeout(function(){ processNext(i+1); }, 120);
+      }).catch(function(){
+        logEl.innerHTML += '<div>Falha ao salvar a data '+dateKey+'</div>';
+        doneCount++;
+        setTimeout(function(){ processNext(i+1); }, 120);
+      });
+    }
+    processNext(0);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+safeOn('import-file', 'change', function(ev){
+  var file = ev.target.files && ev.target.files[0];
+  if(file) runFileImport(file);
+});
+
+// ---------- Importar folgas em lote (colar texto) ----------
+function parseImportLines(text){
+  var lines = text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  var parsed = [];
+  var errors = [];
+  lines.forEach(function(line, i){
+    var parts = line.split(',');
+    if(parts.length < 2){ errors.push('Linha '+(i+1)+': formato invalido ("'+line+'")'); return; }
+    var id = parts[0].trim();
+    var dataBr = parts[1].trim();
+    var m = dataBr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(!m){ errors.push('Linha '+(i+1)+': data invalida ("'+dataBr+'")'); return; }
+    if(!byId[id]){ errors.push('Linha '+(i+1)+': ID nao encontrado no cadastro ("'+id+'")'); return; }
+    var dd = m[1].padStart(2,'0'), mm = m[2].padStart(2,'0'), yyyy = m[3];
+    var dateKey = yyyy+'-'+mm+'-'+dd;
+    parsed.push({id:id, dateKey:dateKey});
+  });
+  return {parsed:parsed, errors:errors};
+}
+
+function runImport(){
+  var text = document.getElementById('import-text').value;
+  var statusEl = document.getElementById('import-status');
+  var logEl = document.getElementById('import-log');
+  var res = parseImportLines(text);
+  if(res.parsed.length === 0){
+    statusEl.textContent = 'Nada para importar.';
+    logEl.style.display = 'block';
+    logEl.innerHTML = res.errors.map(function(e){return '<div>'+e+'</div>';}).join('') || '<div>Cole linhas no formato ID,dd/mm/aaaa</div>';
+    return;
+  }
+  if(!window.storage){
+    statusEl.textContent = 'Armazenamento indisponivel neste navegador.';
+    return;
+  }
+  var byDate = {};
+  res.parsed.forEach(function(p){
+    if(!byDate[p.dateKey]) byDate[p.dateKey] = [];
+    byDate[p.dateKey].push(p.id);
+  });
+  var dateKeys = Object.keys(byDate);
+  var doneCount = 0;
+  var applied = 0;
+  statusEl.textContent = 'Importando 0 / '+dateKeys.length+' datas…';
+  logEl.style.display = 'block';
+  logEl.innerHTML = res.errors.map(function(e){return '<div>'+e+'</div>';}).join('');
+
+  function processNext(i){
+    if(i >= dateKeys.length){
+      statusEl.textContent = applied+' folgas aplicadas em '+dateKeys.length+' data(s).'+(res.errors.length ? (' '+res.errors.length+' linha(s) com problema.') : '');
+      if(byDate[currentDate]){ loadState(currentDate); }
+      return;
+    }
+    var dateKey = dateKeys[i];
+    window.storage.get(storageKey(dateKey), false).then(function(r){
+      return r && r.value ? JSON.parse(r.value) : {};
+    }).catch(function(){ return {}; }).then(function(dayState){
+      byDate[dateKey].forEach(function(id){
+        dayState[id] = {status:'FO', hora:''};
+        applied++;
+      });
+      return window.storage.set(storageKey(dateKey), JSON.stringify(dayState), false);
+    }).then(function(){
+      doneCount++;
+      statusEl.textContent = 'Importando '+doneCount+' / '+dateKeys.length+' datas…';
+      setTimeout(function(){ processNext(i+1); }, 120);
+    }).catch(function(){
+      logEl.innerHTML += '<div>Falha ao salvar a data '+dateKey+'</div>';
+      doneCount++;
+      setTimeout(function(){ processNext(i+1); }, 120);
+    });
+  }
+  processNext(0);
+}
+safeOn('btn-import', 'click', runImport);
+
+// ---------- Importar folgas por escala (tabela de dias do mês) ----------
+function normEscala(s){
+  return String(s||'').replace(/\s+/g,' ').trim();
+}
+
+function parseEscalaFolgaTable(text){
+  var lines = text.split('\n').map(function(l){ return l.replace(/\r$/,''); }).filter(function(l){ return l.trim()!==''; });
+  var months = [9,10,11]; // Setembro, Outubro, Novembro 2026
+  var rows = [];
+  lines.forEach(function(line){
+    var cols = line.split('\t').map(function(c){return c.trim();});
+    if(cols.length < 2) cols = line.split(/ {2,}/).map(function(c){return c.trim();});
+    if(cols.length < 2) return;
+    var escalaName = cols[0];
+    if(!escalaName || /^escala$/i.test(escalaName)) return; // vazio ou cabeçalho
+    var monthDays = {};
+    for(var m=0; m<3; m++){
+      var cell = cols[m+1] || '';
+      if(!cell) continue;
+      var days = cell.split(',').map(function(d){ return parseInt(d.trim(),10); }).filter(function(n){ return !isNaN(n) && n>=1 && n<=31; });
+      if(days.length) monthDays[months[m]] = days;
+    }
+    if(Object.keys(monthDays).length) rows.push({escala:escalaName, monthDays:monthDays});
+  });
+  return rows;
+}
+
+function runEscalaFolgaImport(){
+  var text = document.getElementById('escala-folga-text').value;
+  var statusEl = document.getElementById('escala-folga-status');
+  var logEl = document.getElementById('escala-folga-log');
+  var rows = parseEscalaFolgaTable(text);
+
+  if(!rows.length){
+    statusEl.textContent = 'Nada para importar.';
+    logEl.style.display = 'block';
+    logEl.innerHTML = '<div>Cole a tabela com a coluna Escala e os dias de folga de cada mês.</div>';
+    return;
+  }
+
+  var byDate = {};
+  var unmatched = [];
+  var matchedGroups = 0, matchedEmployees = 0, totalMarks = 0;
+  rows.forEach(function(row){
+    var wanted = normEscala(row.escala);
+    var emps = ALL.filter(function(e){ return normEscala(e.escala)===wanted; });
+    if(!emps.length){ unmatched.push(row.escala); return; }
+    matchedGroups++;
+    matchedEmployees += emps.length;
+    Object.keys(row.monthDays).forEach(function(mStr){
+      var m = Number(mStr);
+      row.monthDays[mStr].forEach(function(day){
+        var iso = '2026-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+        if(!byDate[iso]) byDate[iso] = {};
+        emps.forEach(function(e){
+          byDate[iso][e.id] = {status:'FO', hora:''};
+          totalMarks++;
+        });
+      });
+    });
+  });
+
+  var dateKeys = Object.keys(byDate);
+  if(!dateKeys.length){
+    statusEl.textContent = 'Nada para importar.';
+    logEl.style.display = 'block';
+    logEl.innerHTML = unmatched.length
+      ? ('<div>Nenhuma dessas escalas foi encontrada no cadastro: '+unmatched.join('; ')+'</div>')
+      : '<div>Não encontrei dias válidos nas colunas de mês.</div>';
+    return;
+  }
+  if(!window.storage){
+    statusEl.textContent = 'Armazenamento indisponível neste navegador.';
+    return;
+  }
+
+  var doneCount = 0;
+  statusEl.textContent = 'Importando 0 / '+dateKeys.length+' datas…';
+  logEl.style.display = unmatched.length ? 'block' : 'none';
+  logEl.innerHTML = unmatched.length
+    ? ('<div>Escalas não encontradas no cadastro (ignoradas): '+unmatched.join('; ')+'</div>')
+    : '';
+
+  function processNext(i){
+    if(i >= dateKeys.length){
+      statusEl.textContent = totalMarks+' folgas aplicadas em '+dateKeys.length+' data(s), pra '+matchedEmployees+' colaborador(es) em '+matchedGroups+' escala(s).'+
+        (unmatched.length ? (' '+unmatched.length+' escala(s) não encontrada(s), veja abaixo.') : '');
+      loadSpecificSheetDates();
+      if(dateKeys.indexOf(currentDate)>-1){ loadState(currentDate); }
+      return;
+    }
+    var dateKey = dateKeys[i];
+    window.storage.get(storageKey(dateKey), false).then(function(r){
+      return r && r.value ? JSON.parse(r.value) : {};
+    }).catch(function(){ return {}; }).then(function(dayState){
+      var updates = byDate[dateKey];
+      Object.keys(updates).forEach(function(id){ dayState[id] = updates[id]; });
+      monthStates[dateKey] = dayState;
+      try{ localStorage.setItem(storageKey(dateKey), JSON.stringify(dayState)); }catch(e){}
+      return window.storage.set(storageKey(dateKey), JSON.stringify(dayState), false);
+    }).then(function(){
+      doneCount++;
+      statusEl.textContent = 'Importando '+doneCount+' / '+dateKeys.length+' datas…';
+      setTimeout(function(){ processNext(i+1); }, 120);
+    }).catch(function(){
+      logEl.innerHTML += '<div>Falha ao salvar a data '+dateKey+'</div>';
+      doneCount++;
+      setTimeout(function(){ processNext(i+1); }, 120);
+    });
+  }
+  processNext(0);
+}
+safeOn('btn-escala-folga-import', 'click', runEscalaFolgaImport);
+
+// ---------- Render all ----------
+function renderAll(){
+  renderSheet();
+  updateStatsCards();
+}
+
+function updateStatsCards(){
+  var src = statsSourceState();
+  var total = ALL.length;
+  var p=0,f=0,fo=0,at=0,dem=0,bh=0,tf=0,fa=0,pend=0;
+  ALL.forEach(function(e){
+    var st = src[e.id] ? src[e.id].status : '';
+    if(st==='P') p++;
+    else if(st==='F') f++;
+    else if(st==='FO') fo++;
+    else if(st==='AT') at++;
+    else if(st==='DEM') dem++;
+    else if(st==='BH') bh++;
+    else if(st==='TF') tf++;
+    else if(st==='FA') fa++;
+    else pend++;
+  });
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-p').textContent = p;
+  document.getElementById('st-f').textContent = f;
+  document.getElementById('st-fo').textContent = fo;
+  document.getElementById('st-at').textContent = at;
+  document.getElementById('st-dem').textContent = dem;
+  document.getElementById('st-bh').textContent = bh;
+  document.getElementById('st-tf').textContent = tf;
+  document.getElementById('st-fa').textContent = fa;
+  document.getElementById('st-pend').textContent = pend;
+  updateStatsDateLabel();
+}
+
+// Os cards do topo (Presença/Falta/Folga...) mostram os números da data que
+// está "em foco": se você está na aba Planilha, é a data que aparece em
+// "Consultando: ..."; nas outras abas (Bater presença etc.) é a data do
+// campo "Data" no canto superior. Isso evita o caso de marcar status na
+// Planilha para 01/09 enquanto os cards mostram os números de outra data.
+function statsSourceDate(){
+  var panel = document.getElementById('panel-sheet');
+  if(panel && panel.classList.contains('active') && selectedSheetDates && selectedSheetDates[0]){
+    return selectedSheetDates[0];
+  }
+  return currentDate;
+}
+function statsSourceState(){
+  var d = statsSourceDate();
+  if(d===currentDate) return state;
+  return monthStates[d] || {};
+}
+function updateStatsDateLabel(){
+  var el = document.getElementById('stats-date-label');
+  if(el) el.textContent = 'Dados de ' + formatDateBR(statsSourceDate());
+}
+
+// ---------- Aba Grupos: cadastro de colaboradores ----------
+function normHeaderKey(s){
+  return String(s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().trim().replace(/\s+/g,' ');
+}
+var ROSTER_FIELD_ALIASES = {
+  'id': 'id',
+  'groot id': 'grootId',
+  'grootid': 'grootId',
+  'nome': 'nome',
+  'matricula': 'matricula',
+  'coordenador': 'coordenador',
+  'escala': 'escala',
+  'escala antiga': 'escalaAntiga',
+  'horario': 'horario',
+  'telefone': 'telefone',
+  'contato': 'telefone',
+  'sexo': 'sexo',
+  'cargo': 'cargo',
+  'origem': 'origem',
+  'tipo': 'tipo',
+  'setor': 'setor',
+  'cpf': 'cpf',
+  'ext': 'ext',
+  'status': 'status'
+};
+var ROSTER_EXTRA_FIELDS = ['grootId','matricula','coordenador','escala','escalaAntiga','horario','sexo','cargo','origem','tipo','setor','cpf','ext'];
+
+function splitRosterCols(line){
+  var cols = line.split('\t');
+  if(cols.length < 2) cols = line.split(',');
+  return cols.map(function(c){ return c.trim(); });
+}
+
+function parseRosterLines(text){
+  var lines = text.split('\n').map(function(l){ return l.replace(/\r$/,''); }).filter(function(l){ return l.trim()!==''; });
+  var parsed = [], errors = [];
+  if(!lines.length) return {parsed:parsed, errors:errors};
+
+  var headerCols = splitRosterCols(lines[0]).map(normHeaderKey);
+  var fieldMap = headerCols.map(function(h){ return ROSTER_FIELD_ALIASES[h] || null; });
+  var hasIdCol = fieldMap.indexOf('id') > -1;
+  var recognized = fieldMap.filter(Boolean).length;
+
+  if(hasIdCol && recognized >= 3){
+    // Cabeçalho reconhecido (colado direto da planilha) — mapeia por nome de coluna.
+    for(var i=1; i<lines.length; i++){
+      var cols = splitRosterCols(lines[i]);
+      var obj = {};
+      fieldMap.forEach(function(field, idx){
+        if(field) obj[field] = cols[idx]!=null ? cols[idx].trim() : '';
+      });
+      if(!obj.id){ errors.push('Linha '+(i+1)+': sem ID'); continue; }
+      parsed.push(obj);
+    }
+  }else{
+    // Formato simples: ID,Nome,Coordenador,Escala,Horário,Telefone(opcional)
+    for(var j=0; j<lines.length; j++){
+      var parts = splitRosterCols(lines[j]);
+      if(parts.length < 5){ errors.push('Linha '+(j+1)+': formato inválido, faltam colunas ("'+lines[j]+'")'); continue; }
+      var id = parts[0];
+      if(!id){ errors.push('Linha '+(j+1)+': ID em branco'); continue; }
+      parsed.push({id:id, nome:parts[1]||'', coordenador:parts[2]||'', escala:parts[3]||'', horario:parts[4]||'', telefone:parts[5]||''});
+    }
+  }
+  return {parsed:parsed, errors:errors};
+}
+
+function saveGroupsFromText(){
+  var text = document.getElementById('grupos-text').value;
+  var statusEl = document.getElementById('grupos-status');
+  var logEl = document.getElementById('grupos-log');
+  var res = parseRosterLines(text);
+  if(!res.parsed.length){
+    statusEl.textContent = 'Nada para salvar.';
+    logEl.style.display = 'block';
+    logEl.innerHTML = res.errors.map(function(e){return '<div>'+e+'</div>';}).join('') ||
+      '<div>Cole as linhas do cadastro — pode colar direto da planilha, com o cabeçalho (ID, Nome, Coordenador, Escala...).</div>';
+    return;
+  }
+  var added = 0, updated = 0, movedInactive = 0;
+  res.parsed.forEach(function(p){
+    var statusVal = p.status ? normHeaderKey(p.status) : '';
+    var isInactive = statusVal && statusVal!=='ativo';
+    var existing = byId[p.id] || INACTIVE.find(function(e){ return e.id===p.id; });
+    var isNew = !existing;
+    var rec = existing || {id:p.id};
+    if(p.nome) rec.nome = p.nome;
+    ROSTER_EXTRA_FIELDS.forEach(function(f){ if(p[f]) rec[f] = p[f]; });
+    if(p.telefone){ contacts[p.id] = p.telefone; }
+
+    ALL = ALL.filter(function(e){ return e.id!==p.id; });
+    INACTIVE = INACTIVE.filter(function(e){ return e.id!==p.id; });
+    if(isInactive){
+      rec.inactivatedAt = rec.inactivatedAt || todayStr();
+      INACTIVE.push(rec);
+      movedInactive++;
+    }else{
+      ALL.push(rec);
+      if(isNew) added++; else updated++;
+    }
+  });
+  rebuildById();
+  dedupeRoster();
+  saveRoster();
+  saveInactiveList();
+  saveContacts();
+  rebuildFilterLists();
+  generateBarcodes();
+  qrGenerated = false;
+  generateSelectedCodes();
+  renderAll();
+  renderGroupsTable();
+  renderInactiveTable();
+  statusEl.textContent = added+' adicionado(s), '+updated+' atualizado(s)'+(movedInactive?(', '+movedInactive+' marcado(s) como inativo'):'')+'.'+
+    (res.errors.length ? (' '+res.errors.length+' linha(s) com problema.') : '');
+  logEl.style.display = res.errors.length ? 'block' : 'none';
+  logEl.innerHTML = res.errors.map(function(e){return '<div>'+e+'</div>';}).join('');
+  document.getElementById('grupos-text').value = '';
+}
+
+function removeGroupsFromText(){
+  var text = document.getElementById('grupos-remove-text').value;
+  var statusEl = document.getElementById('grupos-remove-status');
+  var ids = text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  if(!ids.length){ statusEl.textContent = 'Cole ao menos um ID.'; return; }
+  var idSet = new Set(ids);
+  var before = ALL.length;
+  ALL = ALL.filter(function(e){ return !idSet.has(e.id); });
+  var removed = before - ALL.length;
+  rebuildById();
+  saveRoster();
+  rebuildFilterLists();
+  generateBarcodes();
+  qrGenerated = false;
+  generateSelectedCodes();
+  renderAll();
+  renderGroupsTable();
+  statusEl.textContent = removed+' colaborador(es) removido(s).';
+  document.getElementById('grupos-remove-text').value = '';
+}
+
+function exportRosterCsv(){
+  var lines = ['ID,Groot ID,Nome,Matrícula,Coordenador,Escala,Escala Antiga,Horário,Telefone,Sexo,Cargo,Origem,Tipo,Setor,CPF,EXT'];
+  ALL.forEach(function(e){
+    var phone = contacts[e.id] || '';
+    lines.push([e.id, e.grootId, e.nome, e.matricula, e.coordenador, e.escala, e.escalaAntiga, e.horario, phone, e.sexo, e.cargo, e.origem, e.tipo, e.setor, e.cpf, e.ext].map(function(v){
+      var s = String(v==null?'':v);
+      return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+    }).join(','));
+  });
+  var blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'colaboradores.csv';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+
+function renderGroupsTable(){
+  var body = document.getElementById('grupos-table-body');
+  if(!body) return;
+  var rows = ALL.slice().sort(function(a,b){ return a.nome.localeCompare(b.nome); });
+  document.getElementById('grupos-count').textContent = ALL.length;
+  body.innerHTML = rows.map(function(e){
+    var phone = contacts[e.id] || '';
+    return '<tr>'+
+      '<td>'+esc(e.id)+'</td>'+
+      '<td>Ativo</td>'+
+      '<td>'+esc(e.grootId||'')+'</td>'+
+      '<td>'+esc(e.nome)+'</td>'+
+      '<td>'+esc(e.matricula||'')+'</td>'+
+      '<td>'+esc(e.coordenador)+'</td>'+
+      '<td>'+esc(e.escala)+'</td>'+
+      '<td>'+esc(e.escalaAntiga||'')+'</td>'+
+      '<td>'+esc(e.horario)+'</td>'+
+      '<td>'+esc(phone)+'</td>'+
+      '<td>'+esc(e.sexo||'')+'</td>'+
+      '<td>'+esc(e.cargo||'')+'</td>'+
+      '<td>'+esc(e.origem||'')+'</td>'+
+      '<td>'+esc(e.tipo||'')+'</td>'+
+      '<td>'+esc(e.setor||'')+'</td>'+
+      '<td>'+esc(e.cpf||'')+'</td>'+
+      '<td>'+esc(e.ext||'')+'</td>'+
+      '</tr>';
+  }).join('');
+}
+
+safeOn('btn-grupos-save', 'click', saveGroupsFromText);
+safeOn('btn-grupos-remove', 'click', removeGroupsFromText);
+safeOn('btn-grupos-export', 'click', exportRosterCsv);
+safeOn('btn-grupos-dedupe', 'click', function(){
+  var removed = dedupeRoster();
+  var statusEl = document.getElementById('grupos-status');
+  statusEl.textContent = removed>0 ? (removed+' duplicado(s) removido(s).') : 'Nenhum duplicado encontrado.';
+  rebuildFilterLists();
+  generateBarcodes();
+  qrGenerated = false;
+  generateSelectedCodes();
+  renderAll();
+  renderGroupsTable();
+});
+
+// ---------- Aba Inativos ----------
+function renderInactiveTable(){
+  var body = document.getElementById('inativos-table-body');
+  var empty = document.getElementById('inativos-empty');
+  if(!body) return;
+  if(!INACTIVE.length){
+    body.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  var rows = INACTIVE.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||''); });
+  body.innerHTML = rows.map(function(e){
+    var dates = (e.demDates||[]).map(formatDateBR).join(', ');
+    return '<tr>'+
+      '<td>'+esc(e.id)+'</td>'+
+      '<td>'+esc(e.nome)+'</td>'+
+      '<td>'+esc(e.coordenador)+'</td>'+
+      '<td>'+esc(e.escala)+'</td>'+
+      '<td>'+esc(e.horario)+'</td>'+
+      '<td>'+esc(dates)+'</td>'+
+      '<td>'+esc(formatDateBR(e.inactivatedAt||''))+'</td>'+
+      '<td><button type="button" class="reativar-btn" data-reativar-id="'+esc(e.id)+'">Reativar</button></td>'+
+      '</tr>';
+  }).join('');
+  body.querySelectorAll('.reativar-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ reactivateEmployee(btn.dataset.reativarId); });
+  });
+}
+
+safeInit('códigos de barras', generateBarcodes);
+safeInit('log de leitura', function(){ document.getElementById('scan-log').dataset.empty = '1'; });
+safeInit('tabela de presença do dia', function(){ loadState(currentDate); });
+safeInit('seletores de data', initDateSelectors);
+safeInit('datas da planilha', loadSpecificSheetDates);
+safeInit('estados do mês', function(){ loadMonthStates(sheetMonthCursor); });
+safeInit('tabela de grupos', renderGroupsTable);
+safeInit('tabela de inativos', renderInactiveTable);
+
+// Reconcilia com a nuvem (window.storage) caso este navegador não tenha
+// nada salvo localmente ainda (ex.: primeiro acesso num aparelho novo).
+if(window.storage){
+  Promise.all([
+    window.storage.get(ROSTER_KEY, false).catch(function(){return null;}),
+    window.storage.get(INACTIVE_KEY, false).catch(function(){return null;}),
+    window.storage.get(DEMREC_KEY, false).catch(function(){return null;})
+  ]).then(function(results){
+    var changed = false;
+    try{
+      if(results[0] && results[0].value){
+        var roster = JSON.parse(results[0].value);
+        if(Array.isArray(roster) && roster.length){ ALL = roster; rebuildById(); dedupeRoster(); changed = true; }
+      }
+      if(results[1] && results[1].value){
+        var inact = JSON.parse(results[1].value);
+        if(Array.isArray(inact)){ INACTIVE = inact; changed = true; }
+      }
+      if(results[2] && results[2].value){
+        var dr = JSON.parse(results[2].value);
+        if(dr && typeof dr==='object'){ demRecords = dr; }
+      }
+    }catch(e){}
+    if(changed){
+      safeInit('filtros (após sincronizar nuvem)', rebuildFilterLists);
+      safeInit('códigos de barras (após sincronizar nuvem)', generateBarcodes);
+      qrGenerated = false;
+      safeInit('geração de códigos (após sincronizar nuvem)', generateSelectedCodes);
+      safeInit('tabela de presença (após sincronizar nuvem)', renderAll);
+      safeInit('tabela de grupos (após sincronizar nuvem)', renderGroupsTable);
+      safeInit('tabela de inativos (após sincronizar nuvem)', renderInactiveTable);
+    }
+  });
+}
+})();
+</script>
+</body>
+</html>
+
+<!-- V11 lightweight split-sheet -->
