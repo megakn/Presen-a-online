@@ -1661,33 +1661,67 @@ function initials(nome){
 }
 
 // ---------- Tabs ----------
+// Troca a aba primeiro e deixa tarefas pesadas para o próximo frame.
+// Assim o clique responde imediatamente, mesmo com centenas de colaboradores.
+var activeTabName = 'scan';
+var groupsDirty = true;
+var inactiveDirty = true;
+var codesDirty = true;
+var sheetDataLoadedOnce = false;
+function afterPaint(fn){
+  requestAnimationFrame(function(){ setTimeout(fn, 0); });
+}
+function markHeavyViewsDirty(){
+  groupsDirty = true;
+  inactiveDirty = true;
+  codesDirty = true;
+  qrGenerated = false;
+}
 document.querySelectorAll('.tab').forEach(function(btn){
   btn.addEventListener('click', function(){
+    var tabName = btn.dataset.tab;
+    if(tabName === activeTabName) return;
+
+    // Primeiro troca só a interface. Nada pesado roda antes da nova aba aparecer.
     document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
     btn.classList.add('active');
     document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
-    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
-    if(btn.dataset.tab !== 'scan' && html5QrCode && html5QrCode.isScanning){
-      stopCamera();
-    }
-    if(btn.dataset.tab === 'qr' && !qrGenerated){
-      generateQrCodes();
-    }
-    if(btn.dataset.tab === 'scan'){
-      setTimeout(function(){ codeInput && codeInput.focus(); }, 50);
-    }
-    if(btn.dataset.tab === 'grupos' && typeof renderGroupsTable==='function'){
-      renderGroupsTable();
-    }
-    if(btn.dataset.tab === 'inativos' && typeof renderInactiveTable==='function'){
-      renderInactiveTable();
-    }
-    if(typeof renderAll==='function'){
-      // Isso também atualiza os cards do topo pra data certa: na Planilha,
-      // mostram a data em foco ali; nas outras abas, voltam pra data do
-      // campo "Data" (canto superior).
-      renderAll();
-    }
+    var target = document.getElementById('panel-'+tabName);
+    if(target) target.classList.add('active');
+    activeTabName = tabName;
+    if(typeof closeStatusPopover === 'function') closeStatusPopover();
+
+    // O leitor real usa codeReader/cameraRunning; evita câmera consumindo CPU em segundo plano.
+    if(tabName !== 'scan' && cameraRunning){ stopCamera(); }
+
+    // Cards do topo são leves.
+    if(typeof updateStatsCards === 'function') updateStatsCards();
+
+    // Conteúdo pesado só depois que o navegador já exibiu a aba.
+    afterPaint(function(){
+      if(activeTabName !== tabName) return;
+      if(tabName === 'scan'){
+        if(codeInput) codeInput.focus();
+      }else if(tabName === 'sheet'){
+        if(!sheetDataLoadedOnce){
+          sheetDataLoadedOnce = true;
+          loadSpecificSheetDates();
+          loadMonthStates(sheetMonthCursor);
+        }else{
+          renderSheet();
+        }
+      }else if(tabName === 'grupos'){
+        if(groupsDirty){ renderGroupsTable(); groupsDirty = false; }
+      }else if(tabName === 'inativos'){
+        if(inactiveDirty){ renderInactiveTable(); inactiveDirty = false; }
+      }else if(tabName === 'qr'){
+        updateCodeView();
+        if(codesDirty){
+          var hint = document.getElementById('code-hint');
+          if(hint) hint.textContent = 'Escolha o tipo e clique em Gerar códigos.';
+        }
+      }
+    });
   });
 });
 
@@ -1698,8 +1732,13 @@ datepick.addEventListener('change', function(){
   currentDate = datepick.value || todayStr();
   loadState(currentDate);
   initDateSelectors();
-loadSpecificSheetDates();
-loadMonthStates(sheetMonthCursor);
+  if(activeTabName==='sheet'){
+    loadSpecificSheetDates();
+    loadMonthStates(sheetMonthCursor);
+  }else{
+    sheetNeedsRender = true;
+    sheetDataLoadedOnce = false;
+  }
 });
 
 // ---------- Camera scanning ----------
@@ -2166,12 +2205,10 @@ function moveToInactive(id, demDates){
   saveRoster();
   saveInactiveList();
   rebuildFilterLists();
-  generateBarcodes();
-  qrGenerated = false;
-  generateSelectedCodes();
+  markHeavyViewsDirty();
   renderAll();
-  renderGroupsTable();
-  renderInactiveTable();
+  if(activeTabName==='grupos'){ renderGroupsTable(); groupsDirty=false; }
+  if(activeTabName==='inativos'){ renderInactiveTable(); inactiveDirty=false; }
 }
 
 function reactivateEmployee(id){
@@ -2189,12 +2226,10 @@ function reactivateEmployee(id){
   saveInactiveList();
   saveDemRecords();
   rebuildFilterLists();
-  generateBarcodes();
-  qrGenerated = false;
-  generateSelectedCodes();
+  markHeavyViewsDirty();
   renderAll();
-  renderGroupsTable();
-  renderInactiveTable();
+  if(activeTabName==='grupos'){ renderGroupsTable(); groupsDirty=false; }
+  if(activeTabName==='inativos'){ renderInactiveTable(); inactiveDirty=false; }
   logActivity('cadastro', 'Reativou '+(rec.nome||id));
  });
 }
@@ -2487,91 +2522,106 @@ safeOn('btn-export', 'click', function(){
   setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
 });
 
-loadMonthStates(sheetMonthCursor);
+// O mês da planilha é carregado sob demanda ao abrir a aba Planilha.
 
 // ---------- QR / Código de barras ----------
-function generateQrCodes(){
+var codeGenerationToken = 0;
+function setCodeGenerationBusy(busy, text){
+  var btn = document.getElementById('btn-generate-code');
+  if(btn) btn.disabled = !!busy;
+  var hint = document.getElementById('code-hint');
+  if(hint && text) hint.textContent = text;
+}
+
+function generateQrCodes(done){
   qrGenerated = true;
+  var token = ++codeGenerationToken;
   var grid = document.getElementById('qr-grid');
   grid.innerHTML = '';
 
   if(typeof QRCode === 'undefined'){
     grid.innerHTML = '<p class="muted">Não foi possível carregar a biblioteca de QR Code agora (sem conexão?). O resto do app continua funcionando normalmente — tente de novo mais tarde ou recarregue a página.</p>';
+    setCodeGenerationBusy(false);
     return;
   }
 
-  ALL.forEach(function(e){
-    try{
-      var card = document.createElement('div');
-      card.className = 'qrcard';
-      card.dataset.name = (e.nome||'').toLowerCase();
-      card.dataset.id = e.id;
-
-      var qrDiv = document.createElement('div');
-      card.appendChild(qrDiv);
-
-      var idLabel = document.createElement('p');
-      idLabel.textContent = e.id;
-      card.appendChild(idLabel);
-
-      grid.appendChild(card);
-
-      new QRCode(qrDiv, {
-        text: String(e.id||''),
-        width: 110,
-        height: 110,
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    }catch(err){
-      console.error('[KN] falha ao gerar QR de', e && e.id, err);
+  var i = 0;
+  var batchSize = 18;
+  function batch(){
+    if(token !== codeGenerationToken) return;
+    var limit = Math.min(i + batchSize, ALL.length);
+    for(; i < limit; i++){
+      var e = ALL[i];
+      try{
+        var card = document.createElement('div');
+        card.className = 'qrcard';
+        card.dataset.name = (e.nome||'').toLowerCase();
+        card.dataset.id = e.id;
+        var qrDiv = document.createElement('div');
+        card.appendChild(qrDiv);
+        var idLabel = document.createElement('p');
+        idLabel.textContent = e.id;
+        card.appendChild(idLabel);
+        grid.appendChild(card);
+        new QRCode(qrDiv, {text:String(e.id||''),width:110,height:110,correctLevel:QRCode.CorrectLevel.M});
+      }catch(err){ console.error('[KN] falha ao gerar QR de', e && e.id, err); }
     }
-  });
-
-  applyCodeFilter();
+    setCodeGenerationBusy(true, 'Gerando QR Codes… '+i+'/'+ALL.length);
+    if(i < ALL.length){
+      requestAnimationFrame(batch);
+    }else{
+      applyCodeFilter();
+      setCodeGenerationBusy(false, ALL.length+' QR Codes gerados · somente ID/Groot ID.');
+      if(done) done();
+    }
+  }
+  requestAnimationFrame(batch);
 }
 
-function generateBarcodes(){
+function generateBarcodes(done){
+  var token = ++codeGenerationToken;
   var grid = document.getElementById('barcode-grid');
   grid.innerHTML = '';
 
   if(typeof JsBarcode === 'undefined'){
     grid.innerHTML = '<p class="muted">Não foi possível carregar a biblioteca de código de barras agora (sem conexão?). O resto do app continua funcionando normalmente — tente de novo mais tarde ou recarregue a página.</p>';
+    setCodeGenerationBusy(false);
     return;
   }
 
-  ALL.forEach(function(e){
-    try{
-      if(!e || !e.id) return;
-      var card = document.createElement('div');
-      card.className = 'barcodecard';
-      card.dataset.name = (e.nome||'').toLowerCase();
-      card.dataset.id = e.id;
-
-      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      card.appendChild(svg);
-
-      var idLabel = document.createElement('div');
-      idLabel.className = 'barcode-id';
-      idLabel.textContent = e.id;
-      card.appendChild(idLabel);
-
-      grid.appendChild(card);
-
-      JsBarcode(svg, String(e.id), {
-        format: 'CODE128',
-        displayValue: false,
-        width: 1.25,
-        height: 34,
-        margin: 1,
-        background: '#ffffff',
-        lineColor: '#000000'
-      });
-    }catch(err){
-      console.error('[KN] falha ao gerar código de barras de', e && e.id, err);
+  var i = 0;
+  var batchSize = 28;
+  function batch(){
+    if(token !== codeGenerationToken) return;
+    var limit = Math.min(i + batchSize, ALL.length);
+    for(; i < limit; i++){
+      var e = ALL[i];
+      try{
+        if(!e || !e.id) continue;
+        var card = document.createElement('div');
+        card.className = 'barcodecard';
+        card.dataset.name = (e.nome||'').toLowerCase();
+        card.dataset.id = e.id;
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        card.appendChild(svg);
+        var idLabel = document.createElement('div');
+        idLabel.className = 'barcode-id';
+        idLabel.textContent = e.id;
+        card.appendChild(idLabel);
+        grid.appendChild(card);
+        JsBarcode(svg, String(e.id), {format:'CODE128',displayValue:false,width:1.25,height:34,margin:1,background:'#ffffff',lineColor:'#000000'});
+      }catch(err){ console.error('[KN] falha ao gerar código de barras de', e && e.id, err); }
     }
-  });
-
-  applyCodeFilter();
+    setCodeGenerationBusy(true, 'Gerando códigos de barras… '+i+'/'+ALL.length);
+    if(i < ALL.length){
+      requestAnimationFrame(batch);
+    }else{
+      applyCodeFilter();
+      setCodeGenerationBusy(false, ALL.length+' códigos de barras gerados · somente ID/Groot ID.');
+      if(done) done();
+    }
+  }
+  requestAnimationFrame(batch);
 }
 
 function applyCodeFilter(){
@@ -2599,18 +2649,11 @@ function updateCodeView(){
 
 function generateSelectedCodes(){
   var type = selectedCodeType();
-
-  if(type==='barcode'){
-    generateBarcodes();
-    document.getElementById('code-hint').textContent =
-      ALL.length+' códigos de barras gerados · somente ID/Groot ID.';
-  }else{
-    generateQrCodes();
-    document.getElementById('code-hint').textContent =
-      ALL.length+' QR Codes gerados · somente ID/Groot ID.';
-  }
-
+  codesDirty = false;
   updateCodeView();
+  setCodeGenerationBusy(true, type==='barcode' ? 'Preparando códigos de barras…' : 'Preparando QR Codes…');
+  if(type==='barcode') generateBarcodes();
+  else generateQrCodes();
 }
 
 function buildCustomPrintCss(type, wMM, hMM){
@@ -2643,29 +2686,25 @@ function buildCustomPrintCss(type, wMM, hMM){
 
 function printSelectedCodes(){
   var type = selectedCodeType();
+  var source = type==='barcode' ? document.getElementById('barcode-grid') : document.getElementById('qr-grid');
+
+  // Se ainda não gerou, conclui em lotes e só então abre a impressão.
+  if(!source.children.length){
+    setCodeGenerationBusy(true, 'Gerando códigos para impressão…');
+    if(type==='barcode') generateBarcodes(printSelectedCodes);
+    else generateQrCodes(printSelectedCodes);
+    return;
+  }
+
   var size = document.getElementById('print-size').value;
-
-  if(type==='barcode' && !document.getElementById('barcode-grid').children.length){
-    generateBarcodes();
-  }
-  if(type==='qr' && !document.getElementById('qr-grid').children.length){
-    generateQrCodes();
-  }
-
-  var source = type==='barcode'
-    ? document.getElementById('barcode-grid')
-    : document.getElementById('qr-grid');
-
   var printarea = document.getElementById('printarea');
   var customStyle = '';
   if(size==='custom'){
-    var wMM = Math.max(1, Number(document.getElementById('custom-size-w').value) || (type==='qr'?35:35));
+    var wMM = Math.max(1, Number(document.getElementById('custom-size-w').value) || 35);
     var hMM = Math.max(1, Number(document.getElementById('custom-size-h').value) || 14);
     customStyle = '<style>'+buildCustomPrintCss(type, wMM, hMM)+'</style>';
   }
-  printarea.innerHTML = customStyle +
-    '<div class="print-'+type+' print-'+size+'">'+source.outerHTML+'</div>';
-
+  printarea.innerHTML = customStyle + '<div class="print-'+type+' print-'+size+'">'+source.outerHTML+'</div>';
   window.print();
 }
 
@@ -2683,18 +2722,24 @@ function updateCustomSizeFields(){
 safeOn('print-size', 'change', updateCustomSizeFields);
 
 safeOn('code-type', 'change', function(){
+  codeGenerationToken++;
+  setCodeGenerationBusy(false);
   updateCodeView();
   updateCustomSizeFields();
-  generateSelectedCodes();
+  codesDirty = true;
+  var hint = document.getElementById('code-hint');
+  if(hint) hint.textContent = 'Clique em Gerar códigos para criar somente o tipo escolhido.';
 });
 
-safeOn('btn-generate-code', 'click', generateSelectedCodes);
+safeOn('btn-generate-code', 'click', function(){
+  generateSelectedCodes();
+  codesDirty = false;
+});
 safeOn('btn-print-code', 'click', printSelectedCodes);
 safeOn('qr-search', 'input', applyCodeFilter);
 
 safeInit('view de código', updateCodeView);
 safeInit('campos de tamanho personalizado', updateCustomSizeFields);
-safeInit('geração de códigos', generateSelectedCodes);
 
 // ---------- Importar planilha (Excel/CSV) ----------
 var VALID_IMPORT_STATUSES = ['P','FO','AT','F','ATEST','DEM','BH','TF','FA'];
@@ -3213,12 +3258,10 @@ function saveGroupsFromText(){
   saveInactiveList();
   saveContacts();
   rebuildFilterLists();
-  generateBarcodes();
-  qrGenerated = false;
-  generateSelectedCodes();
+  markHeavyViewsDirty();
   renderAll();
-  renderGroupsTable();
-  renderInactiveTable();
+  if(activeTabName==='grupos'){ renderGroupsTable(); groupsDirty=false; }
+  if(activeTabName==='inativos'){ renderInactiveTable(); inactiveDirty=false; }
   statusEl.textContent = added+' adicionado(s), '+updated+' atualizado(s)'+(movedInactive?(', '+movedInactive+' marcado(s) como inativo'):'')+'.'+
     (res.errors.length ? (' '+res.errors.length+' linha(s) com problema.') : '');
   logEl.style.display = res.errors.length ? 'block' : 'none';
@@ -3241,11 +3284,9 @@ function removeGroupsFromText(){
   rebuildById();
   saveRoster();
   rebuildFilterLists();
-  generateBarcodes();
-  qrGenerated = false;
-  generateSelectedCodes();
+  markHeavyViewsDirty();
   renderAll();
-  renderGroupsTable();
+  if(activeTabName==='grupos'){ renderGroupsTable(); groupsDirty=false; }
   statusEl.textContent = removed+' colaborador(es) removido(s).';
   logActivity('cadastro', removed+' colaborador(es) removido(s): '+ids.join(', '));
   document.getElementById('grupos-remove-text').value = '';
@@ -3307,11 +3348,9 @@ safeOn('btn-grupos-dedupe', 'click', function(){
   var statusEl = document.getElementById('grupos-status');
   statusEl.textContent = removed>0 ? (removed+' duplicado(s) removido(s).') : 'Nenhum duplicado encontrado.';
   rebuildFilterLists();
-  generateBarcodes();
-  qrGenerated = false;
-  generateSelectedCodes();
+  markHeavyViewsDirty();
   renderAll();
-  renderGroupsTable();
+  if(activeTabName==='grupos'){ renderGroupsTable(); groupsDirty=false; }
   if(removed>0) logActivity('cadastro', removed+' duplicado(s) removido(s) via botão Deduplicar');
  });
 });
@@ -3347,14 +3386,13 @@ function renderInactiveTable(){
 }
 
 safeInit('gatilho do histórico (admin)', setupAdminTrigger);
-safeInit('códigos de barras', generateBarcodes);
+safeInit('identificação inicial', function(){
+  if(!currentOperator) openOperatorModal();
+});
 safeInit('log de leitura', function(){ document.getElementById('scan-log').dataset.empty = '1'; });
 safeInit('tabela de presença do dia', function(){ loadState(currentDate); });
 safeInit('seletores de data', initDateSelectors);
-safeInit('datas da planilha', loadSpecificSheetDates);
-safeInit('estados do mês', function(){ loadMonthStates(sheetMonthCursor); });
-safeInit('tabela de grupos', renderGroupsTable);
-safeInit('tabela de inativos', renderInactiveTable);
+// Planilha, Grupos, Inativos e códigos são carregados sob demanda ao abrir a aba.
 
 // Reconcilia com a nuvem (window.storage) caso este navegador não tenha
 // nada salvo localmente ainda (ex.: primeiro acesso num aparelho novo).
@@ -3381,12 +3419,10 @@ if(window.storage){
     }catch(e){}
     if(changed){
       safeInit('filtros (após sincronizar nuvem)', rebuildFilterLists);
-      safeInit('códigos de barras (após sincronizar nuvem)', generateBarcodes);
-      qrGenerated = false;
-      safeInit('geração de códigos (após sincronizar nuvem)', generateSelectedCodes);
+      markHeavyViewsDirty();
       safeInit('tabela de presença (após sincronizar nuvem)', renderAll);
-      safeInit('tabela de grupos (após sincronizar nuvem)', renderGroupsTable);
-      safeInit('tabela de inativos (após sincronizar nuvem)', renderInactiveTable);
+      if(activeTabName==='grupos'){ safeInit('tabela de grupos (visível)', function(){ renderGroupsTable(); groupsDirty=false; }); }
+      if(activeTabName==='inativos'){ safeInit('tabela de inativos (visível)', function(){ renderInactiveTable(); inactiveDirty=false; }); }
     }
   });
 }
@@ -3423,12 +3459,10 @@ if(sbReady){
     }catch(err){ console.error('[KN] Supabase: erro ao reconciliar dados recebidos:', err); }
     if(changed){
       safeInit('filtros (após sincronizar Supabase)', rebuildFilterLists);
-      safeInit('códigos de barras (após sincronizar Supabase)', generateBarcodes);
-      qrGenerated = false;
-      safeInit('geração de códigos (após sincronizar Supabase)', generateSelectedCodes);
+      markHeavyViewsDirty();
       safeInit('tabela de presença (após sincronizar Supabase)', renderAll);
-      safeInit('tabela de grupos (após sincronizar Supabase)', renderGroupsTable);
-      safeInit('tabela de inativos (após sincronizar Supabase)', renderInactiveTable);
+      if(activeTabName==='grupos'){ safeInit('tabela de grupos (visível)', function(){ renderGroupsTable(); groupsDirty=false; }); }
+      if(activeTabName==='inativos'){ safeInit('tabela de inativos (visível)', function(){ renderInactiveTable(); inactiveDirty=false; }); }
     }
   }).catch(function(err){ console.error('[KN] Supabase: erro na reconciliação inicial:', err); });
 }
