@@ -296,6 +296,13 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 #panel-sheet .sheet-table tbody tr:nth-child(even) .col-nome{background:#fafbf9}
 #panel-sheet .sheet-table tbody tr:hover .col-id,
 #panel-sheet .sheet-table tbody tr:hover .col-nome{background:#eef2ec}
+.sexo-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:15px;height:15px;border-radius:50%;font-size:9px;font-weight:800;
+  margin-right:5px;flex:none;line-height:1;vertical-align:middle;
+}
+.sexo-badge.sexo-M{background:#dbeafe;color:#1d4ed8}
+.sexo-badge.sexo-F{background:#fce7f3;color:#be185d}
 #panel-sheet .contact-input{
   width:114px;
   min-width:114px;
@@ -1156,6 +1163,11 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 #panel-grupos #groups-db-search{
   min-width:230px;height:36px;padding:0 10px;border:1px solid #ccd6e2;border-radius:7px
 }
+#panel-grupos #groups-db-filter-coord,
+#panel-grupos #groups-db-filter-escala{
+  height:36px;padding:0 8px;border:1px solid #ccd6e2;border-radius:7px;background:#fff;
+  font-size:13px;max-width:190px
+}
 #panel-grupos .groups-db-summary{
   margin:10px 0 8px;font-size:12px;color:#536579
 }
@@ -1188,7 +1200,9 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 #panel-grupos .groups-db-table td:nth-child(2) input{min-width:220px}
 #panel-grupos .groups-db-table td:nth-child(4) input{min-width:150px}
 #panel-grupos .groups-db-table td:nth-child(5) input{min-width:230px}
+#panel-grupos .groups-db-table td:nth-child(9) select{min-width:0;width:38px;padding:4px 2px;text-align:center;text-align-last:center}
 #panel-grupos .groups-db-table td:nth-child(11) input{min-width:230px}
+#panel-grupos .groups-db-table td:nth-child(14) input{min-width:118px}
 #panel-grupos .groups-db-table td:nth-child(15) input{min-width:120px}
 #panel-grupos .groups-db-row-actions{display:flex;gap:4px;padding:2px}
 #panel-grupos .groups-db-row-actions button{
@@ -1197,6 +1211,122 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 }
 #panel-grupos .groups-db-row-actions .save{background:#2f7658;color:#fff;border-color:#2f7658}
 #panel-grupos .groups-db-row-actions .del{color:#a32020}
+</style>
+
+
+<style>
+#panel-import .fo-present-section{
+  margin-top:18px;
+  padding-top:14px;
+  border-top:1px solid #e4e9ef;
+}
+#panel-import .fo-present-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:10px;
+  border:1px solid #dfe5ec;
+  border-radius:10px;
+  overflow:hidden;
+}
+#panel-import .fo-present-table th{
+  background:#f7f9fc;
+  color:#31455b;
+  padding:7px 6px;
+  text-align:left;
+}
+#panel-import .fo-present-table td{
+  padding:7px 6px;
+  border-bottom:1px solid #edf1f5;
+  color:#12243a;
+}
+#panel-import .fo-present-table th:nth-child(n+2),
+#panel-import .fo-present-table td:nth-child(n+2){
+  text-align:center;
+}
+#panel-import .fo-present-row{cursor:pointer}
+#panel-import .fo-present-row:hover{background:#f7f9fc}
+#panel-import .fo-present-people{
+  display:none;
+  border:1px solid #e3e8ef;
+  border-top:0;
+  padding:4px 10px 8px;
+  background:#fff;
+}
+#panel-import .fo-present-block.open .fo-present-people{display:block}
+#panel-import .fo-present-person{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:5px 4px;
+  border-bottom:1px solid #eef2f6;
+  font-size:10px;
+}
+#panel-import .fo-present-person:last-child{border-bottom:0}
+</style>
+
+
+<style>
+#panel-import .fo-present-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:8px;
+}
+#panel-import .fo-present-head .fo-working-title{
+  margin:0;
+}
+#panel-import #fo-present-scale-filter{
+  min-width:220px;
+  height:34px;
+  padding:4px 28px 4px 8px;
+  border:1px solid #ccd6e2;
+  border-radius:7px;
+  background:#fff;
+  font-size:11px;
+}
+#panel-import .fo-off-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:10px;
+  border:1px solid #dfe5ec;
+  border-radius:10px;
+  overflow:hidden;
+}
+#panel-import .fo-off-table th{
+  background:#f7f9fc;
+  color:#31455b;
+  padding:7px 6px;
+  text-align:left;
+}
+#panel-import .fo-off-table th:last-child,
+#panel-import .fo-off-table td:last-child{
+  text-align:center;
+  width:52px;
+}
+#panel-import .fo-off-table td{
+  padding:7px 6px;
+  border-bottom:1px solid #edf1f5;
+  color:#12243a;
+}
+#panel-import .fo-off-main-row{cursor:pointer}
+#panel-import .fo-off-main-row:hover{background:#f7f9fc}
+#panel-import .fo-off-detail-row{display:none}
+#panel-import .fo-off-detail-row.open{display:table-row}
+#panel-import .fo-off-detail-cell{
+  padding:0!important;
+  background:#fff;
+}
+#panel-import .fo-off-person{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 10px;
+  border-bottom:1px solid #eef2f6;
+  font-size:10px;
+}
+#panel-import .fo-off-person:last-child{border-bottom:0}
 </style>
 
 </head>
@@ -1439,7 +1569,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
             <button type="button" class="fo-group-btn" data-fo-group="C">Grupo C</button>
             <button type="button" class="fo-group-btn" data-fo-group="D">Grupo D</button>
           </div>
-          <div id="fo-group-caption" class="fo-sub" style="margin-top:10px">Clique em um grupo para ver os nomes.</div>
+          <div id="fo-group-caption" class="fo-sub" style="margin-top:10px">Os grupos A, B, C e D existem somente aqui na Escala de Folga. Eles já estão preenchidos com os Coordenadores, Líderes e Conferentes que você informou.</div>
           <div id="fo-group-people" class="fo-people"></div>
         </div>
       </div>
@@ -1462,7 +1592,18 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 
           <div id="fo-query-offgroups" class="fo-ref-groups"></div>
 
-          <div class="fo-working-section">
+          <div class="fo-present-section">
+            <div class="fo-present-head">
+              <p class="fo-working-title">ESCALAS TRABALHANDO NESTA DATA</p>
+              <select id="fo-present-scale-filter">
+                <option value="">Todas as escalas</option>
+              </select>
+            </div>
+            <div id="fo-present-groups"></div>
+          </div>
+
+
+          <div class="fo-working-section" style="display:none">
             <p class="fo-working-title">ESCALAS TRABALHANDO NESTA DATA</p>
             <div id="fo-query-working-groups" class="fo-working-groups"></div>
           </div>
@@ -1505,6 +1646,23 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
   
 
 <div id="panel-grupos" class="panel">
+  <div class="card" style="margin-bottom:14px">
+    <details>
+      <summary style="cursor:pointer;font-weight:800">+ Importar vários colaboradores de uma vez (colar lista)</summary>
+      <p class="muted" style="margin:10px 0">
+        Cole a lista inteira (uma linha por colaborador) em vez de cadastrar um por um — dá pra colar direto do Excel/Google Sheets. Primeira linha é o cabeçalho, nesta ordem:<br>
+        <code style="font-size:11px;line-height:1.6">ID · Groot ID · Nome · Matrícula · Coordenador · ESCALA · Escala Antiga · HORÁRIO · Telefone · SEXO · CARGO · ORIGEM · TIPO · Setor · CPF · EXT</code><br>
+        Se o colaborador já existe (mesmo ID), atualiza só os campos preenchidos — sem apagar o que já estava salvo.
+      </p>
+      <textarea id="grupos-text" rows="8" placeholder="Cole aqui a lista de colaboradores (com o cabeçalho na primeira linha)..."></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="btn-grupos-save" class="primary" type="button">Salvar lista</button>
+        <span class="muted" id="grupos-status"></span>
+      </div>
+      <div id="grupos-log" class="importlog" style="display:none"></div>
+    </details>
+  </div>
+
   <div class="card groups-db-card">
     <div class="groups-db-head">
       <div>
@@ -1513,6 +1671,8 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
       </div>
       <div class="groups-db-actions">
         <input id="groups-db-search" type="search" placeholder="Pesquisar colaborador...">
+        <select id="groups-db-filter-coord"><option value="">Todos os coordenadores</option></select>
+        <select id="groups-db-filter-escala"><option value="">Todas as escalas</option></select>
         <button id="groups-db-add" class="primary" type="button">+ Novo colaborador</button>
       </div>
     </div>
@@ -1551,10 +1711,6 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 
     <!-- Compatibilidade interna com funções antigas -->
     <div style="display:none">
-      <textarea id="grupos-text"></textarea>
-      <button id="btn-grupos-save"></button>
-      <span id="grupos-status"></span>
-      <div id="grupos-log"></div>
       <button id="btn-grupos-export"></button>
       <button id="btn-grupos-dedupe"></button>
       <textarea id="grupos-remove-text"></textarea>
@@ -3078,6 +3234,10 @@ function renderSheet(){
   body.innerHTML = rows.map(function(e){
     var phone = contacts[e.id] || '';
     var canWhats = !!cleanPhone(phone);
+    var sexoVal = String(e.sexo||'').trim().toUpperCase();
+    var sexoBadge = (sexoVal==='M'||sexoVal==='F')
+      ? '<span class="sexo-badge sexo-'+sexoVal+'" title="'+(sexoVal==='M'?'Masculino':'Feminino')+'">'+sexoVal+'</span>'
+      : '';
     var dateCells = dates.map(function(date){
       var ds = monthStates[date] || {};
       if(date===currentDate) ds = state;
@@ -3086,7 +3246,7 @@ function renderSheet(){
     }).join('');
     return '<tr>'+
       '<td class="col-id">'+esc(e.id)+'</td>'+
-      '<td class="col-nome" title="'+esc(e.nome)+'">'+esc(e.nome)+'</td>'+
+      '<td class="col-nome" title="'+esc(e.nome)+'">'+sexoBadge+esc(e.nome)+'</td>'+
       '<td class="col-contato"><input class="contact-input" type="tel" inputmode="tel" data-contact-id="'+esc(e.id)+'" value="'+esc(phone)+'" placeholder="(21) 99999-9999"></td>'+
       '<td class="col-whats"><button type="button" class="whatsapp-btn" data-whats-id="'+esc(e.id)+'" '+(canWhats?'':'disabled')+' title="WhatsApp" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.44 9.9-9.9 0-2.64-1.03-5.12-2.9-6.99A9.82 9.82 0 0 0 12.04 2zm5.8 14.14c-.24.68-1.4 1.32-1.93 1.4-.5.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.85-1.23-4.71-4.1-4.85-4.29-.14-.19-1.16-1.55-1.16-2.95 0-1.4.73-2.09 1-2.38.26-.28.57-.35.76-.35h.55c.18 0 .42-.07.65.5.24.58.81 2 .88 2.14.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.16-.29.36-.42.49-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.44.12.61-.07.16-.19.7-.81.89-1.09.19-.28.37-.23.62-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.68-.17 1.36z"/></svg></button></td>'+
       '<td class="col-coord" title="'+esc(e.coordenador)+'">'+esc(e.coordenador)+'</td>'+
@@ -4049,10 +4209,8 @@ function saveGroupsFromText(){
     return;
   }
 
-  var ativos = [];
-  var inativosNovos = [];
+  var added=0, updated=0, movedInactive=0, duplicados=0;
   var seen = {};
-  var duplicados = 0;
 
   res.parsed.forEach(function(p){
     if(!p.id && p.grootId) p.id = p.grootId;
@@ -4062,22 +4220,30 @@ function saveGroupsFromText(){
     seen[p.id] = true;
 
     var statusVal = p.status ? normHeaderKey(p.status) : 'ativo';
-    if(statusVal && statusVal !== 'ativo'){
-      inativosNovos.push(p);
-    }else{
-      ativos.push(p);
-    }
-    if(p.telefone) contacts[p.id] = p.telefone;
-  });
+    var isInactive = statusVal && statusVal !== 'ativo';
 
-  // A planilha colada passa a ser a fonte atual do cadastro.
-  ALL = ativos;
-  if(inativosNovos.length){
-    var existingInactive = {};
-    INACTIVE.forEach(function(e){ existingInactive[e.id] = e; });
-    inativosNovos.forEach(function(e){ existingInactive[e.id] = e; });
-    INACTIVE = Object.keys(existingInactive).map(function(k){ return existingInactive[k]; });
-  }
+    // Adiciona ou atualiza — NUNCA apaga quem já estava cadastrado e não
+    // veio nesta lista colada. Campo vazio na linha colada não apaga o
+    // que já tinha sido salvo antes.
+    var existing = byId[p.id] || INACTIVE.find(function(e){ return e.id===p.id; });
+    var isNew = !existing;
+    var rec = existing || {id:p.id};
+    if(p.nome) rec.nome = p.nome;
+    ROSTER_EXTRA_FIELDS.forEach(function(f){ if(p[f]) rec[f] = p[f]; });
+    if(p.telefone) contacts[p.id] = p.telefone;
+
+    ALL = ALL.filter(function(e){ return e.id!==p.id; });
+    INACTIVE = INACTIVE.filter(function(e){ return e.id!==p.id; });
+
+    if(isInactive){
+      rec.inactivatedAt = rec.inactivatedAt || todayStr();
+      INACTIVE.push(rec);
+      movedInactive++;
+    }else{
+      ALL.push(rec);
+      if(isNew) added++; else updated++;
+    }
+  });
 
   rebuildById();
   saveRoster();
@@ -4087,11 +4253,13 @@ function saveGroupsFromText(){
   markHeavyViewsDirty();
   renderAll();
 
-  statusEl.textContent = ativos.length+' colaborador(es) ativos carregados'+
-    (duplicados ? ' · '+duplicados+' duplicado(s) ignorado(s)' : '')+'.';
+  statusEl.textContent = added+' adicionado(s), '+updated+' atualizado(s)'+
+    (movedInactive ? ', '+movedInactive+' marcado(s) como inativo' : '')+
+    (duplicados ? ' · '+duplicados+' linha(s) duplicada(s) ignorada(s)' : '')+'.';
   logEl.style.display = res.errors.length ? 'block' : 'none';
   logEl.innerHTML = res.errors.map(function(e){return '<div>'+e+'</div>';}).join('');
-  logActivity('cadastro', 'Cadastro substituído pela planilha: '+ativos.length+' ativos.');
+  logActivity('cadastro', added+' adicionado(s), '+updated+' atualizado(s), '+movedInactive+' inativado(s) via lista colada');
+  if(typeof window.refreshGroupsDbView==='function') window.refreshGroupsDbView();
  });
 }
 
@@ -4290,8 +4458,6 @@ if(sbReady){
     }
   }).catch(function(err){ console.error('[KN] Supabase: erro na reconciliação inicial:', err); });
 }
-})();
-
 
 // ===== Calendário de Folgas interativo =====
 var FO_CAL_STORAGE = 'kn_scale_fo_calendar_v2';
@@ -4305,11 +4471,32 @@ function foRoleAllowed(e){
   return /coorden|líder|lider|confer/.test(c);
 }
 function foGroupLetterFromEmployee(e){
-  var s = foNorm((e && e.escala)||'');
-  var m = s.match(/^SVC\s*-\s*([ABCD])(?:\s|$|-)/i);
-  if(m) return m[1].toUpperCase();
-  var t = String((e && e.turno)||'').trim().toUpperCase();
-  return /^[ABCD]$/.test(t) ? t : '';
+  if(!foRoleAllowed(e)) return '';
+
+  // Grupos A/B/C/D existem somente na área de Escala de Folga.
+  // Primeiro usa a lista fixa informada pela usuária, procurando pelo nome.
+  try{
+    var nn = String((e && e.nome)||'')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/\s+/g,' ').trim().toUpperCase();
+
+    if(Array.isArray(window.FIXED_LEADERSHIP)){
+      var hit = window.FIXED_LEADERSHIP.find(function(x){
+        var xn = String(x.nome||'')
+          .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/\s+/g,' ').trim().toUpperCase();
+        return xn===nn;
+      });
+      if(hit && /^[ABCD]$/.test(String(hit.grupo||'').toUpperCase())){
+        return String(hit.grupo).toUpperCase();
+      }
+    }
+  }catch(err){}
+
+  // Como reserva, aceita somente escala geral SVC - A/B/C/D.
+  var s = foNorm((e && e.escala)||'').toUpperCase();
+  var m = s.match(/^SVC\s*-\s*([ABCD])\s*$/i);
+  return m ? m[1].toUpperCase() : '';
 }
 function foDate(y,m,d){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
 function foDaysFromCell(cell){
@@ -4558,6 +4745,32 @@ function foInitInteractive(){
 }
 safeInit('calendário de folgas interativo', foInitInteractive);
 
+// Expõe pro script separado da tabela "Banco de dados dos colaboradores"
+// (aba Grupos) — sem isso, editar/adicionar/remover por ali não persistia
+// (não salvava no Supabase/localStorage nem atualizava o resto do app,
+// porque só trocava "window.ALL" sem nunca tocar no "ALL" real usado aqui
+// dentro). Essa função troca o ALL de verdade e refaz tudo que depende dele.
+window.setRosterAll = function(arr){
+  ALL = Array.isArray(arr) ? arr : [];
+  window.ALL = ALL;
+  rebuildById();
+  saveRoster();
+  rebuildFilterLists();
+  if(typeof markHeavyViewsDirty==='function') markHeavyViewsDirty();
+  renderAll();
+};
+window.getContact = function(id){
+  return (id && contacts[id]) ? contacts[id] : '';
+};
+window.setContact = function(id, phone){
+  if(!id) return;
+  if(phone){ contacts[id] = phone; } else { delete contacts[id]; }
+  saveContacts();
+};
+window.ensureOperator = ensureOperator;
+window.logActivity = logActivity;
+})();
+
 </script>
 
 
@@ -4726,9 +4939,27 @@ safeInit('calendário de folgas interativo', foInitInteractive);
     var allowed=/coorden|líder|lider|confer/i;
     var arr=employees().filter(function(e){
       var role=String(e.cargo||'');
-      var s=empScale(e);
-      var m=s.match(/^SVC\s*-\s*([ABCD])(?:\s|$|-)/i);
-      var g=m?m[1].toUpperCase():String(e.turno||'').trim().toUpperCase();
+      var g='';
+      var nn=String(e.nome||'')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/\s+/g,' ').trim().toUpperCase();
+
+      if(Array.isArray(window.FIXED_LEADERSHIP)){
+        var hit=window.FIXED_LEADERSHIP.find(function(x){
+          var xn=String(x.nome||'')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+            .replace(/\s+/g,' ').trim().toUpperCase();
+          return xn===nn;
+        });
+        if(hit) g=String(hit.grupo||'').toUpperCase();
+      }
+
+      if(!g){
+        var s=empScale(e).trim().toUpperCase();
+        var m=s.match(/^SVC\s*-\s*([ABCD])\s*$/i);
+        g=m?m[1].toUpperCase():'';
+      }
+
       return allowed.test(role)&&g===letter;
     }).sort(function(a,b){return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');});
     document.querySelectorAll('.fo-group-btn').forEach(function(btn){btn.classList.toggle('active',btn.dataset.foGroup===letter);});
@@ -5409,9 +5640,9 @@ safeInit('calendário de folgas interativo', foInitInteractive);
 
     box.innerHTML=
       '<table class="fo-working-table">'+
-      '<thead><tr><th>Escala</th><th>Homens</th><th>Mulheres</th><th>Total</th></tr></thead><tbody>'+
+      '<thead><tr><th>Escala</th><th>Total</th></tr></thead><tbody>'+
       working.map(function(g){
-        return '<tr><td>'+esc(g.label)+'</td><td>'+g.men+'</td><td>'+g.women+'</td><td>'+g.total+'</td></tr>';
+        return '<tr data-fo-scale="'+esc(g.label)+'"><td>'+esc(g.label)+'</td><td>'+g.total+'</td></tr>';
       }).join('')+
       '</tbody></table>';
   }
@@ -5455,20 +5686,25 @@ safeInit('calendário de folgas interativo', foInitInteractive);
     return Array.isArray(window.ALL) ? window.ALL : [];
   }
   function setRoster(arr){
-    try{
-      ALL = arr;
-    }catch(e){}
-    window.ALL = arr;
-    if(typeof rebuildById==='function') rebuildById();
-    if(typeof saveRoster==='function') saveRoster();
-    if(typeof rebuildFilterLists==='function') rebuildFilterLists();
-    if(typeof markHeavyViewsDirty==='function') markHeavyViewsDirty();
-    if(typeof renderAll==='function') renderAll();
+    if(typeof window.setRosterAll==='function'){
+      window.setRosterAll(arr);
+    }else{
+      // proteção: se por algum motivo o app principal ainda não carregou,
+      // ao menos deixa a lista atualizada localmente pra não perder o que
+      // foi digitado, e avisa no console que não persistiu de verdade.
+      window.ALL = arr;
+      console.error('[KN] setRosterAll indisponível — a alteração pode não ter sido salva de verdade. Recarregue a página e tente de novo.');
+    }
   }
   function rowHtml(e, idx, isNew){
     var t='<tr data-db-index="'+idx+'"'+(isNew?' class="groups-db-new"':'')+'>';
     FIELDS.forEach(function(f){
-      var key=f[0], val=e && e[key]!=null ? e[key] : '';
+      var key=f[0], val;
+      if(key==='telefone'){
+        val = (e && e.id && typeof window.getContact==='function') ? window.getContact(e.id) : '';
+      }else{
+        val = e && e[key]!=null ? e[key] : '';
+      }
       if(key==='sexo'){
         t += '<td><select data-field="'+key+'">'+
           '<option value=""'+(!val?' selected':'')+'></option>'+
@@ -5489,20 +5725,46 @@ safeInit('calendário de folgas interativo', foInitInteractive);
     var el=document.getElementById('groups-db-count');
     if(el) el.textContent=roster().length;
   }
+  function populateFilterSelect(id, key){
+    var sel=document.getElementById(id);
+    if(!sel) return;
+    var current=sel.value;
+    var values=[];
+    var seen={};
+    roster().forEach(function(e){
+      var v=String(e[key]||'').trim();
+      if(v && !seen[v]){ seen[v]=1; values.push(v); }
+    });
+    values.sort(function(a,b){ return a.localeCompare(b,'pt-BR'); });
+    sel.innerHTML='<option value="">'+(sel.dataset.allLabel||'Todos')+'</option>'+
+      values.map(function(v){ return '<option value="'+esc(v)+'"'+(v===current?' selected':'')+'>'+esc(v)+'</option>'; }).join('');
+    if(values.indexOf(current)<0) sel.value='';
+  }
+  function refreshFilters(){
+    populateFilterSelect('groups-db-filter-coord','coordenador');
+    populateFilterSelect('groups-db-filter-escala','escala');
+  }
   function render(){
     var body=document.getElementById('groups-db-body');
     if(!body) return;
     var q=String((document.getElementById('groups-db-search')||{}).value||'').toLowerCase().trim();
+    var coordFilter=String((document.getElementById('groups-db-filter-coord')||{}).value||'');
+    var escalaFilter=String((document.getElementById('groups-db-filter-escala')||{}).value||'');
     var arr=roster();
     var html='';
+    var shown=0;
     arr.forEach(function(e,idx){
-      var hay=[e.grootId,e.nome,e.matricula,e.coordenador,e.escala,e.horario,e.cargo,e.origem,e.ext]
+      if(coordFilter && String(e.coordenador||'')!==coordFilter) return;
+      if(escalaFilter && String(e.escala||'')!==escalaFilter) return;
+      var hay=[e.grootId,e.nome,e.matricula,e.coordenador,e.escala,e.horario,e.cargo,e.origem,e.ext,e.cpf,e.setor]
         .join(' ').toLowerCase();
       if(q && hay.indexOf(q)<0) return;
       html+=rowHtml(e,idx,false);
+      shown++;
     });
     body.innerHTML=html || '<tr><td colspan="16" style="padding:18px;text-align:center;color:#718096">Nenhum colaborador encontrado.</td></tr>';
-    updateCount();
+    var el=document.getElementById('groups-db-count');
+    if(el) el.textContent = (shown!==arr.length) ? (shown+' de '+arr.length) : arr.length;
   }
   function readRow(tr){
     var obj={};
@@ -5511,7 +5773,6 @@ safeInit('calendário de folgas interativo', foInitInteractive);
     });
     if(!obj.grootId) return {error:'Preencha o Groot ID.'};
     if(!obj.nome) return {error:'Preencha o Nome.'};
-    obj.id=obj.grootId;
     obj.status='Ativo';
     return {obj:obj};
   }
@@ -5522,11 +5783,12 @@ safeInit('calendário de folgas interativo', foInitInteractive);
       el.style.color=ok===false?'#a32020':'#536579';
     }
   }
-  function saveRow(tr){
+  function doSaveRow(tr){
     var got=readRow(tr);
     if(got.error){status(got.error,false);return;}
     var arr=roster().slice();
     var idx=parseInt(tr.dataset.dbIndex,10);
+    var isNewRow = isNaN(idx) || idx<0;
 
     // Prevent duplicate Groot ID.
     var duplicate=arr.findIndex(function(e,i){
@@ -5534,24 +5796,58 @@ safeInit('calendário de folgas interativo', foInitInteractive);
     });
     if(duplicate>=0){status('Já existe um colaborador com esse Groot ID.',false);return;}
 
-    if(isNaN(idx) || idx<0){
+    var telefoneVal = got.obj.telefone;
+    delete got.obj.telefone; // telefone não fica no cadastro — vai pro mapa de contatos separado
+
+    if(isNewRow){
+      // Só pra colaborador novo, sem outro identificador melhor disponível,
+      // usa o Groot ID como ID interno.
+      got.obj.id = got.obj.grootId;
       arr.push(got.obj);
     }else{
       var old=arr[idx]||{};
+      // NUNCA troca o ID interno de quem já existe (isso quebraria histórico
+      // de presença, QR/código de barras e o vínculo com o Supabase).
+      got.obj.id = old.id || got.obj.grootId;
       arr[idx]=Object.assign({},old,got.obj);
     }
+
+    if(typeof window.setContact==='function') window.setContact(got.obj.id, telefoneVal);
     setRoster(arr);
     render();
     status('Cadastro salvo. Total: '+arr.length+' colaborador(es).',true);
+    if(typeof window.updateLeadershipBadges==='function') window.updateLeadershipBadges();
+    if(typeof window.logActivity==='function'){
+      window.logActivity('cadastro', (isNewRow?'Adicionou ':'Atualizou ')+(got.obj.nome||got.obj.id)+' via Banco de dados dos colaboradores');
+    }
   }
-  function deleteRow(tr){
+  function saveRow(tr){
+    if(typeof window.ensureOperator==='function'){
+      window.ensureOperator(function(){ doSaveRow(tr); });
+    }else{
+      doSaveRow(tr);
+    }
+  }
+  function doDeleteRow(tr){
     var idx=parseInt(tr.dataset.dbIndex,10);
     if(isNaN(idx) || idx<0){tr.remove();return;}
     var arr=roster().slice();
+    var removed=arr[idx];
     arr.splice(idx,1);
     setRoster(arr);
     render();
     status('Colaborador removido. Total: '+arr.length+'.',true);
+    if(typeof window.updateLeadershipBadges==='function') window.updateLeadershipBadges();
+    if(typeof window.logActivity==='function'){
+      window.logActivity('cadastro', 'Removeu '+(removed?(removed.nome||removed.id):'colaborador')+' via Banco de dados dos colaboradores');
+    }
+  }
+  function deleteRow(tr){
+    if(typeof window.ensureOperator==='function'){
+      window.ensureOperator(function(){ doDeleteRow(tr); });
+    }else{
+      doDeleteRow(tr);
+    }
   }
   function addNew(){
     var body=document.getElementById('groups-db-body');
@@ -5568,7 +5864,12 @@ safeInit('calendário de folgas interativo', foInitInteractive);
     var body=document.getElementById('groups-db-body');
     var add=document.getElementById('groups-db-add');
     var search=document.getElementById('groups-db-search');
+    var filterCoord=document.getElementById('groups-db-filter-coord');
+    var filterEscala=document.getElementById('groups-db-filter-escala');
     if(!body) return;
+
+    if(filterCoord) filterCoord.dataset.allLabel='Todos os coordenadores';
+    if(filterEscala) filterEscala.dataset.allLabel='Todas as escalas';
 
     if(add && !add.dataset.bound){
       add.dataset.bound='1';
@@ -5577,6 +5878,14 @@ safeInit('calendário de folgas interativo', foInitInteractive);
     if(search && !search.dataset.bound){
       search.dataset.bound='1';
       search.addEventListener('input',render);
+    }
+    if(filterCoord && !filterCoord.dataset.bound){
+      filterCoord.dataset.bound='1';
+      filterCoord.addEventListener('change',render);
+    }
+    if(filterEscala && !filterEscala.dataset.bound){
+      filterEscala.dataset.bound='1';
+      filterEscala.addEventListener('change',render);
     }
     if(!body.dataset.bound){
       body.dataset.bound='1';
@@ -5588,16 +5897,711 @@ safeInit('calendário de folgas interativo', foInitInteractive);
         if(btn.dataset.dbAction==='delete') deleteRow(tr);
       });
     }
+    refreshFilters();
     render();
   }
+  // Pra outras partes do app (ex: importar lista colada) avisarem essa
+  // tabela que precisa se atualizar, já que ela roda num script separado.
+  window.refreshGroupsDbView = function(){ refreshFilters(); render(); };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,120);});
   else setTimeout(bind,120);
   setTimeout(bind,1000);
   document.addEventListener('click',function(ev){
     var tab=ev.target.closest&&ev.target.closest('[data-tab="grupos"]');
-    if(tab) setTimeout(render,80);
+    if(tab) setTimeout(function(){ refreshFilters(); render(); },80);
   });
+})();
+</script>
+
+
+<script>
+(function(){
+  'use strict';
+
+  function roleAllowed(e){
+    return /coorden|líder|lider|confer/i.test(String((e&&e.cargo)||''));
+  }
+  function groupOf(e){
+    if(!roleAllowed(e)) return '';
+
+    var nn=String((e&&e.nome)||'')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/\s+/g,' ').trim().toUpperCase();
+
+    if(Array.isArray(window.FIXED_LEADERSHIP)){
+      var hit=window.FIXED_LEADERSHIP.find(function(x){
+        var xn=String(x.nome||'')
+          .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/\s+/g,' ').trim().toUpperCase();
+        return xn===nn;
+      });
+      if(hit && /^[ABCD]$/.test(String(hit.grupo||'').toUpperCase())){
+        return String(hit.grupo).toUpperCase();
+      }
+    }
+
+    var s=String((e&&e.escala)||'').replace(/\s+/g,' ').trim().toUpperCase();
+    var m=s.match(/^SVC\s*-\s*([ABCD])\s*$/i);
+    return m?m[1].toUpperCase():'';
+  }
+  function updateLeadershipBadges(){
+    var all=Array.isArray(window.ALL)?window.ALL:[];
+    ['A','B','C','D'].forEach(function(letter){
+      var n=all.filter(function(e){return groupOf(e)===letter;}).length;
+      var btn=document.querySelector('.fo-group-btn[data-fo-group="'+letter+'"]');
+      if(btn){
+        btn.textContent='Grupo '+letter+' ('+n+')';
+        btn.title='Coordenadores, Líderes e Conferentes da escala SVC - '+letter;
+      }
+    });
+  }
+  window.updateLeadershipBadges=updateLeadershipBadges;
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(updateLeadershipBadges,150);});
+  }else{
+    setTimeout(updateLeadershipBadges,150);
+  }
+  setTimeout(updateLeadershipBadges,1100);
+
+  document.addEventListener('click',function(ev){
+    var tab=ev.target.closest&&ev.target.closest('[data-tab="import"]');
+    if(tab) setTimeout(updateLeadershipBadges,80);
+  });
+})();
+</script>
+
+
+
+<script>
+(function(){
+  'use strict';
+  // Lista fixa usada somente nos botões A/B/C/D da Escala de Folga.
+  // Não altera o banco de dados dos colaboradores.
+  window.FIXED_LEADERSHIP = [{"nome": "Jonathan Chagas Louvisi", "grupo": "A", "cargo": "Coordenador"}, {"nome": "Édio Cruz dos Santos", "grupo": "A", "cargo": "Coordenador"}, {"nome": "Aline Saboia Odom", "grupo": "A", "cargo": "Coordenador"}, {"nome": "Bruno Nardoto de Carvalho", "grupo": "B", "cargo": "Coordenador"}, {"nome": "Marcio Mariano Dos Santos", "grupo": "B", "cargo": "Coordenador"}, {"nome": "Filipi Gonçalves da Mata e Silva", "grupo": "B", "cargo": "Coordenador"}, {"nome": "Mariana da Silva Bernardes", "grupo": "C", "cargo": "Coordenador"}, {"nome": "Dyenis Mendes de Lima", "grupo": "C", "cargo": "Coordenador"}, {"nome": "Marco Antonio Leandro Rangel", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Marcelo Magalhães", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Adnilson Tavares Lima", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Mario Silva Dos Santos", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Jefferson Rodrigues", "grupo": "A", "cargo": "Conferente"}, {"nome": "Ingrid Araújo", "grupo": "A", "cargo": "Conferente"}, {"nome": "Leandri Guimarães", "grupo": "A", "cargo": "Conferente"}, {"nome": "Thamires Barcelos", "grupo": "A", "cargo": "Conferente"}, {"nome": "Matheus Notarangelo", "grupo": "A", "cargo": "Conferente"}, {"nome": "Thaynara Silva", "grupo": "B", "cargo": "Conferente"}, {"nome": "Carlos Henrique", "grupo": "B", "cargo": "Conferente"}, {"nome": "Eliezer Passos", "grupo": "B", "cargo": "Conferente"}, {"nome": "Leilane Rangel", "grupo": "B", "cargo": "Conferente"}, {"nome": "Yris Nepomuceno", "grupo": "B", "cargo": "Conferente"}, {"nome": "Matheus Govea", "grupo": "B", "cargo": "Conferente"}, {"nome": "Roger Alves", "grupo": "C", "cargo": "Conferente"}, {"nome": "João Marcos", "grupo": "C", "cargo": "Conferente"}, {"nome": "Mylene Monteiro", "grupo": "C", "cargo": "Conferente"}, {"nome": "Carine Silva", "grupo": "C", "cargo": "Conferente"}, {"nome": "Thayanne do Espírito", "grupo": "C", "cargo": "Conferente"}, {"nome": "Lucas Fernades", "grupo": "D", "cargo": "Conferente"}, {"nome": "Andrilene Oliveira", "grupo": "D", "cargo": "Conferente"}, {"nome": "Igor Antônio", "grupo": "D", "cargo": "Conferente"}, {"nome": "Gabriel Pereira", "grupo": "D", "cargo": "Conferente"}, {"nome": "Matheus do Carmo", "grupo": "D", "cargo": "Conferente"}, {"nome": "Cristiane", "grupo": "D", "cargo": "Conferente"}, {"nome": "Marcelly Matias Honorato", "grupo": "A", "cargo": "Líder"}, {"nome": "Jonathan dos Santos Soares", "grupo": "A", "cargo": "Líder"}, {"nome": "Salatiel Silva de Paiva", "grupo": "A", "cargo": "Líder"}, {"nome": "Priscila Pereira da Silva", "grupo": "B", "cargo": "Líder"}, {"nome": "Rafael Maria de Lima", "grupo": "B", "cargo": "Líder"}, {"nome": "Lucas Gabriel Paraíso Oliveira", "grupo": "B", "cargo": "Líder"}, {"nome": "Alexander da Silva Alves", "grupo": "C", "cargo": "Líder"}, {"nome": "Jean Pedro da Silva Lima", "grupo": "C", "cargo": "Líder"}, {"nome": "Tamires Cristine de Aguiar Germano", "grupo": "C", "cargo": "Líder"}, {"nome": "Davi Lira de Abreu", "grupo": "D", "cargo": "Líder"}, {"nome": "Luiz Henrique de Souza Santos", "grupo": "D", "cargo": "Líder"}, {"nome": "Rebeca Bernardo de Andrade", "grupo": "D", "cargo": "Líder"}];
+})();
+</script>
+
+
+
+<script>
+(function(){
+  'use strict';
+
+  var FOLGA_GROUPS = [{"nome": "Jonathan Chagas Louvisi", "grupo": "A", "cargo": "Coordenador"}, {"nome": "Édio Cruz dos Santos", "grupo": "A", "cargo": "Coordenador"}, {"nome": "Aline Saboia Odom", "grupo": "A", "cargo": "Coordenador"}, {"nome": "Bruno Nardoto de Carvalho", "grupo": "B", "cargo": "Coordenador"}, {"nome": "Marcio Mariano Dos Santos", "grupo": "B", "cargo": "Coordenador"}, {"nome": "Filipi Gonçalves da Mata e Silva", "grupo": "B", "cargo": "Coordenador"}, {"nome": "Mariana da Silva Bernardes", "grupo": "C", "cargo": "Coordenador"}, {"nome": "Dyenis Mendes de Lima", "grupo": "C", "cargo": "Coordenador"}, {"nome": "Marco Antonio Leandro Rangel", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Marcelo Magalhães", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Adnilson Tavares Lima", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Mario Silva Dos Santos", "grupo": "D", "cargo": "Coordenador"}, {"nome": "Jefferson Rodrigues", "grupo": "A", "cargo": "Conferente"}, {"nome": "Ingrid Araújo", "grupo": "A", "cargo": "Conferente"}, {"nome": "Leandri Guimarães", "grupo": "A", "cargo": "Conferente"}, {"nome": "Thamires Barcelos", "grupo": "A", "cargo": "Conferente"}, {"nome": "Matheus Notarangelo", "grupo": "A", "cargo": "Conferente"}, {"nome": "Thaynara Silva", "grupo": "B", "cargo": "Conferente"}, {"nome": "Carlos Henrique", "grupo": "B", "cargo": "Conferente"}, {"nome": "Eliezer Passos", "grupo": "B", "cargo": "Conferente"}, {"nome": "Leilane Rangel", "grupo": "B", "cargo": "Conferente"}, {"nome": "Yris Nepomuceno", "grupo": "B", "cargo": "Conferente"}, {"nome": "Matheus Govea", "grupo": "B", "cargo": "Conferente"}, {"nome": "Roger Alves", "grupo": "C", "cargo": "Conferente"}, {"nome": "João Marcos", "grupo": "C", "cargo": "Conferente"}, {"nome": "Mylene Monteiro", "grupo": "C", "cargo": "Conferente"}, {"nome": "Carine Silva", "grupo": "C", "cargo": "Conferente"}, {"nome": "Thayanne do Espírito", "grupo": "C", "cargo": "Conferente"}, {"nome": "Lucas Fernades", "grupo": "D", "cargo": "Conferente"}, {"nome": "Andrilene Oliveira", "grupo": "D", "cargo": "Conferente"}, {"nome": "Igor Antônio", "grupo": "D", "cargo": "Conferente"}, {"nome": "Gabriel Pereira", "grupo": "D", "cargo": "Conferente"}, {"nome": "Matheus do Carmo", "grupo": "D", "cargo": "Conferente"}, {"nome": "Cristiane", "grupo": "D", "cargo": "Conferente"}, {"nome": "Marcelly Matias Honorato", "grupo": "A", "cargo": "Líder"}, {"nome": "Jonathan dos Santos Soares", "grupo": "A", "cargo": "Líder"}, {"nome": "Salatiel Silva de Paiva", "grupo": "A", "cargo": "Líder"}, {"nome": "Priscila Pereira da Silva", "grupo": "B", "cargo": "Líder"}, {"nome": "Rafael Maria de Lima", "grupo": "B", "cargo": "Líder"}, {"nome": "Lucas Gabriel Paraíso Oliveira", "grupo": "B", "cargo": "Líder"}, {"nome": "Alexander da Silva Alves", "grupo": "C", "cargo": "Líder"}, {"nome": "Jean Pedro da Silva Lima", "grupo": "C", "cargo": "Líder"}, {"nome": "Tamires Cristine de Aguiar Germano", "grupo": "C", "cargo": "Líder"}, {"nome": "Davi Lira de Abreu", "grupo": "D", "cargo": "Líder"}, {"nome": "Luiz Henrique de Souza Santos", "grupo": "D", "cargo": "Líder"}, {"nome": "Rebeca Bernardo de Andrade", "grupo": "D", "cargo": "Líder"}];
+
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function members(letter){
+    return FOLGA_GROUPS
+      .filter(function(x){ return x.grupo===letter; })
+      .sort(function(a,b){
+        var order={'Coordenador':1,'Conferente':2,'Líder':3};
+        var ao=order[a.cargo]||9, bo=order[b.cargo]||9;
+        if(ao!==bo) return ao-bo;
+        return a.nome.localeCompare(b.nome,'pt-BR');
+      });
+  }
+
+  function updateButtons(){
+    ['A','B','C','D'].forEach(function(letter){
+      var btn=document.querySelector('.fo-group-btn[data-fo-group="'+letter+'"]');
+      if(btn) btn.textContent='Grupo '+letter+' ('+members(letter).length+')';
+    });
+  }
+
+  function renderGroup(letter){
+    var list=members(letter);
+    var cap=document.getElementById('fo-group-caption');
+    var box=document.getElementById('fo-group-people');
+
+    document.querySelectorAll('.fo-group-btn').forEach(function(b){
+      b.classList.toggle('active', b.dataset.foGroup===letter);
+    });
+
+    if(cap) cap.textContent='Grupo '+letter+' — Coordenadores, Líderes e Conferentes ('+list.length+')';
+
+    if(box){
+      box.innerHTML=list.length ? list.map(function(x){
+        return '<div class="fo-person"><span>'+esc(x.nome)+'</span><span class="role">'+esc(x.cargo)+'</span></div>';
+      }).join('') : '<div class="fo-person"><span class="muted">Nenhuma pessoa cadastrada neste grupo.</span></div>';
+    }
+  }
+
+  function bind(){
+    updateButtons();
+    document.querySelectorAll('.fo-group-btn').forEach(function(btn){
+      if(btn.dataset.fixedFolgaBound) return;
+      btn.dataset.fixedFolgaBound='1';
+      btn.addEventListener('click',function(ev){
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        renderGroup(btn.dataset.foGroup);
+      }, true);
+    });
+    renderGroup('A');
+  }
+
+  window.FOLGA_GROUPS = FOLGA_GROUPS;
+  window.renderFixedFolgaGroup = renderGroup;
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,100);});
+  }else{
+    setTimeout(bind,100);
+  }
+  setTimeout(bind,900);
+  document.addEventListener('click',function(ev){
+    var tab=ev.target.closest&&ev.target.closest('[data-tab="import"]');
+    if(tab) setTimeout(bind,100);
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  'use strict';
+
+  function norm(v){
+    return String(v||'')
+      .replace(/\s+/g,' ')
+      .replace(/\s*-\s*/g,' - ')
+      .replace(/\s*\/\s*/g,' / ')
+      .trim()
+      .toUpperCase();
+  }
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+  function roster(){ return Array.isArray(window.ALL) ? window.ALL : []; }
+  function rows(){ return Array.isArray(window.BUILTIN_FOLGAS_2026) ? window.BUILTIN_FOLGAS_2026 : []; }
+  function parseDays(v){
+    return String(v||'').split(',').map(function(x){return parseInt(x.trim(),10);})
+      .filter(function(n){return !isNaN(n);});
+  }
+  function isScaleOff(scale,date){
+    var p=String(date||'').split('-');
+    if(p.length!==3) return false;
+    var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+
+    try{
+      var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
+      for(var i=0;i<stores.length;i++){
+        var obj=JSON.parse(localStorage.getItem(stores[i])||'{}')||{};
+        var key=Object.keys(obj).find(function(k){return norm(k)===s;});
+        if(key && obj[key] && obj[key][date]) return true;
+      }
+    }catch(e){}
+
+    if(y!==2026 || [9,10,11].indexOf(m)<0) return false;
+    var row=rows().find(function(r){return norm(r[0])===s;});
+    if(!row) return false;
+    var idx=m===9?1:(m===10?2:3);
+    return parseDays(row[idx]).indexOf(d)>=0;
+  }
+  function grouped(){
+    var map={};
+    roster().forEach(function(e){
+      var raw=String(e.escala||'').trim();
+      if(!raw) return;
+      var k=norm(raw);
+      if(!map[k]) map[k]={label:raw,people:[]};
+      map[k].people.push(e);
+    });
+    return map;
+  }
+
+  function renderOffScales(){
+    var dateEl=document.getElementById('fo-query-date');
+    var box=document.getElementById('fo-query-offgroups');
+    if(!dateEl || !box || !dateEl.value) return;
+
+    var map=grouped();
+    var off=[];
+    Object.keys(map).forEach(function(k){
+      var g=map[k];
+      if(isScaleOff(g.label,dateEl.value)){
+        g.people.sort(function(a,b){
+          return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
+        });
+        off.push(g);
+      }
+    });
+    off.sort(function(a,b){return a.label.localeCompare(b.label,'pt-BR');});
+
+    var total=off.reduce(function(n,g){return n+g.people.length;},0);
+    var cnt=document.getElementById('fo-off-count');
+    if(cnt) cnt.textContent=total;
+
+    if(!off.length){
+      box.innerHTML='<div class="fo-ref-empty">Nenhuma escala de folga encontrada nesta data.</div>';
+      return;
+    }
+
+    box.innerHTML=
+      '<div style="margin:0 0 8px;font-weight:900;color:#12243a">Escalas de folga nesta data</div>'+
+      off.map(function(g){
+        return '<div class="fo-ref-group">'+
+          '<button type="button" class="fo-ref-group-head" data-fo-off-scale="'+esc(g.label)+'">'+
+            '<span>'+esc(g.label)+'</span>'+
+            '<span class="fo-ref-group-count">'+g.people.length+'</span>'+
+          '</button>'+
+          '<div class="fo-ref-people">'+
+            g.people.map(function(e){
+              var id=e.grootId||e.id||e.matricula||'';
+              return '<div class="fo-ref-person"><span>'+esc(e.nome||'')+'</span><span class="fo-ref-person-id">'+esc(id)+'</span></div>';
+            }).join('')+
+          '</div>'+
+        '</div>';
+      }).join('');
+  }
+
+  document.addEventListener('click',function(ev){
+    var head=ev.target.closest&&ev.target.closest('[data-fo-off-scale]');
+    if(head){
+      var g=head.closest('.fo-ref-group');
+      if(g) g.classList.toggle('open');
+    }
+  });
+
+  function bind(){
+    var btn=document.getElementById('fo-query-btn');
+    if(btn && !btn.dataset.foOnlyBound){
+      btn.dataset.foOnlyBound='1';
+      btn.addEventListener('click',function(){setTimeout(renderOffScales,0);});
+    }
+    renderOffScales();
+  }
+
+  window.renderOffScalesOnly=renderOffScales;
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,120);});
+  }else{
+    setTimeout(bind,120);
+  }
+  setTimeout(bind,1000);
+})();
+</script>
+
+
+<script>
+(function(){
+  'use strict';
+
+  function norm(v){
+    return String(v||'')
+      .replace(/\s+/g,' ')
+      .replace(/\s*-\s*/g,' - ')
+      .replace(/\s*\/\s*/g,' / ')
+      .trim()
+      .toUpperCase();
+  }
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+  function roster(){ return Array.isArray(window.ALL) ? window.ALL : []; }
+  function rows(){ return Array.isArray(window.BUILTIN_FOLGAS_2026) ? window.BUILTIN_FOLGAS_2026 : []; }
+  function parseDays(v){
+    return String(v||'').split(',').map(function(x){return parseInt(x.trim(),10);})
+      .filter(function(n){return !isNaN(n);});
+  }
+  function isScaleOff(scale,date){
+    var p=String(date||'').split('-');
+    if(p.length!==3) return false;
+    var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+
+    try{
+      var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
+      for(var i=0;i<stores.length;i++){
+        var obj=JSON.parse(localStorage.getItem(stores[i])||'{}')||{};
+        var key=Object.keys(obj).find(function(k){return norm(k)===s;});
+        if(key && obj[key] && obj[key][date]) return true;
+      }
+    }catch(e){}
+
+    if(y!==2026 || [9,10,11].indexOf(m)<0) return false;
+    var row=rows().find(function(r){return norm(r[0])===s;});
+    if(!row) return false;
+    var idx=m===9?1:(m===10?2:3);
+    return parseDays(row[idx]).indexOf(d)>=0;
+  }
+
+  function sex(e){
+    var s=String(e.sexo||'').trim().toUpperCase();
+    if(s==='M'||s==='MASCULINO') return 'M';
+    if(s==='F'||s==='FEMININO') return 'F';
+    return '';
+  }
+
+  function renderPresent(){
+    var dateEl=document.getElementById('fo-query-date');
+    var box=document.getElementById('fo-present-groups');
+    if(!dateEl || !box || !dateEl.value) return;
+
+    var map={};
+    roster().forEach(function(e){
+      var raw=String(e.escala||'').trim();
+      if(!raw) return;
+      var k=norm(raw);
+      if(!map[k]) map[k]={label:raw,people:[]};
+      map[k].people.push(e);
+    });
+
+    var working=[];
+    Object.keys(map).forEach(function(k){
+      var g=map[k];
+      if(isScaleOff(g.label,dateEl.value)) return;
+
+      var men=0,women=0;
+      g.people.forEach(function(e){
+        var sx=sex(e);
+        if(sx==='M') men++;
+        else if(sx==='F') women++;
+      });
+
+      g.people.sort(function(a,b){
+        return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
+      });
+
+      working.push({
+        label:g.label,
+        men:men,
+        women:women,
+        total:g.people.length,
+        people:g.people
+      });
+    });
+
+    working.sort(function(a,b){return a.label.localeCompare(b.label,'pt-BR');});
+
+    if(!working.length){
+      box.innerHTML='<div class="fo-ref-empty">Nenhuma escala trabalhando encontrada nesta data.</div>';
+      return;
+    }
+
+    box.innerHTML=working.map(function(g){
+      return '<div class="fo-present-block">'+
+        '<table class="fo-present-table"><tbody>'+
+          '<tr class="fo-present-row" data-present-scale="'+esc(g.label)+'">'+
+            '<td>'+esc(g.label)+'</td>'+
+            '<td>'+g.men+' homens</td>'+
+            '<td>'+g.women+' mulheres</td>'+
+            '<td>'+g.total+' total</td>'+
+          '</tr>'+
+        '</tbody></table>'+
+        '<div class="fo-present-people">'+
+          g.people.map(function(e){
+            var sx=sex(e);
+            var sxLabel=sx==='M'?'Homem':(sx==='F'?'Mulher':'');
+            return '<div class="fo-present-person"><span>'+esc(e.nome||'')+'</span><span>'+esc(sxLabel)+'</span></div>';
+          }).join('')+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  document.addEventListener('click',function(ev){
+    var row=ev.target.closest&&ev.target.closest('[data-present-scale]');
+    if(row){
+      var block=row.closest('.fo-present-block');
+      if(block) block.classList.toggle('open');
+    }
+  });
+
+  function bind(){
+    var btn=document.getElementById('fo-query-btn');
+    if(btn && !btn.dataset.presentBound){
+      btn.dataset.presentBound='1';
+      btn.addEventListener('click',function(){setTimeout(renderPresent,0);});
+    }
+    renderPresent();
+  }
+
+  window.renderPresentScales=renderPresent;
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,150);});
+  }else{
+    setTimeout(bind,150);
+  }
+  setTimeout(bind,1100);
+})();
+</script>
+
+
+<script>
+(function(){
+  'use strict';
+
+  function norm(v){
+    return String(v||'')
+      .replace(/\s+/g,' ')
+      .replace(/\s*-\s*/g,' - ')
+      .replace(/\s*\/\s*/g,' / ')
+      .trim()
+      .toUpperCase();
+  }
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+  function roster(){ return Array.isArray(window.ALL) ? window.ALL : []; }
+  function rows(){ return Array.isArray(window.BUILTIN_FOLGAS_2026) ? window.BUILTIN_FOLGAS_2026 : []; }
+  function parseDays(v){
+    return String(v||'').split(',').map(function(x){return parseInt(x.trim(),10);})
+      .filter(function(n){return !isNaN(n);});
+  }
+  function isScaleOff(scale,date){
+    var p=String(date||'').split('-');
+    if(p.length!==3) return false;
+    var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+
+    try{
+      var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
+      for(var i=0;i<stores.length;i++){
+        var obj=JSON.parse(localStorage.getItem(stores[i])||'{}')||{};
+        var key=Object.keys(obj).find(function(k){return norm(k)===s;});
+        if(key && obj[key] && obj[key][date]) return true;
+      }
+    }catch(e){}
+
+    if(y!==2026 || [9,10,11].indexOf(m)<0) return false;
+    var row=rows().find(function(r){return norm(r[0])===s;});
+    if(!row) return false;
+    var idx=m===9?1:(m===10?2:3);
+    return parseDays(row[idx]).indexOf(d)>=0;
+  }
+
+  function grouped(){
+    var map={};
+    roster().forEach(function(e){
+      var label=String(e.escala||'').trim();
+      if(!label) return;
+      var k=norm(label);
+      if(!map[k]) map[k]={label:label,people:[]};
+      map[k].people.push(e);
+    });
+    return map;
+  }
+
+  function renderOffLikeScreenshot(){
+    var dateEl=document.getElementById('fo-query-date');
+    var box=document.getElementById('fo-query-offgroups');
+    if(!dateEl || !box || !dateEl.value) return;
+
+    var map=grouped(), off=[];
+    Object.keys(map).forEach(function(k){
+      var g=map[k];
+      if(isScaleOff(g.label,dateEl.value)){
+        g.people.sort(function(a,b){return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');});
+        off.push(g);
+      }
+    });
+    off.sort(function(a,b){return a.label.localeCompare(b.label,'pt-BR');});
+
+    var total=off.reduce(function(n,g){return n+g.people.length;},0);
+    var cnt=document.getElementById('fo-off-count');
+    if(cnt) cnt.textContent=total;
+
+    if(!off.length){
+      box.innerHTML='<div class="fo-ref-empty">Nenhuma escala de folga encontrada nesta data.</div>';
+      return;
+    }
+
+    box.innerHTML=
+      '<div style="margin:0 0 8px;font-weight:900;color:#12243a">Escalas de folga nesta data</div>'+
+      '<table class="fo-off-table"><thead><tr><th>Escala</th><th>Total</th></tr></thead><tbody>'+
+      off.map(function(g,i){
+        var details=g.people.map(function(e){
+          var id=e.grootId||e.id||e.matricula||'';
+          return '<div class="fo-off-person"><span>'+esc(e.nome||'')+'</span><span>'+esc(id)+'</span></div>';
+        }).join('');
+        return '<tr class="fo-off-main-row" data-off-index="'+i+'"><td>'+esc(g.label)+'</td><td>'+g.people.length+'</td></tr>'+
+               '<tr class="fo-off-detail-row" data-off-detail="'+i+'"><td colspan="2" class="fo-off-detail-cell">'+details+'</td></tr>';
+      }).join('')+
+      '</tbody></table>';
+  }
+
+  document.addEventListener('click',function(ev){
+    var row=ev.target.closest&&ev.target.closest('.fo-off-main-row');
+    if(!row) return;
+    var idx=row.dataset.offIndex;
+    var detail=document.querySelector('.fo-off-detail-row[data-off-detail="'+idx+'"]');
+    if(detail) detail.classList.toggle('open');
+  });
+
+  function bind(){
+    var btn=document.getElementById('fo-query-btn');
+    if(btn && !btn.dataset.offScreenshotBound){
+      btn.dataset.offScreenshotBound='1';
+      btn.addEventListener('click',function(){setTimeout(renderOffLikeScreenshot,0);});
+    }
+    renderOffLikeScreenshot();
+  }
+
+  window.renderOffLikeScreenshot=renderOffLikeScreenshot;
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,160);});
+  }else{
+    setTimeout(bind,160);
+  }
+  setTimeout(bind,1150);
+})();
+</script>
+
+
+<script>
+(function(){
+  'use strict';
+
+  function norm(v){
+    return String(v||'')
+      .replace(/\s+/g,' ')
+      .replace(/\s*-\s*/g,' - ')
+      .replace(/\s*\/\s*/g,' / ')
+      .trim()
+      .toUpperCase();
+  }
+  function esc(v){
+    return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+  function roster(){ return Array.isArray(window.ALL) ? window.ALL : []; }
+  function rows(){ return Array.isArray(window.BUILTIN_FOLGAS_2026) ? window.BUILTIN_FOLGAS_2026 : []; }
+  function parseDays(v){
+    return String(v||'').split(',').map(function(x){return parseInt(x.trim(),10);})
+      .filter(function(n){return !isNaN(n);});
+  }
+  function isScaleOff(scale,date){
+    var p=String(date||'').split('-');
+    if(p.length!==3) return false;
+    var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+
+    try{
+      var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
+      for(var i=0;i<stores.length;i++){
+        var obj=JSON.parse(localStorage.getItem(stores[i])||'{}')||{};
+        var key=Object.keys(obj).find(function(k){return norm(k)===s;});
+        if(key && obj[key] && obj[key][date]) return true;
+      }
+    }catch(e){}
+
+    if(y!==2026 || [9,10,11].indexOf(m)<0) return false;
+    var row=rows().find(function(r){return norm(r[0])===s;});
+    if(!row) return false;
+    var idx=m===9?1:(m===10?2:3);
+    return parseDays(row[idx]).indexOf(d)>=0;
+  }
+  function sex(e){
+    var s=String(e.sexo||'').trim().toUpperCase();
+    if(s==='M'||s==='MASCULINO') return 'M';
+    if(s==='F'||s==='FEMININO') return 'F';
+    return '';
+  }
+
+  function buildWorking(){
+    var dateEl=document.getElementById('fo-query-date');
+    var box=document.getElementById('fo-present-groups');
+    var filter=document.getElementById('fo-present-scale-filter');
+    if(!dateEl || !box || !filter || !dateEl.value) return;
+
+    var map={};
+    roster().forEach(function(e){
+      var label=String(e.escala||'').trim();
+      if(!label) return;
+      var k=norm(label);
+      if(!map[k]) map[k]={label:label,people:[]};
+      map[k].people.push(e);
+    });
+
+    var arr=[];
+    Object.keys(map).forEach(function(k){
+      var g=map[k];
+      if(isScaleOff(g.label,dateEl.value)) return;
+      var men=0,women=0;
+      g.people.forEach(function(e){
+        var sx=sex(e);
+        if(sx==='M') men++;
+        else if(sx==='F') women++;
+      });
+      g.people.sort(function(a,b){return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');});
+      arr.push({key:k,label:g.label,people:g.people,men:men,women:women,total:g.people.length});
+    });
+    arr.sort(function(a,b){return a.label.localeCompare(b.label,'pt-BR');});
+
+    var current=filter.value;
+    filter.innerHTML='<option value="">Todas as escalas</option>'+
+      arr.map(function(g){return '<option value="'+esc(g.key)+'">'+esc(g.label)+'</option>';}).join('');
+    if(arr.some(function(g){return g.key===current;})) filter.value=current;
+
+    var chosen=filter.value;
+    var shown=chosen ? arr.filter(function(g){return g.key===chosen;}) : arr;
+
+    if(!shown.length){
+      box.innerHTML='<div class="fo-ref-empty">Nenhuma escala trabalhando encontrada.</div>';
+      return;
+    }
+
+    box.innerHTML=
+      '<table class="fo-present-table"><thead><tr><th>Escala</th><th>Homens</th><th>Mulheres</th><th>Total</th></tr></thead><tbody>'+
+      shown.map(function(g,i){
+        return '<tr class="fo-present-row" data-present-index="'+i+'">'+
+          '<td>'+esc(g.label)+'</td><td>'+g.men+'</td><td>'+g.women+'</td><td>'+g.total+'</td>'+
+        '</tr>'+
+        '<tr class="fo-off-detail-row" data-present-detail="'+i+'"><td colspan="4" class="fo-off-detail-cell">'+
+          g.people.map(function(e){
+            var sx=sex(e), sxLabel=sx==='M'?'Homem':(sx==='F'?'Mulher':'');
+            return '<div class="fo-off-person"><span>'+esc(e.nome||'')+'</span><span>'+esc(sxLabel)+'</span></div>';
+          }).join('')+
+        '</td></tr>';
+      }).join('')+
+      '</tbody></table>';
+  }
+
+  document.addEventListener('click',function(ev){
+    var row=ev.target.closest&&ev.target.closest('.fo-present-row');
+    if(!row) return;
+    var idx=row.dataset.presentIndex;
+    var detail=document.querySelector('.fo-off-detail-row[data-present-detail="'+idx+'"]');
+    if(detail) detail.classList.toggle('open');
+  });
+
+  function bind(){
+    var btn=document.getElementById('fo-query-btn');
+    var filter=document.getElementById('fo-present-scale-filter');
+    if(btn && !btn.dataset.workingFilterBound){
+      btn.dataset.workingFilterBound='1';
+      btn.addEventListener('click',function(){setTimeout(buildWorking,0);});
+    }
+    if(filter && !filter.dataset.workingFilterBound){
+      filter.dataset.workingFilterBound='1';
+      filter.addEventListener('change',buildWorking);
+    }
+    buildWorking();
+  }
+
+  window.buildWorkingWithFilter=buildWorking;
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,180);});
+  }else{
+    setTimeout(bind,180);
+  }
+  setTimeout(bind,1200);
 })();
 </script>
 
