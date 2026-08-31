@@ -1648,13 +1648,18 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
         </div>
 
         <div class="fo-card" style="margin-top:14px">
-          <p class="fo-title">Grupos A, B, C e D</p>
-          <div class="fo-sub">Esses quatro grupos são exclusivos de Coordenadores, Líderes e Conferentes. Nenhuma outra função entra nessa consulta.</div>
+          <p class="fo-title">Escala de Coordenador, Líder e Conferente</p>
+          <div class="fo-sub">Veja quem está de folga ou trabalhando numa data específica, por grupo (A, B, C ou D). Só entram Coordenadores, Líderes e Conferentes nessa consulta.</div>
           <div class="fo-group-buttons" style="margin-top:10px">
             <button type="button" class="fo-group-btn" data-fo-group="A">Grupo A</button>
             <button type="button" class="fo-group-btn" data-fo-group="B">Grupo B</button>
             <button type="button" class="fo-group-btn" data-fo-group="C">Grupo C</button>
             <button type="button" class="fo-group-btn" data-fo-group="D">Grupo D</button>
+          </div>
+          <div class="fo-ref-form" style="margin-top:12px">
+            <label>Ver quem está de folga/trabalhando em
+              <input id="fo-group-date" type="date" value="2026-09-01">
+            </label>
           </div>
           <div id="fo-group-caption" class="fo-sub" style="margin-top:10px">Os grupos A, B, C e D existem somente aqui na Escala de Folga. Eles já estão preenchidos com os Coordenadores, Líderes e Conferentes que você informou.</div>
           <div id="fo-group-people" class="fo-people"></div>
@@ -4785,7 +4790,19 @@ var foCalendarData = {};
 var foCalendarDraft = {};
 var foSelectedLeadershipGroup = '';
 
-function foNorm(s){ return String(s||'').replace(/\s+/g,' ').trim(); }
+function foNorm(s){
+  // Padroniza de verdade: maiúsculas + espaçamento único ao redor de "-" e
+  // "/". Sem isso, a mínima diferença de formatação (ex.: "SVC -A1" vs
+  // "SVC - A1", ou minúsculo) fazia o app tratar como escalas DIFERENTES —
+  // causando duplicatas na lista e calendário "vazio" pra variante que não
+  // batia exatamente com o nome oficial.
+  return String(s||'')
+    .replace(/\s+/g,' ')
+    .replace(/\s*-\s*/g,' - ')
+    .replace(/\s*\/\s*/g,' / ')
+    .trim()
+    .toUpperCase();
+}
 function foRoleAllowed(e){
   var c = String((e && e.cargo)||'').toLowerCase();
   return /coorden|líder|lider|confer/.test(c);
@@ -4838,8 +4855,13 @@ function foLoadCalendarStore(){
   var base = foBuiltInObject();
   var saved = {};
   try{ saved = JSON.parse(localStorage.getItem(FO_CAL_STORAGE)||'{}') || {}; }catch(e){ saved={}; }
-  Object.keys(saved).forEach(function(scale){
-    base[scale] = Object.assign(base[scale]||{}, saved[scale]||{});
+  // As chaves salvas antes podem estar num formato antigo/mais fraco de
+  // normalização (ex.: sem maiúsculas). Reaplica o foNorm atual em cada
+  // chave salva antes de mesclar, senão os dias marcados manualmente por
+  // você se perdem (viram uma chave "órfã" que ninguém mais lê).
+  Object.keys(saved).forEach(function(rawScale){
+    var scale = foNorm(rawScale);
+    base[scale] = Object.assign({}, base[scale]||{}, saved[rawScale]||{});
   });
   foCalendarData = base;
 }
@@ -4848,7 +4870,14 @@ function foPersistCalendar(){
 }
 function foScaleOptions(){
   var names = [];
-  (BUILTIN_FOLGAS_2026||[]).forEach(function(r){ names.push(foNorm(r[0])); });
+  // As 26 escalas dos colaboradores (turnos operacionais) + as 4 escalas
+  // genéricas "SVC - A/B/C/D", que são o calendário de folga separado dos
+  // Grupos de liderança (Coordenador/Líder/Conferente) — não são "lixo",
+  // são usadas de propósito ali.
+  (BUILTIN_FOLGAS_2026||[]).forEach(function(r){
+    var n = foNorm(r[0]);
+    if(/^SVC - [ABCD]$/.test(n)) names.push(n); // só as 4 genéricas de liderança
+  });
   (ALL||[]).forEach(function(e){ if(e.escala) names.push(foNorm(e.escala)); });
   names = Array.from(new Set(names.filter(Boolean))).sort();
   return names;
@@ -5104,7 +5133,17 @@ window.logActivity = logActivity;
   var data = {};
   var draft = {};
 
-  function norm(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
+  function norm(v){
+    // Mesma correção do módulo oficial: maiúsculas + espaçamento padronizado
+    // ao redor de "-" e "/", senão a mínima diferença de formatação cria
+    // escalas "fantasmas" na lista.
+    return String(v||'')
+      .replace(/\s+/g,' ')
+      .replace(/\s*-\s*/g,' - ')
+      .replace(/\s*\/\s*/g,' / ')
+      .trim()
+      .toUpperCase();
+  }
   function esc2(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
   function dateKey(y,m,d){ return y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
   function monthInfo(ym){
@@ -5131,7 +5170,13 @@ window.logActivity = logActivity;
     data=baseData();
     try{
       var saved=JSON.parse(localStorage.getItem(STORE)||'{}')||{};
-      Object.keys(saved).forEach(function(s){ data[s]=Object.assign(data[s]||{},saved[s]||{}); });
+      // Re-normaliza as chaves salvas (podem estar no formato antigo, mais
+      // fraco) antes de mesclar, senão os dias marcados manualmente se
+      // perdem numa chave que ninguém mais lê.
+      Object.keys(saved).forEach(function(rawS){
+        var s=norm(rawS);
+        data[s]=Object.assign({},data[s]||{},saved[rawS]||{});
+      });
     }catch(e){}
   }
   function saveStore(){ try{ localStorage.setItem(STORE,JSON.stringify(data)); }catch(e){} }
@@ -5143,7 +5188,14 @@ window.logActivity = logActivity;
     var sel=getScaleSelect();
     if(!sel) return;
     var current=sel.value;
-    var names=ROWS.map(function(r){return norm(r[0]);});
+    // As 26 escalas dos colaboradores + as 4 genéricas "SVC - A/B/C/D",
+    // que são o calendário de folga separado dos Grupos de liderança
+    // (Coordenador/Líder/Conferente) — não são lixo, são usadas de propósito.
+    var names=[];
+    ROWS.forEach(function(r){
+      var n = norm(r[0]);
+      if(/^SVC - [ABCD]$/.test(n)) names.push(n);
+    });
     if(Array.isArray(window.ALL)){
       window.ALL.forEach(function(e){ if(e && e.escala) names.push(norm(e.escala)); });
     }
@@ -6582,6 +6634,41 @@ window.logActivity = logActivity;
     });
   }
 
+  // ---- folga/trabalhando por data, pra cada pessoa do grupo ----
+  // O calendário de folga de Coordenador/Líder/Conferente é o do GRUPO
+  // (A, B, C ou D) da pessoa — não uma escala individual dela. As 4
+  // escalas genéricas "SVC - A/B/C/D" guardam esses dias.
+  function norm(v){
+    return String(v||'')
+      .replace(/\s+/g,' ')
+      .replace(/\s*-\s*/g,' - ')
+      .replace(/\s*\/\s*/g,' / ')
+      .trim()
+      .toUpperCase();
+  }
+  function parseDaysG(v){
+    return String(v||'').split(',').map(function(x){return parseInt(x.trim(),10);})
+      .filter(function(n){return !isNaN(n);});
+  }
+  function escalaDoGrupo(letter){
+    return 'SVC - '+letter;
+  }
+  function isEscalaOffOnDate(escala,date){
+    var s=norm(escala), p=String(date||'').split('-');
+    if(!s || p.length!==3) return null; // null = não sabemos (sem escala cadastrada)
+    var y=Number(p[0]), m=Number(p[1]), d=Number(p[2]);
+    try{
+      var obj=JSON.parse(localStorage.getItem('kn_scale_fo_calendar_v3')||'{}')||{};
+      var key=Object.keys(obj).find(function(k){return norm(k)===s;});
+      if(key && obj[key] && obj[key][date]) return true;
+    }catch(e){}
+    if(y!==2026 || [9,10,11].indexOf(m)<0) return false;
+    var row=(window.BUILTIN_FOLGAS_2026||[]).find(function(r){return norm(r[0])===s;});
+    if(!row) return false;
+    var idx=m===9?1:(m===10?2:3);
+    return parseDaysG(row[idx]).indexOf(d)>=0;
+  }
+
   function members(letter){
     return FOLGA_GROUPS
       .filter(function(x){ return x.grupo===letter; })
@@ -6604,12 +6691,23 @@ window.logActivity = logActivity;
     var list=members(letter);
     var cap=document.getElementById('fo-group-caption');
     var box=document.getElementById('fo-group-people');
+    var dateEl=document.getElementById('fo-group-date');
+    var date=dateEl?dateEl.value:'';
 
     document.querySelectorAll('.fo-group-btn').forEach(function(b){
       b.classList.toggle('active', b.dataset.foGroup===letter);
     });
 
-    if(cap) cap.textContent='Grupo '+letter+' — Coordenadores, Líderes e Conferentes ('+list.length+')';
+    // O status de folga é do GRUPO inteiro nessa data (calendário único
+    // por grupo) — calcula uma vez só, não por pessoa.
+    var groupStatusHtml='';
+    if(date){
+      var off=isEscalaOffOnDate(escalaDoGrupo(letter),date);
+      groupStatusHtml = off===true
+        ? ' — <span style="color:#a33;font-weight:700">Grupo de folga nesta data</span>'
+        : ' — <span style="color:#1f6d3f;font-weight:700">Grupo trabalhando nesta data</span>';
+    }
+    if(cap) cap.innerHTML='Grupo '+letter+' — Coordenadores, Líderes e Conferentes ('+list.length+')'+groupStatusHtml;
 
     if(box){
       box.innerHTML=list.length ? list.map(function(x){
@@ -6618,6 +6716,7 @@ window.logActivity = logActivity;
     }
   }
 
+  var currentLetter='A';
   function bind(){
     updateButtons();
     document.querySelectorAll('.fo-group-btn').forEach(function(btn){
@@ -6626,10 +6725,16 @@ window.logActivity = logActivity;
       btn.addEventListener('click',function(ev){
         ev.preventDefault();
         ev.stopImmediatePropagation();
-        renderGroup(btn.dataset.foGroup);
+        currentLetter=btn.dataset.foGroup;
+        renderGroup(currentLetter);
       }, true);
     });
-    renderGroup('A');
+    var dateEl=document.getElementById('fo-group-date');
+    if(dateEl && !dateEl.dataset.fixedFolgaBound){
+      dateEl.dataset.fixedFolgaBound='1';
+      dateEl.addEventListener('change',function(){ renderGroup(currentLetter); });
+    }
+    renderGroup(currentLetter);
   }
 
   window.FOLGA_GROUPS = FOLGA_GROUPS;
