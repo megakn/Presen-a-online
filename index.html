@@ -1441,7 +1441,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
   <div class="statgrid no-print">
     <div class="stat"><b id="st-total">0</b><span>Colaboradores</span></div>
     <div class="stat status-stat stat-p"><b id="st-p">0</b><span>Presença</span></div>
-    <div class="stat status-stat stat-f"><b id="st-f">0</b><span>Falta</span></div>
+    <div class="stat status-stat stat-f"><b id="st-f">0</b><span>ABS (Falta/Atestado)</span></div>
     <div class="stat status-stat stat-fo"><b id="st-fo">0</b><span>Folga</span></div>
     <div class="stat status-stat stat-at"><b id="st-at">0</b><span>Atraso</span></div>
     <div class="stat status-stat stat-dem"><b id="st-dem">0</b><span>Demissão</span></div>
@@ -1711,28 +1711,6 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
         </div>
       </div>
     </div>
-
-    <div class="card" style="margin-top:14px">
-      <details>
-        <summary style="cursor:pointer;font-weight:800">Importação avançada / lista manual</summary>
-        <p class="muted" style="margin:10px 0">
-          Estas opções antigas foram mantidas caso você precise importar uma tabela ou uma lista de IDs manualmente.
-        </p>
-        <textarea id="escala-folga-text" rows="6" placeholder="Escala	dias setembro	dias outubro	dias novembro"></textarea>
-        <div class="row" style="margin-top:8px">
-          <button id="btn-load-calendar-2026">Carregar calendário Set–Nov/2026</button>
-          <button id="btn-escala-folga-import">Aplicar tabela</button>
-          <span class="muted" id="escala-folga-status"></span>
-        </div>
-        <div id="escala-folga-log" class="importlog" style="display:none"></div>
-        <textarea id="import-text" rows="5" style="margin-top:12px" placeholder="149367,05/09/2026"></textarea>
-        <div class="row" style="margin-top:8px">
-          <button id="btn-import">Importar lista por ID</button>
-          <span class="muted" id="import-status"></span>
-        </div>
-        <div id="import-log" class="importlog" style="display:none"></div>
-      </details>
-    </div>
   </div>
 
   
@@ -1748,6 +1726,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
         <input id="groups-db-search" type="search" placeholder="Pesquisar colaborador...">
         <button id="groups-db-import-toggle" type="button">Importar</button>
         <button id="groups-db-copy-all" type="button" title="Copia a tabela inteira (só as linhas visíveis) — cole no Excel/Sheets">Copiar tabela</button>
+        <button id="groups-db-check-dupes" type="button" title="Procura colaboradores com o mesmo nome cadastrados mais de uma vez">Verificar duplicados</button>
         <button id="groups-db-clear-filters" type="button" style="display:none">Limpar filtros de coluna</button>
         <button id="groups-db-add" class="primary" type="button">+ Novo colaborador</button>
       </div>
@@ -4299,14 +4278,23 @@ function updateStatsCards(){
   var p=0,f=0,fo=0,at=0,dem=0,bh=0,tf=0,fa=0,pend=0;
   statsEmployees.forEach(function(e){
     var st = src[e.id] ? src[e.id].status : '';
+    // Falta e Atestado (isolado ou combinado com falta) contam juntos como
+    // ABS no card do topo, em vez de aparecerem separados ou caírem em
+    // "Pendentes" (ATEST/F_ATEST não tinham bucket próprio antes).
     if(st==='P') p++;
-    else if(st==='F') f++;
+    else if(st==='F' || st==='ATEST' || st==='F_ATEST') f++;
     else if(st==='FO') fo++;
     else if(st==='AT') at++;
     else if(st==='DEM') dem++;
     else if(st==='BH') bh++;
     else if(st==='TF') tf++;
     else if(st==='FA') fa++;
+    else if(!st && typeof foIsOffEmployee==='function' && foIsOffEmployee(e, statsSourceDate())){
+      // Ninguém marcou status nesse dia, mas o calendário de folgas (FO)
+      // já diz que a escala dessa pessoa está de folga — conta automático,
+      // sem precisar que alguém clique "Folga" manualmente pra cada um.
+      fo++;
+    }
     else pend++;
   });
   document.getElementById('st-total').textContent = total;
@@ -6316,6 +6304,54 @@ window.logActivity = logActivity;
     if(copyAllBtn && !copyAllBtn.dataset.bound){
       copyAllBtn.dataset.bound='1';
       copyAllBtn.addEventListener('click', function(){ copyWholeTableToClipboard(copyAllBtn); });
+    }
+    var checkDupesBtn = document.getElementById('groups-db-check-dupes');
+    if(checkDupesBtn && !checkDupesBtn.dataset.bound){
+      checkDupesBtn.dataset.bound='1';
+      checkDupesBtn.addEventListener('click', checkDuplicateNames);
+    }
+  }
+  // Procura colaboradores cadastrados com o mesmo nome (ignorando acento e
+  // maiúsc./minúsc., mas mantendo pontuação — então "Bruna Gomes dos
+  // Santos." e "Bruna Gomes dos Santos" continuam contando como duas
+  // pessoas diferentes, do jeito que já são tratadas no resto do app).
+  // Mostra o resultado no mesmo log usado pela Importação avançada, pra
+  // dar pra ver os IDs de cada ocorrência e decidir qual excluir.
+  function checkDuplicateNames(){
+    var arr = roster();
+    function normName(s){
+      return String(s||'')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .toLowerCase().trim().replace(/\s+/g,' ');
+    }
+    var groups = {};
+    arr.forEach(function(e){
+      var k = normName(e.nome);
+      if(!k) return;
+      if(!groups[k]) groups[k] = [];
+      groups[k].push(e);
+    });
+    var dupKeys = Object.keys(groups).filter(function(k){ return groups[k].length > 1; });
+    var statusEl = document.getElementById('groups-db-status');
+    var logEl = document.getElementById('grupos-log');
+    if(!dupKeys.length){
+      if(statusEl){ statusEl.textContent = 'Nenhum nome duplicado encontrado. Total de colaboradores: '+arr.length+'.'; statusEl.style.color='#536579'; }
+      if(logEl){ logEl.style.display='none'; logEl.innerHTML=''; }
+      return;
+    }
+    if(statusEl){
+      statusEl.textContent = dupKeys.length+' nome(s) com mais de um cadastro. Total de colaboradores: '+arr.length+'.';
+      statusEl.style.color = '#a32020';
+    }
+    if(logEl){
+      logEl.style.display = 'block';
+      logEl.innerHTML = dupKeys.map(function(k){
+        var people = groups[k];
+        var rows = people.map(function(p){
+          return esc(p.nome||'')+' — Groot ID: '+esc(p.grootId||'(vazio)')+' — ID interno: '+esc(p.id||'')+' — Escala: '+esc(p.escala||'');
+        }).join('<br>');
+        return '<div style="margin-bottom:8px">'+rows+'</div>';
+      }).join('');
     }
   }
   // Copia texto pro clipboard com fallback (o navegador.clipboard nem sempre
