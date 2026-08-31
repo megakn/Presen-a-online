@@ -1756,6 +1756,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
     <div id="groups-import-panel" style="display:none;margin:10px 0 4px;padding:12px;border:1px solid #ccd6e2;border-radius:8px;background:#f7f9fc">
       <p class="muted" style="margin:0 0 10px">
         Cole a lista (um colaborador por linha) pra adicionar um ou vários de uma vez — dá pra colar direto do Excel/Google Sheets. Primeira linha é o cabeçalho; pode ser a lista completa ou só alguns campos (ex.: só ID, Nome e Sexo). Ordem completa:<br>
+        <span style="color:#536579">Também aceita um formato simples só pra atualizar o Sexo: uma linha por colaborador terminando em "M" ou "F", sem colunas — ex.: <code>Fulano da Silva M</code>. Nesse caso casa pelo nome com quem já está cadastrado.</span><br>
         <code style="font-size:11px;line-height:1.6">ID · Groot ID · Nome · Matrícula · Coordenador · ESCALA · Escala Antiga · HORÁRIO · Telefone · SEXO · CARGO · ORIGEM · TIPO · Setor · CPF · EXT</code><br>
         Se o colaborador já existe (mesmo ID), atualiza só os campos preenchidos — sem apagar o que já estava salvo.
       </p>
@@ -4464,11 +4465,90 @@ function parseRosterLines(text){
   return {parsed:parsed, errors:errors};
 }
 
+// Suporte a um formato bem mais simples de colagem: uma linha por
+// colaborador, terminando em "M" ou "F" separado por espaço (sem tabulação
+// nem vírgula, sem coluna de ID) — ex.: "Fulano da Silva M". Esse formato
+// não tem como casar por ID, então casa pelo NOME (normalizado, sem acento
+// e sem diferenciar maiúsc./minúsc.) contra quem já está cadastrado, e
+// atualiza só o campo Sexo de quem encontrar.
+function looksLikeNameSexoOnly(text){
+  var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  if(!lines.length) return false;
+  if(text.indexOf('\t')>-1 || text.indexOf(',')>-1) return false;
+  var hits=0;
+  lines.forEach(function(l){ if(/\s[MFmf]$/.test(l)) hits++; });
+  return hits >= lines.length*0.8;
+}
+function normNameForMatch(s){
+  return String(s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().trim().replace(/\s+/g,' ');
+}
+function parseNameSexoLines(text){
+  var lines = text.split('\n')
+    .map(function(l){ return l.replace(/\r$/,''); })
+    .filter(function(l){ return l.trim()!==''; });
+  var parsed=[], errors=[];
+  lines.forEach(function(line, i){
+    var m = line.trim().match(/^(.+?)\s+([MFmf])$/);
+    if(!m){ errors.push('Linha '+(i+1)+': não terminou em M ou F ("'+line.trim()+'").'); return; }
+    parsed.push({ nome: m[1].trim(), sexo: m[2].toUpperCase() });
+  });
+  return {parsed:parsed, errors:errors};
+}
+function saveSexoFromNameList(rawText, statusEl, logEl){
+  var res = parseNameSexoLines(rawText);
+  if(!res.parsed.length){
+    statusEl.textContent = 'Nada para salvar.';
+    logEl.style.display = 'block';
+    logEl.innerHTML = res.errors.map(function(e){return '<div>'+e+'</div>';}).join('') ||
+      '<div>Não reconheci nenhuma linha no formato "Nome M" ou "Nome F".</div>';
+    return;
+  }
+  var nameIndex = {};
+  ALL.forEach(function(e){
+    var k = normNameForMatch(e.nome);
+    if(!nameIndex[k]) nameIndex[k]=[];
+    nameIndex[k].push(e);
+  });
+  var updated=0, notFound=[], ambiguous=[];
+  res.parsed.forEach(function(p){
+    var k = normNameForMatch(p.nome);
+    var matches = nameIndex[k];
+    if(!matches || !matches.length){ notFound.push(p.nome); return; }
+    if(matches.length>1) ambiguous.push(p.nome);
+    matches.forEach(function(e){ e.sexo = p.sexo; });
+    updated++;
+  });
+  rebuildById();
+  saveRoster();
+  rebuildFilterLists();
+  if(typeof markHeavyViewsDirty==='function') markHeavyViewsDirty();
+  renderAll();
+  statusEl.textContent = updated+' colaborador(es) com Sexo atualizado.'+
+    (notFound.length ? ' · '+notFound.length+' nome(s) não encontrado(s) no cadastro.' : '')+
+    (ambiguous.length ? ' · '+ambiguous.length+' nome(s) duplicado(s) (atualizei todas as ocorrências).' : '');
+  var logLines=[];
+  res.errors.forEach(function(e){ logLines.push('<div>'+e+'</div>'); });
+  if(notFound.length) logLines.push('<div>Não encontrados no cadastro: '+notFound.map(esc).join(', ')+'</div>');
+  if(ambiguous.length) logLines.push('<div>Nomes duplicados no cadastro (atualizei todas as ocorrências): '+ambiguous.map(esc).join(', ')+'</div>');
+  logEl.style.display = logLines.length ? 'block' : 'none';
+  logEl.innerHTML = logLines.join('');
+  if(typeof logActivity==='function') logActivity('cadastro', updated+' colaborador(es) com Sexo atualizado via lista Nome+Sexo colada');
+  if(typeof window.refreshGroupsDbView==='function') window.refreshGroupsDbView();
+}
+
 function saveGroupsFromText(){
  ensureOperator(function(){
   var rawText = document.getElementById('grupos-text').value;
   var statusEl = document.getElementById('grupos-status');
   var logEl = document.getElementById('grupos-log');
+
+  if(looksLikeNameSexoOnly(rawText)){
+    saveSexoFromNameList(rawText, statusEl, logEl);
+    return;
+  }
+
   var res = parseRosterLines(rawText);
 
   if(!res.parsed.length){
@@ -6547,6 +6627,193 @@ window.logActivity = logActivity;
   document.addEventListener('click',function(ev){
     var tab=ev.target.closest&&ev.target.closest('[data-tab="grupos"]');
     if(tab) setTimeout(function(){ render(); },80);
+  });
+})();
+</script>
+
+<!-- Seleção de células estilo Excel (clicar e arrastar pra marcar um bloco
+     de linhas/colunas e copiar tudo de uma vez com Ctrl+C) na tabela
+     "Banco de dados dos colaboradores". Fica num script separado, só lendo
+     o DOM já renderizado pela tabela — não mexe na lógica de salvar. -->
+<style>
+#panel-grupos .groups-db-table td.gdb-selected{
+  background:#cfe4ff !important;
+  outline:1px solid #4a86e8;
+  outline-offset:-1px;
+}
+#panel-grupos .groups-db-table{ user-select:none; }
+#panel-grupos .groups-db-table input,
+#panel-grupos .groups-db-table select{ user-select:text; }
+</style>
+<script>
+(function(){
+  'use strict';
+
+  var wrap, table, body;
+  var selecting=false;
+  var anchor=null;   // {r,c}
+  var focusCell=null; // {r,c}
+  var cellsMatrix=[]; // [row][col] -> td element (only data columns, not "Ações")
+
+  function dataCells(tr){
+    // Só considera colunas de dado real (com input/select[data-field]),
+    // ignora a última coluna (Ações) que não tem valor pra copiar.
+    return Array.prototype.filter.call(tr.children, function(td){
+      return !!td.querySelector('[data-field]');
+    });
+  }
+
+  function buildMatrix(){
+    cellsMatrix=[];
+    if(!body) return;
+    Array.prototype.forEach.call(body.querySelectorAll('tr[data-db-index]'), function(tr){
+      cellsMatrix.push(dataCells(tr));
+    });
+  }
+
+  function cellAt(r,c){
+    return cellsMatrix[r] && cellsMatrix[r][c] ? cellsMatrix[r][c] : null;
+  }
+
+  function findCoords(td){
+    for(var r=0;r<cellsMatrix.length;r++){
+      var idx=cellsMatrix[r].indexOf(td);
+      if(idx>-1) return {r:r,c:idx};
+    }
+    return null;
+  }
+
+  function clearHighlight(){
+    if(!table) return;
+    table.querySelectorAll('.gdb-selected').forEach(function(td){ td.classList.remove('gdb-selected'); });
+  }
+
+  function paintSelection(){
+    clearHighlight();
+    if(!anchor || !focusCell) return;
+    var r0=Math.min(anchor.r,focusCell.r), r1=Math.max(anchor.r,focusCell.r);
+    var c0=Math.min(anchor.c,focusCell.c), c1=Math.max(anchor.c,focusCell.c);
+    for(var r=r0;r<=r1;r++){
+      for(var c=c0;c<=c1;c++){
+        var td=cellAt(r,c);
+        if(td) td.classList.add('gdb-selected');
+      }
+    }
+  }
+
+  function cellValue(td){
+    var input=td.querySelector('[data-field]');
+    return input ? String(input.value||'') : '';
+  }
+
+  function selectionIsMultiple(){
+    if(!anchor || !focusCell) return false;
+    return anchor.r!==focusCell.r || anchor.c!==focusCell.c;
+  }
+
+  function copySelectionToClipboard(){
+    if(!anchor || !focusCell) return;
+    var r0=Math.min(anchor.r,focusCell.r), r1=Math.max(anchor.r,focusCell.r);
+    var c0=Math.min(anchor.c,focusCell.c), c1=Math.max(anchor.c,focusCell.c);
+    var lines=[];
+    for(var r=r0;r<=r1;r++){
+      var vals=[];
+      for(var c=c0;c<=c1;c++){
+        var td=cellAt(r,c);
+        vals.push(td ? cellValue(td) : '');
+      }
+      lines.push(vals.join('\t'));
+    }
+    var text=lines.join('\n');
+    var done = (navigator.clipboard && navigator.clipboard.writeText)
+      ? navigator.clipboard.writeText(text).catch(function(){ return gdbLegacyCopy(text); })
+      : gdbLegacyCopy(text);
+    Promise.resolve(done).then(function(){
+      var count=(r1-r0+1)*(c1-c0+1);
+      var st=document.getElementById('groups-db-status');
+      if(st){ st.textContent=count+' célula(s) copiada(s) — cole no Excel ou Google Sheets.'; st.style.color='#536579'; }
+    });
+  }
+  function gdbLegacyCopy(text){
+    try{
+      var ta=document.createElement('textarea');
+      ta.value=text;
+      ta.style.position='fixed';
+      ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Promise.resolve();
+    }catch(err){ return Promise.reject(err); }
+  }
+
+  function onMouseDown(ev){
+    var td=ev.target.closest && ev.target.closest('td');
+    if(!td || !table.contains(td)) return;
+    buildMatrix();
+    var coords=findCoords(td);
+    if(!coords) return; // clicou na coluna "Ações" ou fora de uma célula de dado
+    selecting=true;
+    anchor=coords;
+    focusCell=coords;
+    paintSelection();
+  }
+  function onMouseOver(ev){
+    if(!selecting) return;
+    var td=ev.target.closest && ev.target.closest('td');
+    if(!td) return;
+    var coords=findCoords(td);
+    if(!coords) return;
+    focusCell=coords;
+    paintSelection();
+  }
+  function onMouseUp(){
+    selecting=false;
+  }
+  function onKeyDown(ev){
+    if(!selectionIsMultiple()) return; // deixa o Ctrl+C normal do campo focado funcionar
+    var isCopy = (ev.ctrlKey||ev.metaKey) && (ev.key==='c' || ev.key==='C');
+    if(!isCopy) return;
+    // Só intercepta se a seleção de células ainda está visível (não foi
+    // limpa por um clique fora ou por um novo render da tabela).
+    if(!table || !table.querySelector('.gdb-selected')) return;
+    ev.preventDefault();
+    copySelectionToClipboard();
+  }
+  function onDocMouseDown(ev){
+    if(table && table.contains(ev.target)) return;
+    anchor=null; focusCell=null; clearHighlight();
+  }
+
+  function init(){
+    wrap=document.querySelector('#panel-grupos .groups-db-wrap');
+    table=document.querySelector('#panel-grupos .groups-db-table');
+    body=document.getElementById('groups-db-body');
+    if(!table || table.dataset.gdbSelectBound) return;
+    table.dataset.gdbSelectBound='1';
+    table.addEventListener('mousedown', onMouseDown);
+    table.addEventListener('mouseover', onMouseOver);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', onDocMouseDown, true);
+    // A tabela é recriada (innerHTML) a cada render() do outro script —
+    // observa isso pra invalidar a seleção/realçado antigos, senão a
+    // classe .gdb-selected ficaria "presa" em elementos que não existem
+    // mais e a próxima cópia usaria coordenadas erradas.
+    var mo = new MutationObserver(function(){
+      anchor=null; focusCell=null;
+      buildMatrix();
+    });
+    if(body) mo.observe(body, {childList:true});
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(init,150);});
+  else setTimeout(init,150);
+  setTimeout(init,1100);
+  document.addEventListener('click',function(ev){
+    var tab=ev.target.closest&&ev.target.closest('[data-tab="grupos"]');
+    if(tab) setTimeout(init,150);
   });
 })();
 </script>
