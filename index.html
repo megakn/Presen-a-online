@@ -1917,6 +1917,26 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
         Um colaborador cai aqui automaticamente — e some da Planilha e da aba Grupos — quando "Demissão" é marcado
         pra ele em <b>3 datas diferentes</b> na Planilha (confirmação manual, pra evitar engano). Dá pra reativar a qualquer momento.
       </p>
+      <div style="display:flex;justify-content:flex-end;margin:-2px 0 8px">
+        <button id="inativos-import-toggle" type="button"
+          style="padding:5px 9px;font-size:11px;background:#fff;color:#536579;border:1px solid #ccd6e2">
+          + Adicionar demitidos
+        </button>
+      </div>
+
+      <div id="inativos-import-panel" style="display:none;margin:0 0 10px;padding:10px;border:1px solid #d8e1eb;border-radius:8px;background:#f8fafc">
+        <p class="muted" style="margin:0 0 7px;font-size:11.5px">
+          Cole direto do Excel/Google Sheets com o mesmo cabeçalho da aba Grupos. O sistema reconhece os mesmos campos:
+          <b>ID, Groot ID, Nome, Matrícula, Coordenador, ESCALA, Escala Antiga, HORÁRIO, Telefone, SEXO, CARGO, ORIGEM, TIPO, Setor, CPF e EXT</b>.
+        </p>
+        <textarea id="inativos-import-text" rows="5"
+          placeholder="Cole aqui os colaboradores demitidos, incluindo o cabeçalho..."
+          style="width:100%;resize:vertical"></textarea>
+        <div class="row" style="margin-top:7px">
+          <button id="inativos-import-save" type="button">Adicionar aos inativos</button>
+          <span id="inativos-import-status" class="muted"></span>
+        </div>
+      </div>
       <div class="tablewrap" style="max-height:480px">
         <table>
           <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Demissões confirmadas</th><th>Inativado em</th><th></th></tr></thead>
@@ -3842,6 +3862,9 @@ function moveToInactive(id, demDates){
   INACTIVE = INACTIVE.filter(function(e){ return e.id!==id; }); // evita duplicar
   var record = Object.assign({}, emp, {demDates: demDates, inactivatedAt: todayStr()});
   INACTIVE.push(record);
+  INACTIVE.sort(function(a,b){
+    return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
+  });
   rebuildById();
   saveRoster();
   saveInactiveList();
@@ -3856,22 +3879,51 @@ function reactivateEmployee(id){
  ensureOperator(function(){
   var idx = INACTIVE.findIndex(function(e){ return e.id===id; });
   if(idx===-1) return;
+
   var rec = Object.assign({}, INACTIVE[idx]);
+  var oldDemDates = (rec.demDates || demRecords[id] || []).slice();
+
+  // Ao restaurar, apaga também os status DEM que levaram à inativação.
+  // Isso evita que o card "Demissão" continue contabilizando a pessoa.
+  oldDemDates.forEach(function(date){
+    var ds = monthStates[date] || {};
+    if(ds[id] && ds[id].status === 'DEM'){
+      ds[id] = {status:'', hora:''};
+      monthStates[date] = ds;
+      saveDayState(date, ds);
+      sbSaveRegistro(id, date, '', '');
+    }
+  });
+
   delete rec.demDates;
   delete rec.inactivatedAt;
   INACTIVE.splice(idx,1);
+  ALL = ALL.filter(function(e){ return e.id!==id; });
   ALL.push(rec);
+
+  // Mantém o cadastro ativo sempre em ordem alfabética.
+  ALL.sort(function(a,b){
+    return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
+  });
+
   rebuildById();
   delete demRecords[id];
+
+  if(monthStates[currentDate]){
+    state = monthStates[currentDate];
+  }
+
   saveRoster();
   saveInactiveList();
   saveDemRecords();
   rebuildFilterLists();
   markHeavyViewsDirty();
   renderAll();
+
   if(activeTabName==='grupos'){ renderGroupsTable(); groupsDirty=false; }
   if(activeTabName==='inativos'){ renderInactiveTable(); inactiveDirty=false; }
-  logActivity('cadastro', 'Reativou '+(rec.nome||id));
+
+  logActivity('cadastro', 'Restaurou '+(rec.nome||id)+' e removeu as marcações de demissão.');
  });
 }
 
@@ -5561,6 +5613,84 @@ safeOn('btn-grupos-dedupe', 'click', function(){
   if(removed>0) logActivity('cadastro', removed+' duplicado(s) removido(s) via botão Deduplicar');
  });
 });
+
+
+function importInactiveFromText(){
+ ensureOperator(function(){
+  var textEl = document.getElementById('inativos-import-text');
+  var statusEl = document.getElementById('inativos-import-status');
+  if(!textEl || !statusEl) return;
+
+  var rawText = textEl.value || '';
+  var res = parseRosterLines(rawText);
+
+  if(!res.parsed.length){
+    statusEl.textContent = 'Nada para adicionar. Cole a tabela com o cabeçalho.';
+    return;
+  }
+
+  var added = 0, updated = 0, skipped = 0;
+  var seen = {};
+
+  res.parsed.forEach(function(p){
+    if(!p.id && p.grootId) p.id = p.grootId;
+    if(!p.id && p.matricula) p.id = p.matricula;
+    if(!p.id || seen[p.id]){ skipped++; return; }
+    seen[p.id] = true;
+
+    var existingInactive = INACTIVE.find(function(e){ return e.id===p.id; });
+    var existingActive = byId[p.id];
+    var rec = existingInactive || existingActive || {id:p.id};
+
+    if(p.nome) rec.nome = p.nome;
+    ROSTER_EXTRA_FIELDS.forEach(function(f){
+      if(p[f]) rec[f] = p[f];
+    });
+    if(p.telefone) contacts[p.id] = p.telefone;
+
+    rec.inactivatedAt = rec.inactivatedAt || todayStr();
+    rec.demDates = rec.demDates || [];
+
+    ALL = ALL.filter(function(e){ return e.id!==p.id; });
+    INACTIVE = INACTIVE.filter(function(e){ return e.id!==p.id; });
+    INACTIVE.push(rec);
+
+    if(existingInactive) updated++;
+    else added++;
+  });
+
+  INACTIVE.sort(function(a,b){
+    return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
+  });
+
+  rebuildById();
+  saveRoster();
+  saveInactiveList();
+  saveContacts();
+  rebuildFilterLists();
+  markHeavyViewsDirty();
+  renderAll();
+  renderInactiveTable();
+  inactiveDirty = false;
+
+  statusEl.textContent =
+    added+' adicionado(s) aos inativos'+
+    (updated ? ', '+updated+' atualizado(s)' : '')+
+    (skipped ? ' · '+skipped+' linha(s) ignorada(s)' : '')+'.';
+
+  textEl.value = '';
+  logActivity('cadastro', added+' colaborador(es) incluído(s) manualmente nos inativos.');
+ });
+}
+
+safeOn('inativos-import-toggle', 'click', function(){
+  var panel = document.getElementById('inativos-import-panel');
+  if(!panel) return;
+  panel.style.display = panel.style.display==='none' ? 'block' : 'none';
+});
+
+safeOn('inativos-import-save', 'click', importInactiveFromText);
+
 
 // ---------- Aba Inativos ----------
 function renderInactiveTable(){
