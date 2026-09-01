@@ -2528,6 +2528,211 @@ var sheetMonthCursor = (function(){
   return '2026-09';
 })();
 var monthStates = {};
+
+var sbLiveChannel = null;
+var sbLiveConnected = false;
+var sbLiveDeviceId = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+var sbLiveFallbackTimer = null;
+var sbLiveRenderTimer = null;
+var sbLastFallbackSyncAt = 0;
+
+function saveLiveStateLocally(date){
+  try{
+    monthStates[date] = (date === currentDate) ? state : (monthStates[date] || {});
+    localStorage.setItem(storageKey(date), JSON.stringify(monthStates[date]));
+  }catch(e){}
+}
+
+function scheduleLivePresenceRender(){
+  if(sbLiveRenderTimer) return;
+  sbLiveRenderTimer = setTimeout(function(){
+    sbLiveRenderTimer = null;
+    try{
+      renderAll();
+      if(activeTabName === 'sheet' && typeof renderSheet === 'function'){
+        renderSheet();
+      }
+    }catch(err){
+      console.error('[KN] erro ao atualizar presença ao vivo:', err);
+    }
+  }, 60);
+}
+
+function showRemotePresenceConfirmation(id, status, hora){
+  if(status !== 'P') return;
+  var emp = byId[id];
+  if(!emp) return;
+
+  try{
+    if(typeof flashScanTick === 'function') flashScanTick(true);
+  }catch(e){}
+
+  var confirmEl = document.getElementById('scan-confirm');
+  if(confirmEl){
+    confirmEl.style.display = 'block';
+    confirmEl.style.borderColor = 'var(--success)';
+    confirmEl.style.background = '#eaf3ee';
+    confirmEl.innerHTML =
+      '<b>'+emp.nome+'</b><br>' +
+      (emp.coordenador ? emp.coordenador+' &middot; ' : '') +
+      (emp.escala ? 'escala '+emp.escala+'<br>' : '<br>') +
+      'Presença recebida do celular às '+(hora || '');
+  }
+
+  try{
+    if(typeof prependLog === 'function') prependLog(emp, hora || '');
+  }catch(e){}
+}
+
+function applyLiveRegistro(payload, source){
+  if(!payload) return;
+
+  var id = String(payload.colaborador_id || payload.id || '').trim();
+  var date = String(payload.data || payload.date || '').trim();
+  var status = String(payload.status || '').trim();
+  var hora = String(payload.hora || '').trim();
+
+  if(!id || !date) return;
+  if(payload.device_id && payload.device_id === sbLiveDeviceId) return;
+
+  var target = (date === currentDate) ? state : (monthStates[date] || {});
+  var prev = target[id];
+
+  // Evita rerender duplicado quando o mesmo evento chega por Broadcast
+  // e também por postgres_changes.
+  if(prev && prev.status === status && prev.hora === hora) return;
+
+  target[id] = {status:status, hora:hora};
+  monthStates[date] = target;
+
+  if(date === currentDate){
+    state = target;
+  }
+
+  try{
+    localStorage.setItem(storageKey(date), JSON.stringify(target));
+  }catch(e){}
+
+  if(date === currentDate){
+    showRemotePresenceConfirmation(id, status, hora);
+  }
+
+  scheduleLivePresenceRender();
+}
+
+function sbBroadcastRegistro(id, date, status, hora){
+  if(!sbReady || !sbLiveChannel || !sbLiveConnected) return;
+
+  try{
+    sbLiveChannel.send({
+      type: 'broadcast',
+      event: 'presenca',
+      payload: {
+        colaborador_id: String(id),
+        data: date,
+        status: status || '',
+        hora: hora || '',
+        device_id: sbLiveDeviceId,
+        sent_at: Date.now()
+      }
+    }).catch(function(err){
+      console.warn('[KN] broadcast de presença falhou:', err);
+    });
+  }catch(err){
+    console.warn('[KN] broadcast de presença falhou:', err);
+  }
+}
+
+function sbFallbackPullCurrentDate(){
+  if(!sbReady || sbLiveConnected || document.hidden) return;
+
+  var now = Date.now();
+  if(now - sbLastFallbackSyncAt < 1800) return;
+  sbLastFallbackSyncAt = now;
+
+  sbLoadRegistros(currentDate).then(function(rows){
+    if(!Array.isArray(rows)) return;
+
+    rows.forEach(function(r){
+      applyLiveRegistro({
+        colaborador_id: r.colaborador_id,
+        data: currentDate,
+        status: r.status || '',
+        hora: r.hora || ''
+      }, 'poll');
+    });
+  }).catch(function(){});
+}
+
+function initSupabaseLivePresence(){
+  if(!sbReady || !sb || typeof sb.channel !== 'function') return;
+
+  try{
+    if(sbLiveChannel){
+      try{ sb.removeChannel(sbLiveChannel); }catch(e){}
+      sbLiveChannel = null;
+    }
+
+    sbLiveChannel = sb
+      .channel('kn-presenca-live-v1', {
+        config: {
+          broadcast: { self: false },
+          presence: { key: sbLiveDeviceId }
+        }
+      })
+      .on('broadcast', {event:'presenca'}, function(message){
+        var payload = message && message.payload ? message.payload : message;
+        applyLiveRegistro(payload, 'broadcast');
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: TB_REG
+      }, function(change){
+        var row = (change && (change.new || change.old)) || {};
+        applyLiveRegistro({
+          colaborador_id: row.colaborador_id,
+          data: row.data,
+          status: row.status || '',
+          hora: row.hora || ''
+        }, 'postgres_changes');
+      })
+      .subscribe(function(status){
+        sbLiveConnected = (status === 'SUBSCRIBED');
+
+        var hint = document.getElementById('savedhint');
+        if(hint && sbLiveConnected){
+          hint.textContent = 'sincronização ao vivo ativa';
+        }
+
+        if(!sbLiveConnected && (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED')){
+          console.warn('[KN] Supabase Realtime:', status, '— fallback automático ativado.');
+          sbFallbackPullCurrentDate();
+        }
+      });
+
+    if(sbLiveFallbackTimer) clearInterval(sbLiveFallbackTimer);
+    sbLiveFallbackTimer = setInterval(sbFallbackPullCurrentDate, 2200);
+
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden){
+        sbFallbackPullCurrentDate();
+      }
+    });
+
+    window.addEventListener('online', function(){
+      if(!sbLiveConnected){
+        setTimeout(initSupabaseLivePresence, 300);
+      }else{
+        sbFallbackPullCurrentDate();
+      }
+    });
+  }catch(err){
+    console.error('[KN] não foi possível iniciar presença em tempo real:', err);
+    sbLiveConnected = false;
+  }
+}
+
 var monthLoadToken = 0;
 
 function parseStoredState(raw){
@@ -2653,6 +2858,7 @@ function setStatus(id, status, hora){
     state[id] = {status: status, hora: hora || ''};
     saveState();
     sbSaveRegistro(id, currentDate, status, hora);
+    sbBroadcastRegistro(id, currentDate, status, hora);
     logActivity('presenca', (byId[id] ? byId[id].nome : id)+' -> '+status+(hora?(' às '+hora):'')+' ('+currentDate+')');
     renderAll();
   });
@@ -2735,6 +2941,19 @@ datepick.value = currentDate;
 datepick.addEventListener('change', function(){
   currentDate = datepick.value || todayStr();
   loadState(currentDate);
+  if(sbReady){
+    sbLoadRegistros(currentDate).then(function(rows){
+      if(!Array.isArray(rows)) return;
+      rows.forEach(function(r){
+        applyLiveRegistro({
+          colaborador_id:r.colaborador_id,
+          data:currentDate,
+          status:r.status||'',
+          hora:r.hora||''
+        }, 'date-change');
+      });
+    });
+  }
   initDateSelectors();
   if(activeTabName==='sheet'){
     loadSpecificSheetDates();
@@ -5391,6 +5610,11 @@ if(sbReady){
       if(activeTabName==='inativos'){ safeInit('tabela de inativos (visível)', function(){ renderInactiveTable(); inactiveDirty=false; }); }
     }
   }).catch(function(err){ console.error('[KN] Supabase: erro na reconciliação inicial:', err); });
+}
+
+// Ativa sincronização instantânea entre celular e computador.
+if(sbReady){
+  safeInit('presença em tempo real', initSupabaseLivePresence);
 }
 
 // ===== Calendário de Folgas interativo =====
