@@ -1566,7 +1566,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
       <div class="row" style="margin-bottom:12px">
         <span id="kn-live-indicator" class="kn-live-indicator is-wait"><span class="kn-live-dot"></span><span>CONECTANDO...</span></span> <button id="btn-start" class="primary">Ligar câmera</button>
         <button id="btn-stop" disabled>Desligar câmera</button>
-        <span class="muted">Aponte o QR ou o código de barras do colaborador para a câmera do celular ou notebook.</span>
+        <span class="muted">Aponte um crachá por vez. O sistema confirma a leitura duas vezes antes de registrar, evitando batida duplicada ou em outro colaborador.</span>
       </div>
       <div class="camera-box">
         <video id="barcode-video" playsinline muted></video>
@@ -1926,34 +1926,20 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 
       <div id="inativos-import-panel" style="display:none;margin:0 0 10px;padding:10px;border:1px solid #d8e1eb;border-radius:8px;background:#f8fafc">
         <p class="muted" style="margin:0 0 7px;font-size:11.5px">
-          Cole direto do Excel/Google Sheets com o mesmo cabeçalho da aba Grupos. Depois escolha a data real e o tipo de desligamento. O sistema reconhece os mesmos campos:
+          Cole direto do Excel/Google Sheets com o mesmo cabeçalho da aba Grupos. O sistema reconhece os mesmos campos:
           <b>ID, Groot ID, Nome, Matrícula, Coordenador, ESCALA, Escala Antiga, HORÁRIO, Telefone, SEXO, CARGO, ORIGEM, TIPO, Setor, CPF e EXT</b>.
         </p>
         <textarea id="inativos-import-text" rows="5"
-          placeholder="Cole aqui os colaboradores desligados, incluindo o cabeçalho..."
+          placeholder="Cole aqui os colaboradores demitidos, incluindo o cabeçalho..."
           style="width:100%;resize:vertical"></textarea>
-
-        <div class="row" style="margin-top:8px;align-items:end">
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700">
-            Data de desligamento
-            <input id="inativos-import-date" type="date" style="min-width:160px">
-          </label>
-
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700">
-            Tipo de desligamento
-            <select id="inativos-import-type" style="min-width:170px">
-              <option value="DEMITIDO">Demitido</option>
-              <option value="PEDIU_DEMISSAO">Pediu demissão</option>
-            </select>
-          </label>
-
+        <div class="row" style="margin-top:7px">
           <button id="inativos-import-save" type="button">Adicionar aos inativos</button>
           <span id="inativos-import-status" class="muted"></span>
         </div>
       </div>
       <div class="tablewrap" style="max-height:480px">
         <table>
-          <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Demissões confirmadas</th><th>Data de desligamento</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Demissões confirmadas</th><th>Inativado em</th><th></th></tr></thead>
           <tbody id="inativos-table-body"></tbody>
         </table>
       </div>
@@ -2552,45 +2538,6 @@ var DEMREC_KEY = 'presenca:demrecords:v1';
 var INACTIVE = [];
 var demRecords = {}; // { id: [dateISO, ...] } — datas em que "Demissão" foi confirmada
 
-var DISMISSAL_TYPE_PREFIX = '__TIPO_DESLIGAMENTO__:';
-
-function realDemDates(list){
-  return (Array.isArray(list) ? list : []).filter(function(v){
-    return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''));
-  });
-}
-
-function getDismissalType(rec){
-  if(rec && rec.dismissalType) return rec.dismissalType;
-  var list = (rec && Array.isArray(rec.demDates)) ? rec.demDates : [];
-  for(var i=0;i<list.length;i++){
-    var v = String(list[i]||'');
-    if(v.indexOf(DISMISSAL_TYPE_PREFIX)===0){
-      return v.slice(DISMISSAL_TYPE_PREFIX.length) || 'DEMITIDO';
-    }
-  }
-  return 'DEMITIDO';
-}
-
-function setDismissalType(rec, type){
-  if(!rec) return;
-  type = type === 'PEDIU_DEMISSAO' ? 'PEDIU_DEMISSAO' : 'DEMITIDO';
-  rec.dismissalType = type;
-
-  var dates = realDemDates(rec.demDates);
-  rec.demDates = dates.concat([DISMISSAL_TYPE_PREFIX + type]);
-}
-
-function dismissalTypeLabel(type){
-  return type === 'PEDIU_DEMISSAO' ? 'Pediu demissão' : 'Demitido';
-}
-
-function latestDemDate(list){
-  var dates = realDemDates(list).sort();
-  return dates.length ? dates[dates.length-1] : '';
-}
-
-
 function rebuildById(){
   byId = {};
   ALL.forEach(function(e){ byId[e.id] = e; });
@@ -3178,7 +3125,7 @@ function onScanSuccess(decodedText){
   var confirmEl = document.getElementById('scan-confirm');
   if(!emp){
     flashScanTick(false);
-    if(lastScan.id === id && (now - lastScan.t) < 4000){ return; }
+    if(lastScan.id === id && (now - lastScan.t) < 5000){ return; }
     lastScan = {id:id, t:now};
     playScanBeep(false);
     confirmEl.style.display = 'block';
@@ -3190,7 +3137,7 @@ function onScanSuccess(decodedText){
   // Mostra o "tick" verde toda vez que reconhece o crachá — mesmo em leituras
   // repetidas rápidas — pra dar confirmação visual clara na câmera do celular.
   flashScanTick(true);
-  if(lastScan.id === id && (now - lastScan.t) < 4000){ return; }
+  if(lastScan.id === id && (now - lastScan.t) < 5000){ return; }
   lastScan = {id:id, t:now};
   playScanBeep(true);
   var hora = nowTime();
@@ -3217,6 +3164,38 @@ var cameraStream = null;
 var cameraScanTimer = null;
 var cameraNativeDetector = null;
 var cameraDecodeBusy = false;
+
+var cameraCandidateValue = '';
+var cameraCandidateCount = 0;
+var cameraCandidateAt = 0;
+var cameraAcceptedValue = '';
+var cameraNoCodeFrames = 0;
+
+function resetCameraScanGuard(fullReset){
+  cameraCandidateValue = '';
+  cameraCandidateCount = 0;
+  cameraCandidateAt = 0;
+  cameraNoCodeFrames = 0;
+  if(fullReset) cameraAcceptedValue = '';
+}
+
+function noteCameraNoCode(){
+  cameraNoCodeFrames++;
+
+  // Só libera o MESMO crachá para uma nova leitura depois que ele realmente
+  // sair do enquadramento por alguns frames. Isso evita dupla batida.
+  if(cameraNoCodeFrames >= 3){
+    cameraAcceptedValue = '';
+    cameraCandidateValue = '';
+    cameraCandidateCount = 0;
+    cameraCandidateAt = 0;
+  }
+}
+
+function noteCameraHasCode(){
+  cameraNoCodeFrames = 0;
+}
+
 
 function cameraMessage(html, type){
   var confirmEl = document.getElementById('scan-confirm');
@@ -3249,6 +3228,7 @@ function cameraErrorText(err){
 function stopCamera(){
   cameraRunning = false;
   cameraDecodeBusy = false;
+  resetCameraScanGuard(true);
 
   if(cameraScanTimer){
     clearTimeout(cameraScanTimer);
@@ -3293,6 +3273,37 @@ function handleCameraDecoded(value){
   var text = normalizeCameraCode(value);
   if(!text) return false;
 
+  noteCameraHasCode();
+
+  // Se o mesmo crachá ainda está visível, não registra novamente.
+  if(cameraAcceptedValue === text){
+    return true;
+  }
+
+  var now = Date.now();
+
+  // Para evitar uma leitura isolada incorreta (ex.: João virar Maria por um frame),
+  // a câmera precisa ler EXATAMENTE o mesmo código duas vezes seguidas.
+  if(cameraCandidateValue === text && (now - cameraCandidateAt) <= 800){
+    cameraCandidateCount++;
+  }else{
+    cameraCandidateValue = text;
+    cameraCandidateCount = 1;
+  }
+  cameraCandidateAt = now;
+
+  if(cameraCandidateCount < 2){
+    return true;
+  }
+
+  // Confirma apenas IDs que realmente existem no cadastro.
+  // Códigos desconhecidos continuam indo para a mensagem de erro,
+  // mas nunca podem "cair" em outro colaborador.
+  cameraAcceptedValue = text;
+  cameraCandidateValue = '';
+  cameraCandidateCount = 0;
+  cameraCandidateAt = 0;
+
   onScanSuccess(text);
   return true;
 }
@@ -3322,16 +3333,18 @@ async function scanCameraFrame(){
   }
 
   cameraDecodeBusy = true;
+  var detectedAny = false;
 
   try{
     var found = false;
 
-    // 1) Usa o leitor nativo do celular quando disponível.
-    // Ele costuma ser mais rápido e confiável em Chrome/Android.
+    // 1) Leitor nativo do celular.
     if(cameraNativeDetector){
       try{
         var barcodes = await cameraNativeDetector.detect(video);
         if(barcodes && barcodes.length){
+          detectedAny = true;
+
           for(var i=0;i<barcodes.length;i++){
             var raw = barcodes[i].rawValue || '';
             if(handleCameraDecoded(raw)){
@@ -3341,26 +3354,25 @@ async function scanCameraFrame(){
           }
         }
       }catch(nativeErr){
-        // Se o navegador expõe BarcodeDetector mas falha em vídeo,
-        // desativa só o detector nativo e continua com ZXing.
         cameraNativeDetector = null;
       }
     }
 
-    // 2) Fallback ZXing lendo diretamente o frame atual do <video>.
+    // 2) ZXing como fallback.
     if(!found && codeReader){
       try{
         var result = codeReader.decode(video);
         if(result){
+          detectedAny = true;
           var txt = result.getText ? result.getText() : (result.text || '');
           handleCameraDecoded(txt);
         }
       }catch(zxErr){
-        // NotFound/Checksum/Format são normais enquanto o código
-        // ainda não está enquadrado; apenas continua procurando.
+        // Sem código legível neste frame.
       }
     }
   }finally{
+    if(!detectedAny) noteCameraNoCode();
     cameraDecodeBusy = false;
     scheduleCameraScan();
   }
@@ -3913,14 +3925,7 @@ function moveToInactive(id, demDates){
   if(!emp) return;
   ALL = ALL.filter(function(e){ return e.id!==id; });
   INACTIVE = INACTIVE.filter(function(e){ return e.id!==id; }); // evita duplicar
-
-  var desligamentoDate = latestDemDate(demDates) || currentDate || todayStr();
-  var record = Object.assign({}, emp, {
-    demDates: realDemDates(demDates),
-    inactivatedAt: desligamentoDate
-  });
-  setDismissalType(record, 'DEMITIDO');
-
+  var record = Object.assign({}, emp, {demDates: demDates, inactivatedAt: todayStr()});
   INACTIVE.push(record);
   INACTIVE.sort(function(a,b){
     return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
@@ -3941,7 +3946,7 @@ function reactivateEmployee(id){
   if(idx===-1) return;
 
   var rec = Object.assign({}, INACTIVE[idx]);
-  var oldDemDates = realDemDates(rec.demDates || demRecords[id] || []);
+  var oldDemDates = (rec.demDates || demRecords[id] || []).slice();
 
   // Ao restaurar, apaga também os status DEM que levaram à inativação.
   // Isso evita que o card "Demissão" continue contabilizando a pessoa.
@@ -5679,19 +5684,7 @@ function importInactiveFromText(){
  ensureOperator(function(){
   var textEl = document.getElementById('inativos-import-text');
   var statusEl = document.getElementById('inativos-import-status');
-  var dateEl = document.getElementById('inativos-import-date');
-  var typeEl = document.getElementById('inativos-import-type');
-
-  if(!textEl || !statusEl || !dateEl || !typeEl) return;
-
-  var desligamentoDate = String(dateEl.value || '').trim();
-  var desligamentoType = String(typeEl.value || 'DEMITIDO');
-
-  if(!desligamentoDate){
-    statusEl.textContent = 'Escolha a data de desligamento antes de adicionar.';
-    dateEl.focus();
-    return;
-  }
+  if(!textEl || !statusEl) return;
 
   var rawText = textEl.value || '';
   var res = parseRosterLines(rawText);
@@ -5712,7 +5705,7 @@ function importInactiveFromText(){
 
     var existingInactive = INACTIVE.find(function(e){ return e.id===p.id; });
     var existingActive = byId[p.id];
-    var rec = Object.assign({}, existingInactive || existingActive || {id:p.id});
+    var rec = existingInactive || existingActive || {id:p.id};
 
     if(p.nome) rec.nome = p.nome;
     ROSTER_EXTRA_FIELDS.forEach(function(f){
@@ -5720,10 +5713,8 @@ function importInactiveFromText(){
     });
     if(p.telefone) contacts[p.id] = p.telefone;
 
-    // Agora esta data é a DATA REAL DE DESLIGAMENTO, não a data da importação.
-    rec.inactivatedAt = desligamentoDate;
-    rec.demDates = realDemDates(rec.demDates);
-    setDismissalType(rec, desligamentoType);
+    rec.inactivatedAt = rec.inactivatedAt || todayStr();
+    rec.demDates = rec.demDates || [];
 
     ALL = ALL.filter(function(e){ return e.id!==p.id; });
     INACTIVE = INACTIVE.filter(function(e){ return e.id!==p.id; });
@@ -5750,16 +5741,10 @@ function importInactiveFromText(){
   statusEl.textContent =
     added+' adicionado(s) aos inativos'+
     (updated ? ', '+updated+' atualizado(s)' : '')+
-    (skipped ? ' · '+skipped+' linha(s) ignorada(s)' : '')+
-    ' · '+dismissalTypeLabel(desligamentoType)+
-    ' em '+formatDateBR(desligamentoDate)+'.';
+    (skipped ? ' · '+skipped+' linha(s) ignorada(s)' : '')+'.';
 
   textEl.value = '';
-  logActivity(
-    'cadastro',
-    added+' colaborador(es) incluído(s) manualmente nos inativos — '+
-    dismissalTypeLabel(desligamentoType)+' em '+formatDateBR(desligamentoDate)+'.'
-  );
+  logActivity('cadastro', added+' colaborador(es) incluído(s) manualmente nos inativos.');
  });
 }
 
@@ -5777,78 +5762,28 @@ function renderInactiveTable(){
   var body = document.getElementById('inativos-table-body');
   var empty = document.getElementById('inativos-empty');
   if(!body) return;
-
   if(!INACTIVE.length){
     body.innerHTML = '';
     if(empty) empty.style.display = 'block';
     return;
   }
-
   if(empty) empty.style.display = 'none';
-
-  var rows = INACTIVE.slice().sort(function(a,b){
-    return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
-  });
-
+  var rows = INACTIVE.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||''); });
   body.innerHTML = rows.map(function(e){
-    var dismissalType = getDismissalType(e);
-    var desligamentoDate = e.inactivatedAt || '';
-
+    var dates = (e.demDates||[]).map(formatDateBR).join(', ');
     return '<tr>'+
       '<td>'+esc(e.id)+'</td>'+
       '<td>'+esc(e.nome)+'</td>'+
       '<td>'+esc(e.coordenador)+'</td>'+
       '<td>'+esc(e.escala)+'</td>'+
       '<td>'+esc(e.horario)+'</td>'+
-      '<td>'+
-        '<select class="inactive-dismissal-type" data-inactive-id="'+esc(e.id)+'" style="min-width:145px">'+
-          '<option value="DEMITIDO"'+(dismissalType==='DEMITIDO'?' selected':'')+'>Demitido</option>'+
-          '<option value="PEDIU_DEMISSAO"'+(dismissalType==='PEDIU_DEMISSAO'?' selected':'')+'>Pediu demissão</option>'+
-        '</select>'+
-      '</td>'+
-      '<td>'+
-        '<input class="inactive-dismissal-date" data-inactive-id="'+esc(e.id)+'" type="date" value="'+esc(desligamentoDate)+'" style="min-width:145px">'+
-      '</td>'+
+      '<td>'+esc(dates)+'</td>'+
+      '<td>'+esc(formatDateBR(e.inactivatedAt||''))+'</td>'+
       '<td><button type="button" class="reativar-btn" data-reativar-id="'+esc(e.id)+'">Reativar</button></td>'+
       '</tr>';
   }).join('');
-
-  body.querySelectorAll('.inactive-dismissal-type').forEach(function(sel){
-    sel.addEventListener('change', function(){
-      var id = sel.dataset.inactiveId;
-      var rec = INACTIVE.find(function(e){ return e.id===id; });
-      if(!rec) return;
-
-      setDismissalType(rec, sel.value);
-      saveInactiveList();
-
-      logActivity(
-        'cadastro',
-        'Alterou o tipo de desligamento de '+(rec.nome||id)+' para '+dismissalTypeLabel(sel.value)+'.'
-      );
-    });
-  });
-
-  body.querySelectorAll('.inactive-dismissal-date').forEach(function(inp){
-    inp.addEventListener('change', function(){
-      var id = inp.dataset.inactiveId;
-      var rec = INACTIVE.find(function(e){ return e.id===id; });
-      if(!rec) return;
-
-      rec.inactivatedAt = inp.value || '';
-      saveInactiveList();
-
-      logActivity(
-        'cadastro',
-        'Alterou a data de desligamento de '+(rec.nome||id)+' para '+(inp.value ? formatDateBR(inp.value) : 'sem data')+'.'
-      );
-    });
-  });
-
   body.querySelectorAll('.reativar-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      reactivateEmployee(btn.dataset.reativarId);
-    });
+    btn.addEventListener('click', function(){ reactivateEmployee(btn.dataset.reativarId); });
   });
 }
 
