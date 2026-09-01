@@ -2044,6 +2044,30 @@ function sbSaveRegistro(id, date, status, hora){
     }).catch(function(err){ console.error('[KN] Supabase: erro ao salvar presença:', err); });
   }catch(err){ console.error('[KN] Supabase: erro ao preparar presença pra salvar:', err); }
 }
+
+// Ao reativar um colaborador, remove TODAS as marcações DEM desse ID no banco.
+// Não altera o menu/seta onde você escolhe Demissão / Pediu desligamento.
+function sbClearDemissoesDoColaborador(id){
+  if(!sbReady) return Promise.resolve();
+  try{
+    return sb.from(TB_REG)
+      .update({status:'', hora:''})
+      .eq('colaborador_id', String(id))
+      .eq('status', 'DEM')
+      .then(function(res){
+        if(res && res.error){
+          console.error('[KN] Supabase: erro ao limpar demissões do colaborador:', res.error.message);
+        }
+      })
+      .catch(function(err){
+        console.error('[KN] Supabase: erro ao limpar demissões do colaborador:', err);
+      });
+  }catch(err){
+    console.error('[KN] Supabase: erro ao preparar limpeza de demissões:', err);
+    return Promise.resolve();
+  }
+}
+
 // Busca o cadastro completo do Supabase (usado no carregamento inicial e
 // pra reconciliar quando um aparelho novo abre o app pela primeira vez).
 function sbLoadRoster(){
@@ -3946,49 +3970,90 @@ function reactivateEmployee(id){
   if(idx===-1) return;
 
   var rec = Object.assign({}, INACTIVE[idx]);
-  var oldDemDates = (rec.demDates || demRecords[id] || []).slice();
 
-  // Ao restaurar, apaga também os status DEM que levaram à inativação.
-  // Isso evita que o card "Demissão" continue contabilizando a pessoa.
-  oldDemDates.forEach(function(date){
-    var ds = monthStates[date] || {};
-    if(ds[id] && ds[id].status === 'DEM'){
+  // 1) Limpa DEM do estado atual imediatamente.
+  if(state[id] && state[id].status === 'DEM'){
+    state[id] = {status:'', hora:''};
+    monthStates[currentDate] = state;
+    saveState();
+    sbBroadcastRegistro(id, currentDate, '', '');
+  }
+
+  // 2) Limpa DEM de TODAS as datas já carregadas na memória.
+  Object.keys(monthStates).forEach(function(date){
+    var ds = monthStates[date];
+    if(ds && ds[id] && ds[id].status === 'DEM'){
       ds[id] = {status:'', hora:''};
       monthStates[date] = ds;
       saveDayState(date, ds);
-      sbSaveRegistro(id, date, '', '');
     }
   });
 
+  // 3) Limpa também estados salvos localmente que ainda não foram carregados.
+  // Só mexe nas chaves de presença por data: presenca:AAAA-MM-DD.
+  try{
+    for(var i=0; i<localStorage.length; i++){
+      var key = localStorage.key(i);
+      if(!/^presenca:\d{4}-\d{2}-\d{2}$/.test(String(key||''))) continue;
+
+      var raw = localStorage.getItem(key);
+      var dsLocal = parseStoredState(raw);
+      if(dsLocal && dsLocal[id] && dsLocal[id].status === 'DEM'){
+        dsLocal[id] = {status:'', hora:''};
+        localStorage.setItem(key, JSON.stringify(dsLocal));
+
+        var dateKey = key.slice('presenca:'.length);
+        monthStates[dateKey] = dsLocal;
+        if(window.storage){
+          try{ window.storage.set(key, JSON.stringify(dsLocal), false); }catch(e){}
+        }
+      }
+    }
+  }catch(e){
+    console.warn('[KN] não foi possível revisar todos os registros locais ao restaurar:', e);
+  }
+
+  // 4) Limpa TODAS as marcações DEM do mesmo ID no Supabase.
+  // Assim outro aparelho/computador não traz a demissão antiga de volta.
+  sbClearDemissoesDoColaborador(id);
+
   delete rec.demDates;
   delete rec.inactivatedAt;
+
   INACTIVE.splice(idx,1);
   ALL = ALL.filter(function(e){ return e.id!==id; });
   ALL.push(rec);
 
-  // Mantém o cadastro ativo sempre em ordem alfabética.
+  // Volta para o mesmo cadastro ativo, mantendo ordem alfabética.
   ALL.sort(function(a,b){
     return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
   });
 
   rebuildById();
-  delete demRecords[id];
 
-  if(monthStates[currentDate]){
-    state = monthStates[currentDate];
-  }
+  // Remove definitivamente o contador interno usado para as 3 confirmações.
+  delete demRecords[id];
 
   saveRoster();
   saveInactiveList();
   saveDemRecords();
   rebuildFilterLists();
   markHeavyViewsDirty();
+
+  // Recalcula os cards agora, sem esperar atualizar/reabrir a página.
+  updateStatsCards();
   renderAll();
 
-  if(activeTabName==='grupos'){ renderGroupsTable(); groupsDirty=false; }
-  if(activeTabName==='inativos'){ renderInactiveTable(); inactiveDirty=false; }
+  if(activeTabName==='grupos'){
+    renderGroupsTable();
+    groupsDirty=false;
+  }
+  if(activeTabName==='inativos'){
+    renderInactiveTable();
+    inactiveDirty=false;
+  }
 
-  logActivity('cadastro', 'Restaurou '+(rec.nome||id)+' e removeu as marcações de demissão.');
+  logActivity('cadastro', 'Restaurou '+(rec.nome||id)+' e removeu todas as marcações DEM.');
  });
 }
 
@@ -5279,7 +5344,11 @@ function updateStatsCards(){
     else if(st==='F' || st==='ATEST' || st==='F_ATEST') f++;
     else if(st==='FO') fo++;
     else if(st==='AT') at++;
-    else if(st==='DEM') dem++;
+    else if(st==='DEM'){
+      // Só conta a demissão se esse colaborador ainda estiver ativo nesta lista
+      // e o status DEM realmente existir nesta data.
+      dem++;
+    }
     else if(st==='BH') bh++;
     else if(st==='TF') tf++;
     else if(st==='FA') fa++;
@@ -5829,10 +5898,17 @@ function mergeRosterFromCloud(cloudRows){
 function mergeInactiveFromCloud(cloudRows){
   if(!Array.isArray(cloudRows) || !cloudRows.length) return false;
   var localById = {};
+  var activeById = {};
   INACTIVE.forEach(function(e){ localById[e.id] = e; });
+  ALL.forEach(function(e){ activeById[e.id] = true; });
   var changed = false;
   cloudRows.forEach(function(ce){
     if(!ce || ce.id==null) return;
+
+    // Se já está ativo neste aparelho, não deixa uma cópia antiga do banco
+    // colocá-lo novamente em Inativos durante a sincronização.
+    if(activeById[ce.id]) return;
+
     var le = localById[ce.id];
     if(!le){
       INACTIVE.push(ce);
