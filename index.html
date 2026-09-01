@@ -3042,6 +3042,44 @@ datepick.addEventListener('change', function(){
 
 // ---------- Camera scanning ----------
 var scanTickTimer = null;
+
+var scanAudioCtx = null;
+
+function unlockScanAudio(){
+  try{
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return;
+    if(!scanAudioCtx) scanAudioCtx = new AudioCtx();
+    if(scanAudioCtx.state === 'suspended'){
+      scanAudioCtx.resume().catch(function(){});
+    }
+  }catch(e){}
+}
+
+function playScanBeep(ok){
+  try{
+    unlockScanAudio();
+    if(!scanAudioCtx) return;
+
+    var ctx = scanAudioCtx;
+    var now = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(ok ? 1050 : 330, now);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(ok ? 0.22 : 0.16, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + (ok ? 0.11 : 0.18));
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + (ok ? 0.12 : 0.19));
+  }catch(e){}
+}
+
 function flashScanTick(ok){
   var tick = document.getElementById('scan-tick');
   if(!tick) return;
@@ -3069,6 +3107,7 @@ function onScanSuccess(decodedText){
     flashScanTick(false);
     if(lastScan.id === id && (now - lastScan.t) < 4000){ return; }
     lastScan = {id:id, t:now};
+    playScanBeep(false);
     confirmEl.style.display = 'block';
     confirmEl.style.borderColor = 'var(--danger)';
     confirmEl.style.background = '#faece9';
@@ -3080,6 +3119,7 @@ function onScanSuccess(decodedText){
   flashScanTick(true);
   if(lastScan.id === id && (now - lastScan.t) < 4000){ return; }
   lastScan = {id:id, t:now};
+  playScanBeep(true);
   var hora = nowTime();
   setStatus(id, 'P', hora);
   confirmEl.style.display = 'block';
@@ -3297,6 +3337,7 @@ async function chooseCameraStream(){
 }
 
 async function startCamera(){
+  unlockScanAudio();
   var video = document.getElementById('barcode-video');
   var btnStart = document.getElementById('btn-start');
   var btnStop = document.getElementById('btn-stop');
