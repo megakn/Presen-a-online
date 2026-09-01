@@ -393,6 +393,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 #panel-sheet .status-chip[data-status="BH"]{background:#ffe0b2;color:#8a4b00;border-color:#e5a04d}
 #panel-sheet .status-chip[data-status="TF"]{background:#eadcff;color:#60349a;border-color:#b99be3}
 #panel-sheet .status-chip[data-status="FA"]{background:#ffdff0;color:#8b2f61;border-color:#e8a1c9}
+#panel-sheet .status-chip.status-auto{background:#eef5ff;color:#174f91;border-color:#8bb8e8;border-style:dashed}
 
 #status-popover{
   position:fixed;
@@ -3313,14 +3314,26 @@ function loadSpecificSheetDates(){
   });
 }
 
+// Status "de fato" de um colaborador num dia: usa o que foi marcado
+// manualmente se houver; senão, se o calendário de folgas (FO) já diz que
+// a escala dele está de folga nesse dia, considera FO automaticamente —
+// mesmo sem ninguém ter clicado nada na Planilha pra essa pessoa.
+function effectiveStatus(emp, date){
+  var ds = monthStates[date] || {};
+  if(date===currentDate) ds = state;
+  var explicit = (ds[emp.id] && ds[emp.id].status) ? ds[emp.id].status : '';
+  if(explicit) return explicit;
+  if(typeof foIsOffEmployee==='function' && foIsOffEmployee(emp, date)) return 'FO';
+  return '';
+}
+
 function rowMatchesStatusFilter(emp){
   var filterEl = document.getElementById('sheet-status-filter');
   var filter = filterEl ? filterEl.value : '';
   if(!filter) return true;
 
   var sts = selectedSheetDates.map(function(date){
-    var ds = monthStates[date] || {};
-    return (ds[emp.id] && ds[emp.id].status) ? ds[emp.id].status : '';
+    return effectiveStatus(emp, date);
   });
 
   if(filter === 'EMPTY') return sts.some(function(v){ return !v; });
@@ -3363,7 +3376,9 @@ function renderSheet(){
       var ds = monthStates[date] || {};
       if(date===currentDate) ds = state;
       var rec = ds[e.id] || {status:''};
-      return '<td class="status-cell'+(date===today?' today-date':'')+'"><button type="button" class="status-chip" data-id="'+esc(e.id)+'" data-day="'+date+'" data-status="'+esc(rec.status||'')+'">'+statusShort(rec.status||'')+'</button></td>';
+      var autoFo = !rec.status && typeof foIsOffEmployee==='function' && foIsOffEmployee(e, date);
+      var label = autoFo ? 'FO' : statusShort(rec.status||'');
+      return '<td class="status-cell'+(date===today?' today-date':'')+'"><button type="button" class="status-chip'+(autoFo?' status-auto':'')+'" data-id="'+esc(e.id)+'" data-day="'+date+'" data-status="'+esc(rec.status||'')+'"'+(autoFo?' title="Folga automática pelo calendário — clique pra confirmar/alterar"':'')+'>'+label+'</button></td>';
     }).join('');
     return '<tr>'+
       '<td class="col-id">'+esc(e.id)+'</td>'+
