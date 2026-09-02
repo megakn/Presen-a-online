@@ -1545,6 +1545,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
     <button class="tab" data-tab="import">Importar folgas</button>
     <button class="tab" data-tab="grupos">Grupos</button>
     <button class="tab" data-tab="inativos">Inativos</button>
+    <button class="tab" data-tab="hc">Cards HC</button>
   </div>
 
   <div id="stats-date-label" class="muted no-print" style="margin:-4px 0 6px;font-weight:700"></div>
@@ -1939,12 +1940,34 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
       </div>
       <div class="tablewrap" style="max-height:480px">
         <table>
-          <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Demissões confirmadas</th><th>Inativado em</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Tipo de desligamento</th><th>Inativado em</th><th></th></tr></thead>
           <tbody id="inativos-table-body"></tbody>
         </table>
       </div>
       <p class="muted" id="inativos-empty" style="margin-top:10px;display:none">Nenhum colaborador inativo no momento.</p>
     </div>
+  </div>
+
+  <div id="panel-hc" class="panel">
+    <div class="card">
+      <div id="hc-vol-table"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div id="hc-week-table"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div id="hc-card-morning"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div id="hc-card-full"></div>
+    </div>
+    <p class="muted" style="margin-top:10px;font-size:11px">
+      Necessário = calculado a partir da volumetria (270 pacotes/hora por pessoa) quando preenchida; se o turno não tiver
+      volumetria, usa o total de escalados (cadastro menos folga) como estimativa. Presente = quem já bateu presença (P)
+      na Planilha. Delta = Presente − Necessário. "Até 8h" considera só escalas com horário de início antes das 08:00.
+    </p>
+    <p class="muted" style="margin-top:6px;font-size:11px">Férias: 0 · INSS: 0 — nenhum colaborador nessas situações ainda (operação nova).</p>
+    <p class="muted" style="margin-top:6px;font-size:11px">Fixo x Contrato: ainda não dá pra mostrar aqui — o cadastro do app não guarda esse dado por pessoa hoje. Quando quiser, me avisa que a gente resolve.</p>
   </div>
 
   <div id="printarea"></div>
@@ -2047,8 +2070,9 @@ function sbSaveRegistro(id, date, status, hora){
 
 // Ao reativar um colaborador, remove TODAS as marcações DEM desse ID no banco.
 // Não altera o menu/seta onde você escolhe Demissão / Pediu desligamento.
+// Retorna {ok:true} ou {ok:false} — quem chama decide se tenta de novo.
 function sbClearDemissoesDoColaborador(id){
-  if(!sbReady) return Promise.resolve();
+  if(!sbReady) return Promise.resolve({ok:true}); // sem Supabase configurado, nada a limpar remotamente
   try{
     return sb.from(TB_REG)
       .update({status:'', hora:''})
@@ -2057,15 +2081,33 @@ function sbClearDemissoesDoColaborador(id){
       .then(function(res){
         if(res && res.error){
           console.error('[KN] Supabase: erro ao limpar demissões do colaborador:', res.error.message);
+          return {ok:false, error:res.error.message};
         }
+        return {ok:true};
       })
       .catch(function(err){
         console.error('[KN] Supabase: erro ao limpar demissões do colaborador:', err);
+        return {ok:false, error:String(err)};
       });
   }catch(err){
     console.error('[KN] Supabase: erro ao preparar limpeza de demissões:', err);
-    return Promise.resolve();
+    return Promise.resolve({ok:false, error:String(err)});
   }
+}
+// Chama a limpeza acima com uma tentativa extra automática se a primeira falhar,
+// e só então avisa a pessoa — a limpeza local (state/monthStates/localStorage) já
+// aconteceu antes disso, então isso é só a parte que precisa do banco compartilhado.
+function sbClearDemissoesComRetentativa(id, nome){
+  sbClearDemissoesDoColaborador(id).then(function(res){
+    if(res && res.ok) return;
+    // tenta mais uma vez depois de 1.5s antes de incomodar a pessoa
+    setTimeout(function(){
+      sbClearDemissoesDoColaborador(id).then(function(res2){
+        if(res2 && res2.ok) return;
+        alert('Restaurei ' + (nome||id) + ' localmente, mas não consegui confirmar a limpeza no banco compartilhado (outros aparelhos podem continuar mostrando a demissão até isso ser resolvido). Tenta reativar de novo daqui a pouco, ou avisa quem cuida do Supabase.');
+      });
+    }, 1500);
+  });
 }
 
 // Busca o cadastro completo do Supabase (usado no carregamento inicial e
@@ -2562,6 +2604,44 @@ var DEMREC_KEY = 'presenca:demrecords:v1';
 var INACTIVE = [];
 var demRecords = {}; // { id: [dateISO, ...] } — datas em que "Demissão" foi confirmada
 
+var DEM_CLEAR_KEY = 'presenca:demclear:v1';
+var demClearMarks = {};
+
+try{
+  var savedDemClear = JSON.parse(localStorage.getItem(DEM_CLEAR_KEY) || '{}');
+  if(savedDemClear && typeof savedDemClear === 'object') demClearMarks = savedDemClear;
+}catch(e){ demClearMarks = {}; }
+
+function saveDemClearMarks(){
+  try{ localStorage.setItem(DEM_CLEAR_KEY, JSON.stringify(demClearMarks)); }catch(e){}
+  if(window.storage){
+    try{ window.storage.set(DEM_CLEAR_KEY, JSON.stringify(demClearMarks), false); }catch(e){}
+  }
+}
+
+function markDemCleared(id, date){
+  id = String(id||'');
+  date = String(date||'');
+  if(!id || !date) return;
+  if(!demClearMarks[id]) demClearMarks[id] = {};
+  demClearMarks[id][date] = Date.now();
+  saveDemClearMarks();
+}
+
+function unmarkDemCleared(id, date){
+  id = String(id||'');
+  date = String(date||'');
+  if(!demClearMarks[id]) return;
+  delete demClearMarks[id][date];
+  if(!Object.keys(demClearMarks[id]).length) delete demClearMarks[id];
+  saveDemClearMarks();
+}
+
+function isDemCleared(id, date){
+  return !!(demClearMarks[String(id||'')] && demClearMarks[String(id||'')][String(date||'')]);
+}
+
+
 function rebuildById(){
   byId = {};
   ALL.forEach(function(e){ byId[e.id] = e; });
@@ -2707,6 +2787,10 @@ function applyLiveRegistro(payload, source){
   var hora = String(payload.hora || '').trim();
 
   if(!id || !date) return;
+
+  // Se esse DEM já foi limpo por uma restauração, ignora cópia antiga
+  // chegando pelo Realtime/Supabase.
+  if(status === 'DEM' && isDemCleared(id, date)) return;
   if(payload.device_id && payload.device_id === sbLiveDeviceId) return;
 
   var target = (date === currentDate) ? state : (monthStates[date] || {});
@@ -3050,6 +3134,8 @@ document.querySelectorAll('.tab').forEach(function(btn){
           var hint = document.getElementById('code-hint');
           if(hint) hint.textContent = 'Escolha o tipo e clique em Gerar códigos.';
         }
+      }else if(tabName === 'hc'){
+        if(typeof renderHCCards === 'function') renderHCCards();
       }
     });
   });
@@ -3923,6 +4009,10 @@ function applyDayStatus(id, date, val){
   ensureOperator(function(){
     var ds = monthStates[date] || {};
     var old = ds[id] || {status:'',hora:''};
+
+    // Uma escolha manual feita agora sempre prevalece sobre uma restauração antiga.
+    unmarkDemCleared(id, date);
+
     ds[id] = {status:val, hora:val==='P' ? (old.hora || nowTime()) : ''};
     monthStates[date] = ds;
     saveDayState(date, ds);
@@ -3970,27 +4060,32 @@ function reactivateEmployee(id){
   if(idx===-1) return;
 
   var rec = Object.assign({}, INACTIVE[idx]);
+  var datesToClear = {};
 
-  // 1) Limpa DEM do estado atual imediatamente.
+  // Datas registradas no próprio inativo / contador de demissão.
+  getTerminationDates(rec).forEach(function(d){ if(d) datesToClear[d] = true; });
+  (demRecords[id] || []).forEach(function(d){ if(d) datesToClear[d] = true; });
+
+  // Estado atual.
   if(state[id] && state[id].status === 'DEM'){
+    datesToClear[currentDate] = true;
     state[id] = {status:'', hora:''};
     monthStates[currentDate] = state;
     saveState();
-    sbBroadcastRegistro(id, currentDate, '', '');
   }
 
-  // 2) Limpa DEM de TODAS as datas já carregadas na memória.
+  // Todas as datas já carregadas.
   Object.keys(monthStates).forEach(function(date){
     var ds = monthStates[date];
     if(ds && ds[id] && ds[id].status === 'DEM'){
+      datesToClear[date] = true;
       ds[id] = {status:'', hora:''};
       monthStates[date] = ds;
       saveDayState(date, ds);
     }
   });
 
-  // 3) Limpa também estados salvos localmente que ainda não foram carregados.
-  // Só mexe nas chaves de presença por data: presenca:AAAA-MM-DD.
+  // Todas as datas salvas localmente.
   try{
     for(var i=0; i<localStorage.length; i++){
       var key = localStorage.key(i);
@@ -3998,24 +4093,32 @@ function reactivateEmployee(id){
 
       var raw = localStorage.getItem(key);
       var dsLocal = parseStoredState(raw);
-      if(dsLocal && dsLocal[id] && dsLocal[id].status === 'DEM'){
-        dsLocal[id] = {status:'', hora:''};
-        localStorage.setItem(key, JSON.stringify(dsLocal));
+      if(!dsLocal || !dsLocal[id] || dsLocal[id].status !== 'DEM') continue;
 
-        var dateKey = key.slice('presenca:'.length);
-        monthStates[dateKey] = dsLocal;
-        if(window.storage){
-          try{ window.storage.set(key, JSON.stringify(dsLocal), false); }catch(e){}
-        }
+      var dateKey = key.slice('presenca:'.length);
+      datesToClear[dateKey] = true;
+      dsLocal[id] = {status:'', hora:''};
+      localStorage.setItem(key, JSON.stringify(dsLocal));
+      monthStates[dateKey] = dsLocal;
+
+      if(window.storage){
+        try{ window.storage.set(key, JSON.stringify(dsLocal), false); }catch(e){}
       }
     }
   }catch(e){
-    console.warn('[KN] não foi possível revisar todos os registros locais ao restaurar:', e);
+    console.warn('[KN] não foi possível revisar todos os registros locais:', e);
   }
 
-  // 4) Limpa TODAS as marcações DEM do mesmo ID no Supabase.
-  // Assim outro aparelho/computador não traz a demissão antiga de volta.
-  sbClearDemissoesDoColaborador(id);
+  // Marca essas datas como "DEM já removido". Isso impede que um registro
+  // antigo do banco entre de novo antes da limpeza remota terminar.
+  Object.keys(datesToClear).forEach(function(date){
+    markDemCleared(id, date);
+    sbSaveRegistro(id, date, '', '');
+    sbBroadcastRegistro(id, date, '', '');
+  });
+
+  // Limpeza geral no banco compartilhado (com retentativa e aviso se falhar).
+  sbClearDemissoesComRetentativa(id, rec.nome);
 
   delete rec.demDates;
   delete rec.inactivatedAt;
@@ -4024,14 +4127,11 @@ function reactivateEmployee(id){
   ALL = ALL.filter(function(e){ return e.id!==id; });
   ALL.push(rec);
 
-  // Volta para o mesmo cadastro ativo, mantendo ordem alfabética.
   ALL.sort(function(a,b){
     return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
   });
 
   rebuildById();
-
-  // Remove definitivamente o contador interno usado para as 3 confirmações.
   delete demRecords[id];
 
   saveRoster();
@@ -4040,8 +4140,8 @@ function reactivateEmployee(id){
   rebuildFilterLists();
   markHeavyViewsDirty();
 
-  // Recalcula os cards agora, sem esperar atualizar/reabrir a página.
-  updateStatsCards();
+  // Garante que o card use o estado já limpo.
+  if(monthStates[currentDate]) state = monthStates[currentDate];
   renderAll();
 
   if(activeTabName==='grupos'){
@@ -4053,7 +4153,7 @@ function reactivateEmployee(id){
     inactiveDirty=false;
   }
 
-  logActivity('cadastro', 'Restaurou '+(rec.nome||id)+' e removeu todas as marcações DEM.');
+  logActivity('cadastro', 'Restaurou '+(rec.nome||id)+' e zerou os registros de demissão.');
  });
 }
 
@@ -5345,9 +5445,9 @@ function updateStatsCards(){
     else if(st==='FO') fo++;
     else if(st==='AT') at++;
     else if(st==='DEM'){
-      // Só conta a demissão se esse colaborador ainda estiver ativo nesta lista
-      // e o status DEM realmente existir nesta data.
-      dem++;
+      // DEM que já foi removido por "Reativar" não entra no card,
+      // mesmo se uma cópia antiga ainda estiver chegando do banco.
+      if(!isDemCleared(e.id, statsSourceDate())) dem++;
     }
     else if(st==='BH') bh++;
     else if(st==='TF') tf++;
@@ -5393,6 +5493,216 @@ function statsSourceState(){
 function updateStatsDateLabel(){
   var el = document.getElementById('stats-date-label');
   if(el) el.textContent = 'Dados de ' + formatDateBR(statsSourceDate());
+}
+
+// ---------- Aba Cards HC: volumetria, até 8h e quadro completo, hoje x ontem ----------
+var HC_PACOTES_HORA = 270; // produtividade: pacotes por hora por colaborador
+
+function hcParseHour(horario){
+  var m = String(horario||'').match(/(\d{1,2})/);
+  return m ? parseInt(m[1], 10) : 99;
+}
+function hcYesterday(dateStr){
+  var d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+function hcGetDayState(dateStr){
+  if(dateStr === currentDate) return state;
+  if(monthStates[dateStr]) return monthStates[dateStr];
+  return getLocalDayState(dateStr);
+}
+// Duração do turno em horas, a partir do padrão "05H / 09H / 10H / 14H48" da escala
+// (entrada / saída almoço / volta almoço / saída), lidando com virada de dia.
+function hcTurnoHoras(escala){
+  var m = String(escala||'').match(/(\d{1,2})H\s*\/\s*(\d{1,2})H\s*\/\s*(\d{1,2})H\s*\/\s*(\d{1,2})H(\d{2})?/);
+  if(!m) return 8.8;
+  function diff(a, b){ var d = b - a; if(d < 0) d += 24; return d; }
+  var parte1 = diff(+m[1], +m[2]);
+  var parte2 = diff(+m[3], +m[4]) + (+(m[5]||0)) / 60;
+  return parte1 + parte2;
+}
+function hcStorageKeyVol(date){ return 'presenca:volumetria:' + date; }
+function hcGetLocalVol(date){
+  try{ return JSON.parse(localStorage.getItem(hcStorageKeyVol(date)) || '{}') || {}; }catch(e){ return {}; }
+}
+function hcSaveVol(date, volMap){
+  try{ localStorage.setItem(hcStorageKeyVol(date), JSON.stringify(volMap || {})); }catch(e){}
+  if(window.storage){
+    try{ window.storage.set(hcStorageKeyVol(date), JSON.stringify(volMap || {}), false); }catch(e){}
+  }
+}
+// Mapeia cada horário de turno pro ciclo real da operação: AM junta os três
+// horários da manhã numa volumetria só; PM junta os dois da tarde. Horários
+// que ainda não têm ciclo confirmado (ex: 23:00) ficam isolados por enquanto.
+var HC_CYCLE_MAP = { '05:00': 'AM', '06:00': 'AM', '08:00': 'AM', '13:00': 'PM', '14:00': 'PM' };
+function hcCycleKey(horario){ return HC_CYCLE_MAP[horario] || horario; }
+// Lista os ciclos distintos (AM, PM, e qualquer horário sem ciclo confirmado ainda).
+function hcListTurnos(){
+  var seen = {};
+  (ALL || []).forEach(function(e){
+    var key = hcCycleKey(e.horario);
+    if(!seen[key]) seen[key] = { cycle: key, horarios: [], pessoas: 0 };
+    if(seen[key].horarios.indexOf(e.horario) === -1) seen[key].horarios.push(e.horario);
+    seen[key].pessoas++;
+  });
+  return Object.keys(seen).map(function(k){ return seen[k]; }).sort(function(a, b){
+    var ha = Math.min.apply(null, a.horarios.map(hcParseHour));
+    var hb = Math.min.apply(null, b.horarios.map(hcParseHour));
+    return ha - hb;
+  });
+}
+// Duração (em horas) do turno de alguém desse ciclo — todas as escalas têm a mesma duração (8,8h).
+function hcHorasPorCycle(cycleKey){
+  var rep = (ALL || []).find(function(e){ return hcCycleKey(e.horario) === cycleKey; });
+  return rep ? hcTurnoHoras(rep.escala) : 8.8;
+}
+function hcRenderVolTable(){
+  var el = document.getElementById('hc-vol-table');
+  if(!el) return;
+  var today = todayStr();
+  var volMap = hcGetLocalVol(today);
+  var turnos = hcListTurnos();
+  var rows = turnos.map(function(t){
+    var v = volMap[t.cycle] || '';
+    var horas = hcHorasPorCycle(t.cycle);
+    var horariosLabel = t.horarios.slice().sort(function(a, b){ return hcParseHour(a) - hcParseHour(b); }).join(' / ');
+    return '<tr><td>' + esc(t.cycle) + ' <span class="muted" style="font-weight:400">(' + esc(horariosLabel) + ')</span></td><td>' + t.pessoas + '</td><td>' + horas.toFixed(1) + 'h</td>' +
+      '<td><input type="number" min="0" step="1" class="hc-vol-input" data-cycle="' + esc(t.cycle) +
+      '" value="' + v + '" style="width:110px" placeholder="0"></td></tr>';
+  }).join('');
+  el.innerHTML =
+    '<p style="margin:0 0 8px;font-weight:700;font-size:13px">Volumetria esperada hoje (' + formatDateBR(today) + ')</p>' +
+    '<p class="muted" style="margin:0 0 10px;font-size:11px">Preencha o volume de pacotes esperado por ciclo. O HC necessário é calculado com ' +
+    HC_PACOTES_HORA + ' pacotes/hora por colaborador. Ciclo sem volumetria preenchida usa o total de escalados como estimativa.</p>' +
+    '<table><thead><tr><th>Ciclo</th><th>Pessoas cadastradas</th><th>Duração</th><th>Volume esperado (pacotes)</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  el.querySelectorAll('.hc-vol-input').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var vm = hcGetLocalVol(today);
+      var val = parseFloat(inp.value) || 0;
+      if(val > 0) vm[inp.dataset.cycle] = val; else delete vm[inp.dataset.cycle];
+      hcSaveVol(today, vm);
+      renderHCCards();
+    });
+  });
+}
+// Segunda a domingo da semana que contém a data informada.
+function hcWeekDates(baseDateStr){
+  var d = new Date(baseDateStr + 'T00:00:00');
+  var dow = d.getDay(); // 0=domingo ... 6=sábado
+  var diffToMonday = (dow === 0) ? -6 : (1 - dow);
+  var monday = new Date(d); monday.setDate(d.getDate() + diffToMonday);
+  var dates = [];
+  for(var i = 0; i < 7; i++){
+    var dt = new Date(monday); dt.setDate(monday.getDate() + i);
+    var mm = String(dt.getMonth() + 1).padStart(2, '0');
+    var dd = String(dt.getDate()).padStart(2, '0');
+    dates.push(dt.getFullYear() + '-' + mm + '-' + dd);
+  }
+  return dates;
+}
+var HC_WEEKDAY_LABELS = ['segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado','domingo'];
+function hcRenderWeekTable(){
+  var el = document.getElementById('hc-week-table');
+  if(!el) return;
+  var today = todayStr();
+  var dates = hcWeekDates(today);
+  var rows = dates.map(function(date, idx){
+    var snap = hcComputeSnapshot(date, hcGetDayState(date), false, hcGetLocalVol(date));
+    var isToday = date === today;
+    var deltaStyle = snap.delta < 0 ? 'color:#c0392b;font-weight:700' : (snap.delta > 0 ? 'color:#1d9e75;font-weight:700' : '');
+    return '<tr' + (isToday ? ' style="background:#f7f9fc;font-weight:700"' : '') + '>' +
+      '<td>' + HC_WEEKDAY_LABELS[idx] + '<br><span class="muted" style="font-weight:400">' + formatDateBR(date) + '</span></td>' +
+      '<td>' + snap.planejado + '</td><td>' + snap.atual + '</td>' +
+      '<td style="' + deltaStyle + '">' + (snap.delta > 0 ? '+' : '') + snap.delta + '</td>' +
+      '<td>' + snap.falta + '</td><td>' + snap.atraso + '</td></tr>';
+  }).join('');
+  el.innerHTML =
+    '<p style="margin:0 0 8px;font-weight:700;font-size:13px">Visão semanal (segunda a domingo)</p>' +
+    '<p class="muted" style="margin:0 0 10px;font-size:11px">Dias futuros mostram só o Necessário calculado pela volumetria (quando preenchida); Presente/Delta ficam 0 até o dia chegar. Dias passados mostram o resultado real batido na Planilha.</p>' +
+    '<table><thead><tr><th>Dia</th><th>Necessário</th><th>Presente</th><th>Delta</th><th>Falta</th><th>Atraso</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+function hcComputeSnapshot(dateStr, dayState, morningOnly, volMap){
+  var groups = {};
+  (ALL || []).forEach(function(e){
+    if(morningOnly && hcParseHour(e.horario) >= 8) return;
+    if(typeof foIsOffEmployee === 'function' && foIsOffEmployee(e, dateStr)) return;
+    var key = hcCycleKey(e.horario);
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+  var planejado = 0, atual = 0, falta = 0, atraso = 0;
+  Object.keys(groups).forEach(function(key){
+    var pessoas = groups[key];
+    var vol = (volMap || {})[key];
+    var necessario = (vol && vol > 0) ? Math.ceil(vol / (HC_PACOTES_HORA * hcHorasPorCycle(key))) : pessoas.length;
+    planejado += necessario;
+    pessoas.forEach(function(e){
+      var rec = dayState[e.id];
+      var st = rec ? rec.status : '';
+      if(st === 'P') atual++;
+      else if(st === 'F' || st === 'ATEST' || st === 'F_ATEST') falta++;
+      else if(st === 'AT') atraso++;
+    });
+  });
+  return { planejado: planejado, atual: atual, delta: atual - planejado, falta: falta, atraso: atraso };
+}
+function hcRenderCardRow(label, snap){
+  var deltaStyle = snap.delta < 0
+    ? 'color:#c0392b;font-weight:700'
+    : (snap.delta > 0 ? 'color:#1d9e75;font-weight:700' : '');
+  return '<tr><td>' + esc(label) + '</td><td>' + snap.planejado + '</td><td>' + snap.atual +
+    '</td><td style="' + deltaStyle + '">' + (snap.delta > 0 ? '+' : '') + snap.delta +
+    '</td><td>' + snap.falta + '</td><td>' + snap.atraso + '</td></tr>';
+}
+function hcRenderCard(containerId, title, morningOnly, today, yesterday, todayState, yestState, volToday, volYest){
+  var el = document.getElementById(containerId);
+  if(!el) return;
+  var snapToday = hcComputeSnapshot(today, todayState, morningOnly, volToday);
+  var snapYest = hcComputeSnapshot(yesterday, yestState, morningOnly, volYest);
+  el.innerHTML =
+    '<p style="margin:0 0 10px;font-weight:700;font-size:13px">' + esc(title) + '</p>' +
+    '<table><thead><tr><th></th><th>Necessário</th><th>Presente</th><th>Delta</th><th>Falta</th><th>Atraso</th></tr></thead><tbody>' +
+    hcRenderCardRow('Hoje (' + formatDateBR(today) + ')', snapToday) +
+    hcRenderCardRow('Ontem (' + formatDateBR(yesterday) + ')', snapYest) +
+    '</tbody></table>';
+}
+function renderHCCards(){
+  hcRenderVolTable();
+  hcRenderWeekTable();
+  var today = todayStr();
+  var yesterday = hcYesterday(today);
+  var volToday = hcGetLocalVol(today);
+  var volYest = hcGetLocalVol(yesterday);
+  var draw = function(){
+    hcRenderCard('hc-card-morning', 'Até 8h da manhã', true, today, yesterday, hcGetDayState(today), hcGetDayState(yesterday), volToday, volYest);
+    hcRenderCard('hc-card-full', 'Quadro completo (todos os turnos)', false, today, yesterday, hcGetDayState(today), hcGetDayState(yesterday), volToday, volYest);
+    hcRenderWeekTable();
+  };
+  draw();
+  // Reforça com o dado mais recente do Supabase (presença e volumetria de outros aparelhos),
+  // cobrindo hoje, ontem e a semana toda (segunda a domingo).
+  if(window.storage){
+    var datesToSync = hcWeekDates(today).concat([today, yesterday]).filter(function(d, i, arr){ return arr.indexOf(d) === i; });
+    datesToSync.forEach(function(d){
+      window.storage.get(storageKey(d), false).then(function(res){
+        if(res && res.value){ monthStates[d] = parseStoredState(res.value); draw(); }
+      }).catch(function(){});
+      window.storage.get(hcStorageKeyVol(d), false).then(function(res){
+        if(res && res.value){
+          try{
+            var vm = JSON.parse(res.value);
+            if(d === today) volToday = vm; else if(d === yesterday) volYest = vm;
+            localStorage.setItem(hcStorageKeyVol(d), res.value);
+          }catch(e){}
+          draw();
+          if(d === today) hcRenderVolTable();
+        }
+      }).catch(function(){});
+    });
+  }
 }
 
 // ---------- Aba Grupos: cadastro de colaboradores ----------
@@ -5826,33 +6136,97 @@ safeOn('inativos-import-toggle', 'click', function(){
 safeOn('inativos-import-save', 'click', importInactiveFromText);
 
 
+
+var TERMINATION_TYPE_PREFIX = '__TIPO_DESLIGAMENTO__:';
+
+function getTerminationType(rec){
+  var arr = (rec && Array.isArray(rec.demDates)) ? rec.demDates : [];
+  for(var i=0;i<arr.length;i++){
+    var v = String(arr[i] || '');
+    if(v.indexOf(TERMINATION_TYPE_PREFIX) === 0){
+      var t = v.slice(TERMINATION_TYPE_PREFIX.length);
+      if(t === 'PEDIU_DEMISSAO') return 'PEDIU_DEMISSAO';
+      if(t === 'DEMISSAO') return 'DEMISSAO';
+    }
+  }
+  return 'DEMISSAO';
+}
+
+function getTerminationDates(rec){
+  return ((rec && Array.isArray(rec.demDates)) ? rec.demDates : []).filter(function(v){
+    return String(v || '').indexOf(TERMINATION_TYPE_PREFIX) !== 0;
+  });
+}
+
+function setTerminationType(id, value){
+  var rec = INACTIVE.find(function(e){ return e.id === id; });
+  if(!rec) return;
+
+  var cleanDates = getTerminationDates(rec);
+  cleanDates.push(TERMINATION_TYPE_PREFIX + (value === 'PEDIU_DEMISSAO' ? 'PEDIU_DEMISSAO' : 'DEMISSAO'));
+  rec.demDates = cleanDates;
+
+  saveInactiveList();
+  inactiveDirty = true;
+  renderInactiveTable();
+  inactiveDirty = false;
+
+  logActivity(
+    'cadastro',
+    'Tipo de desligamento de '+(rec.nome || id)+' alterado para '+
+    (value === 'PEDIU_DEMISSAO' ? 'Pediu desligamento' : 'Demissão')+'.'
+  );
+}
+
 // ---------- Aba Inativos ----------
 function renderInactiveTable(){
   var body = document.getElementById('inativos-table-body');
   var empty = document.getElementById('inativos-empty');
   if(!body) return;
+
   if(!INACTIVE.length){
     body.innerHTML = '';
     if(empty) empty.style.display = 'block';
     return;
   }
+
   if(empty) empty.style.display = 'none';
-  var rows = INACTIVE.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||''); });
+
+  var rows = INACTIVE.slice().sort(function(a,b){
+    return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
+  });
+
   body.innerHTML = rows.map(function(e){
-    var dates = (e.demDates||[]).map(formatDateBR).join(', ');
+    var termType = getTerminationType(e);
+
     return '<tr>'+
       '<td>'+esc(e.id)+'</td>'+
       '<td>'+esc(e.nome)+'</td>'+
       '<td>'+esc(e.coordenador)+'</td>'+
       '<td>'+esc(e.escala)+'</td>'+
       '<td>'+esc(e.horario)+'</td>'+
-      '<td>'+esc(dates)+'</td>'+
+      '<td>'+
+        '<select class="termination-type-select" data-term-id="'+esc(e.id)+'" '+
+          'style="min-width:165px;padding:6px 28px 6px 8px;border:1px solid #ccd6e2;border-radius:6px;background:#fff;color:#243447">'+
+          '<option value="DEMISSAO"'+(termType==='DEMISSAO'?' selected':'')+'>Demissão</option>'+
+          '<option value="PEDIU_DEMISSAO"'+(termType==='PEDIU_DEMISSAO'?' selected':'')+'>Pediu desligamento</option>'+
+        '</select>'+
+      '</td>'+
       '<td>'+esc(formatDateBR(e.inactivatedAt||''))+'</td>'+
       '<td><button type="button" class="reativar-btn" data-reativar-id="'+esc(e.id)+'">Reativar</button></td>'+
       '</tr>';
   }).join('');
+
+  body.querySelectorAll('.termination-type-select').forEach(function(sel){
+    sel.addEventListener('change', function(){
+      setTerminationType(sel.dataset.termId, sel.value);
+    });
+  });
+
   body.querySelectorAll('.reativar-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){ reactivateEmployee(btn.dataset.reativarId); });
+    btn.addEventListener('click', function(){
+      reactivateEmployee(btn.dataset.reativarId);
+    });
   });
 }
 
@@ -5983,7 +6357,10 @@ if(sbReady){
       }
       if(Array.isArray(registroRows) && registroRows.length){
         registroRows.forEach(function(r){
-          if(!state[r.colaborador_id]){ state[r.colaborador_id] = {status: r.status||'', hora: r.hora||''}; }
+          var rid = String(r.colaborador_id||'');
+          var rst = String(r.status||'');
+          if(rst === 'DEM' && isDemCleared(rid, currentDate)) return;
+          if(!state[rid]){ state[rid] = {status: rst, hora: r.hora||''}; }
         });
         monthStates[currentDate] = state;
         saveDayState(currentDate, state);
