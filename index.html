@@ -6598,7 +6598,7 @@ function foIsOffEmployee(e,date){
   var ds=monthStates[date] || getLocalDayState(date) || {};
   if(ds[e.id] && ds[e.id].status==='FO') return true;
   var scale=foNorm(e.escala);
-  return !!(foCalendarData[scale] && foCalendarData[scale][date]);
+  return !!(foCalendarData && foCalendarData[scale] && foCalendarData[scale][date]);
 }
 function foRenderLeadershipGroup(letter){
   foSelectedLeadershipGroup=letter;
