@@ -2680,7 +2680,23 @@ function saveDemRecords(){
   try{ localStorage.setItem(DEMREC_KEY, JSON.stringify(demRecords)); }catch(e){}
   if(window.storage){ try{ window.storage.set(DEMREC_KEY, JSON.stringify(demRecords), false); }catch(e){} }
 }
-try{ var savedRosterLocal = JSON.parse(localStorage.getItem(ROSTER_KEY) || 'null'); if(Array.isArray(savedRosterLocal) && savedRosterLocal.length){ ALL = savedRosterLocal; rebuildById(); } }catch(e){}
+try{
+  var savedRosterLocal = JSON.parse(localStorage.getItem(ROSTER_KEY) || 'null');
+  if(Array.isArray(savedRosterLocal) && savedRosterLocal.length){
+    // O cache salvo neste navegador pode estar desatualizado (colaborador novo
+    // adicionado ao cadastro embutido depois da última vez que salvou aqui).
+    // Em vez de trocar ALL por inteiro pelo cache antigo, só ACRESCENTA ao cache
+    // quem já está no cadastro atual (ALL) e ainda não está salvo localmente —
+    // assim nunca perde gente nova nem perde edições locais já feitas.
+    var savedIdsLocal = {};
+    savedRosterLocal.forEach(function(e){ savedIdsLocal[e.id] = true; });
+    ALL.forEach(function(e){
+      if(!savedIdsLocal[e.id]) savedRosterLocal.push(e);
+    });
+    ALL = savedRosterLocal;
+    rebuildById();
+  }
+}catch(e){}
 try{ var savedInactiveLocal = JSON.parse(localStorage.getItem(INACTIVE_KEY) || 'null'); if(Array.isArray(savedInactiveLocal)){ INACTIVE = savedInactiveLocal; } }catch(e){}
 try{ var savedDemLocal = JSON.parse(localStorage.getItem(DEMREC_KEY) || 'null'); if(savedDemLocal && typeof savedDemLocal==='object'){ demRecords = savedDemLocal; } }catch(e){}
 try{ dedupeRoster(); }catch(err){ console.error('[KN] falha ao remover duplicados no carregamento:', err); }
