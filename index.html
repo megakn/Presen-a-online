@@ -3406,8 +3406,11 @@ function handleCameraDecoded(value){
   var now = Date.now();
 
   // Para evitar uma leitura isolada incorreta (ex.: João virar Maria por um frame),
-  // a câmera precisa ler EXATAMENTE o mesmo código duas vezes seguidas.
-  if(cameraCandidateValue === text && (now - cameraCandidateAt) <= 800){
+  // a câmera precisa ler EXATAMENTE o mesmo código duas vezes seguidas. A janela
+  // foi alargada de 800ms para 1500ms: em aparelhos/câmeras mais lentos, 800ms
+  // podia não dar tempo de bater duas leituras, e o app ficava "mudo" (sem bipe,
+  // sem erro, sem confirmação) — parecia que nada tinha acontecido.
+  if(cameraCandidateValue === text && (now - cameraCandidateAt) <= 1500){
     cameraCandidateCount++;
   }else{
     cameraCandidateValue = text;
@@ -3416,6 +3419,16 @@ function handleCameraDecoded(value){
   cameraCandidateAt = now;
 
   if(cameraCandidateCount < 2){
+    // Mostra que o app está tentando confirmar a leitura, mesmo antes de bipar
+    // de vez. Sem isso, uma leitura que falha em confirmar (crachá saiu do
+    // quadro, câmera lenta, etc.) não deixava nenhum rastro na tela.
+    var confirmingEl = document.getElementById('scan-confirm');
+    if(confirmingEl){
+      confirmingEl.style.display = 'block';
+      confirmingEl.style.borderColor = 'var(--border)';
+      confirmingEl.style.background = '#f4f6f3';
+      confirmingEl.innerHTML = '<span class="muted">Lendo código, aguarde…</span>';
+    }
     return true;
   }
 
