@@ -13,6 +13,49 @@
 }
 .code-escala-tick-row:hover{background:rgba(127,127,127,.10)}
 .code-escala-tick{width:20px;text-align:center;font-size:18px;font-weight:800;line-height:1}
+
+/* Destaque visual para colaboradores em Standby nas abas Grupos e Presença */
+tr.standby-highlight .col-nome,
+tr.standby-highlight td:nth-child(4){
+  font-weight:800;
+  color:#7c3aed !important;
+}
+.standby-mini-badge{
+  display:none;
+}
+
+
+/* GRUPOS: tabela compacta, sem espaços largos entre as colunas */
+#panel-grupos .groups-db-table{
+  border-collapse:collapse !important;
+  border-spacing:0 !important;
+  width:max-content !important;
+  min-width:100% !important;
+}
+#panel-grupos .groups-db-table th,
+#panel-grupos .groups-db-table td{
+  padding:1px 2px !important;
+  margin:0 !important;
+  line-height:1.05 !important;
+  height:26px !important;
+  white-space:nowrap !important;
+}
+#panel-grupos .groups-db-table input,
+#panel-grupos .groups-db-table select{
+  margin:0 !important;
+  padding:1px 2px !important;
+  border-radius:2px !important;
+  min-height:22px !important;
+  height:22px !important;
+  line-height:20px !important;
+  box-sizing:border-box !important;
+}
+#panel-grupos .groups-db-table .col-filter-btn,
+#panel-grupos .groups-db-table .col-copy-btn{
+  margin-left:1px !important;
+  padding:0 1px !important;
+}
+
 </style>
 
 <style>
@@ -1852,7 +1895,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
       <p class="muted" style="margin:0 0 10px">
         Cole a lista (um colaborador por linha) pra adicionar um ou vários de uma vez — dá pra colar direto do Excel/Google Sheets. Primeira linha é o cabeçalho; pode ser a lista completa ou só alguns campos (ex.: só ID, Nome e Sexo). Ordem completa:<br>
         <span style="color:#536579">Também aceita um formato simples só pra atualizar o Sexo: uma linha por colaborador terminando em "M" ou "F", sem colunas — ex.: <code>Fulano da Silva M</code>. Nesse caso casa pelo nome com quem já está cadastrado.</span><br>
-        <code style="font-size:11px;line-height:1.6">ID · Groot ID · Nome · Matrícula · Coordenador · ESCALA · Escala Antiga · HORÁRIO · Telefone · SEXO · CARGO · ORIGEM · TIPO · Setor · CPF · EXT</code><br>
+        <code style="font-size:11px;line-height:1.6">ID · Groot ID · Nome · Matrícula · Coordenador · ESCALA · Obs · Escala Antiga · HORÁRIO · Telefone · SEXO · CARGO · ORIGEM · TIPO · Setor · CPF · EXT</code><br>
         Se o colaborador já existe (mesmo ID), atualiza só os campos preenchidos — sem apagar o que já estava salvo.
       </p>
       <textarea id="grupos-text" rows="8" placeholder="Cole aqui a lista de colaboradores (com o cabeçalho na primeira linha)..."></textarea>
@@ -1876,6 +1919,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
             <th>Matrícula <button type="button" class="col-filter-btn" data-ff="matricula" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="matricula" title="Copiar coluna">⧉</button></th>
             <th>Coordenador <button type="button" class="col-filter-btn" data-ff="coordenador" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="coordenador" title="Copiar coluna">⧉</button></th>
             <th>ESCALA <button type="button" class="col-filter-btn" data-ff="escala" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="escala" title="Copiar coluna">⧉</button></th>
+            <th>Obs <button type="button" class="col-filter-btn" data-ff="obs" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="obs" title="Copiar coluna">⧉</button></th>
             <th>Escala Antiga <button type="button" class="col-filter-btn" data-ff="escalaAntiga" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="escalaAntiga" title="Copiar coluna">⧉</button></th>
             <th>HORÁRIO <button type="button" class="col-filter-btn" data-ff="horario" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="horario" title="Copiar coluna">⧉</button></th>
             <th>Telefone <button type="button" class="col-filter-btn" data-ff="telefone" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="telefone" title="Copiar coluna">⧉</button></th>
@@ -1909,11 +1953,35 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 </div>
 
 <div id="panel-inativos" class="panel">
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div>
+          <p style="margin:0 0 4px;font-weight:800;font-size:13px">Standby para desligamento</p>
+          <p class="muted" style="margin:0;font-size:11.5px">
+            Pessoas nesta lista <b>continuam ativas e aparecem normalmente na presença</b>. Quando forem dispensadas, clique em <b>Remover</b>: elas saem dos Ativos/Presença e vão direto para Inativos com a data automática.
+          </p>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;align-items:center">
+        <input id="standby-person-input" list="standby-people-list" placeholder="Pesquise por nome ou ID..." style="min-width:280px;flex:1" autocomplete="off">
+        <datalist id="standby-people-list"></datalist>
+        <button id="standby-add-btn" type="button" style="white-space:nowrap">+ Adicionar ao Standby</button>
+        <span id="standby-status" class="muted"></span>
+      </div>
+      <div class="tablewrap" style="max-height:260px;margin-top:10px">
+        <table>
+          <thead><tr><th>Groot ID</th><th>Nome</th><th>Matrícula</th><th>Coordenador</th><th>ESCALA</th><th>Obs</th><th>Escala Antiga</th><th>HORÁRIO</th><th>Telefone</th><th>SEXO</th><th>CARGO</th><th>ORIGEM</th><th>TIPO</th><th>Setor</th><th>CPF</th><th>EXT</th><th>No standby desde</th><th>Ações</th></tr></thead>
+          <tbody id="standby-table-body"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="standby-empty" style="margin-top:10px;display:none">Nenhum colaborador em standby no momento.</p>
+    </div>
+
     <div class="card">
       <p style="margin:0 0 6px;font-weight:700;font-size:13px">Colaboradores inativos</p>
       <p class="muted" style="margin:0 0 10px">
         Um colaborador cai aqui automaticamente — e some da Planilha e da aba Grupos — quando "Demissão" é marcado
-        pra ele em <b>3 datas diferentes</b> na Planilha (confirmação manual, pra evitar engano). Dá pra reativar a qualquer momento.
+        pra ele em <b>3 datas diferentes</b> na Planilha, ou quando é removido da lista de Standby. Dá pra reativar a qualquer momento.
       </p>
       <div style="display:flex;justify-content:flex-end;margin:-2px 0 8px">
         <button id="inativos-import-toggle" type="button"
@@ -1937,7 +2005,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
       </div>
       <div class="tablewrap" style="max-height:480px">
         <table>
-          <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Tipo de desligamento</th><th>Inativado em</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Nome</th><th>Coordenador</th><th>Escala</th><th>Horário</th><th>Tipo de desligamento</th><th>Data de desligamento</th><th></th></tr></thead>
           <tbody id="inativos-table-body"></tbody>
         </table>
       </div>
@@ -4350,9 +4418,10 @@ function renderSheet(){
       var label = autoFo ? 'FO' : statusShort(rec.status||'');
       return '<td class="status-cell'+(date===today?' today-date':'')+'"><button type="button" class="status-chip'+(autoFo?' status-auto':'')+'" data-id="'+esc(e.id)+'" data-day="'+date+'" data-status="'+esc(rec.status||'')+'"'+(autoFo?' title="Folga automática pelo calendário — clique pra confirmar/alterar"':'')+'>'+label+'</button></td>';
     }).join('');
-    return '<tr>'+
+    var standbyNow = (typeof isStandby==='function' && isStandby(e));
+    return '<tr'+(standbyNow?' class="standby-highlight"':'')+'>'+
       '<td class="col-id">'+esc(e.id)+'</td>'+
-      '<td class="col-nome" title="'+esc(e.nome)+'">'+sexoBadge+esc(e.nome)+'</td>'+
+      '<td class="col-nome" title="'+esc(e.nome)+'">'+sexoBadge+esc(e.nome)+(standbyNow?'<span class="standby-mini-badge">STANDBY</span>':'')+'</td>'+
       '<td class="col-contato"><input class="contact-input" type="tel" inputmode="tel" data-contact-id="'+esc(e.id)+'" value="'+esc(phone)+'" placeholder="(21) 99999-9999"></td>'+
       '<td class="col-whats"><button type="button" class="whatsapp-btn" data-whats-id="'+esc(e.id)+'" '+(canWhats?'':'disabled')+' title="WhatsApp" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22h.01c5.46 0 9.9-4.44 9.9-9.9 0-2.64-1.03-5.12-2.9-6.99A9.82 9.82 0 0 0 12.04 2zm5.8 14.14c-.24.68-1.4 1.32-1.93 1.4-.5.08-1.11.11-1.79-.11-.41-.13-.94-.3-1.62-.6-2.85-1.23-4.71-4.1-4.85-4.29-.14-.19-1.16-1.55-1.16-2.95 0-1.4.73-2.09 1-2.38.26-.28.57-.35.76-.35h.55c.18 0 .42-.07.65.5.24.58.81 2 .88 2.14.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.16-.29.36-.42.49-.14.14-.28.29-.12.57.16.28.71 1.17 1.53 1.9 1.05.94 1.94 1.23 2.22 1.37.28.14.44.12.61-.07.16-.19.7-.81.89-1.09.19-.28.37-.23.62-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.68-.17 1.36z"/></svg></button></td>'+
       '<td class="col-coord" title="'+esc(e.coordenador)+'">'+esc(e.coordenador)+'</td>'+
@@ -5758,7 +5827,7 @@ var ROSTER_FIELD_ALIASES = {
   'ext': 'ext',
   'status': 'status'
 };
-var ROSTER_EXTRA_FIELDS = ['grootId','matricula','coordenador','escala','escalaAntiga','horario','sexo','cargo','origem','tipo','setor','cpf','ext'];
+var ROSTER_EXTRA_FIELDS = ['grootId','matricula','coordenador','escala','obs','escalaAntiga','horario','sexo','cargo','origem','tipo','setor','cpf','ext'];
 
 function splitRosterCols(line){
   var cols = line.split('\t');
@@ -5775,7 +5844,7 @@ function parseRosterLines(text){
   if(!lines.length) return {parsed:parsed, errors:errors};
 
   var expectedFields = [
-    'status','grootId','nome','matricula','coordenador','escala',
+    'status','grootId','nome','matricula','coordenador','escala','obs',
     'escalaAntiga','horario','telefone','sexo','cargo','origem',
     'tipo','setor','cpf','ext'
   ];
@@ -5804,7 +5873,7 @@ function parseRosterLines(text){
       });
     }else if(cols.length >= 12){
       // Planilha colada SEM cabeçalho:
-      // Status | Groot ID | Nome | Matrícula | Coordenador | ESCALA |
+      // Status | Groot ID | Nome | Matrícula | Coordenador | ESCALA | Obs |
       // Escala Antiga | HORÁRIO | Telefone | SEXO | CARGO | ORIGEM |
       // TIPO | Setor | CPF | EXT
       expectedFields.forEach(function(field, idx){
@@ -6023,10 +6092,10 @@ function removeGroupsFromText(){
 }
 
 function exportRosterCsv(){
-  var lines = ['ID,Groot ID,Nome,Matrícula,Coordenador,Escala,Escala Antiga,Horário,Telefone,Sexo,Cargo,Origem,Tipo,Setor,CPF,EXT'];
+  var lines = ['ID,Groot ID,Nome,Matrícula,Coordenador,Escala,Obs,Escala Antiga,Horário,Telefone,Sexo,Cargo,Origem,Tipo,Setor,CPF,EXT'];
   ALL.forEach(function(e){
     var phone = contacts[e.id] || '';
-    lines.push([e.id, e.grootId, e.nome, e.matricula, e.coordenador, e.escala, e.escalaAntiga, e.horario, phone, e.sexo, e.cargo, e.origem, e.tipo, e.setor, e.cpf, e.ext].map(function(v){
+    lines.push([e.id, e.grootId, e.nome, e.matricula, e.coordenador, e.escala, e.obs, e.escalaAntiga, e.horario, phone, e.sexo, e.cargo, e.origem, e.tipo, e.setor, e.cpf, e.ext].map(function(v){
       var s = String(v==null?'':v);
       return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
     }).join(','));
@@ -6046,14 +6115,16 @@ function renderGroupsTable(){
   document.getElementById('grupos-count').textContent = ALL.length;
   body.innerHTML = rows.map(function(e){
     var phone = contacts[e.id] || '';
-    return '<tr>'+
+    var standbyNow = (typeof isStandby==='function' && isStandby(e));
+    return '<tr'+(standbyNow?' class="standby-highlight"':'')+'>'+
       '<td>'+esc(e.id)+'</td>'+
-      '<td>Ativo</td>'+
+      '<td>'+(standbyNow?'Standby':'Ativo')+'</td>'+
       '<td>'+esc(e.grootId||'')+'</td>'+
-      '<td>'+esc(e.nome)+'</td>'+
+      '<td>'+esc(e.nome)+(standbyNow?'<span class="standby-mini-badge">STANDBY</span>':'')+'</td>'+
       '<td>'+esc(e.matricula||'')+'</td>'+
       '<td>'+esc(e.coordenador)+'</td>'+
       '<td>'+esc(e.escala)+'</td>'+
+      '<td>'+esc(e.obs||'')+'</td>'+
       '<td>'+esc(e.escalaAntiga||'')+'</td>'+
       '<td>'+esc(e.horario)+'</td>'+
       '<td>'+esc(phone)+'</td>'+
@@ -6163,6 +6234,211 @@ safeOn('inativos-import-save', 'click', importInactiveFromText);
 
 
 
+var STANDBY_PREFIX = '__STANDBY__:';
+
+
+// Lista de standby informada em 06/09/2026. O Groot ID é usado como identificador
+// somente quando o colaborador ainda não existe no cadastro. Se já existir, o ID
+// interno atual é preservado para não quebrar presença, QR/código ou histórico.
+var STANDBY_SEED_20260906 = [
+  {grootId:'2111876',nome:'Amanda de Vasconcelos Teixeira',matricula:'',coordenador:'DYENIS MENDES',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'21 98920 4068',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'152.668.117-06',ext:'ext_amandvas'},
+  {grootId:'1875241',nome:'Ana Carolina da Silva Torres',matricula:'',coordenador:'MARIANA BERNARDES',escala:'SVC - B1 - 05H / 09H / 10H / 14H48',obs:'Deslig',escalaAntiga:'2451',horario:'05:00:00',telefone:'21985239067',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'186.714.067-50',ext:'ext_catoana'},
+  {grootId:'2503268',nome:'Anna Livia Almeida da Silva',matricula:'',coordenador:'MARIO SILVA',escala:'SVC - G2 - 13H / 17H / 18H / 22H48',obs:'Deslig',escalaAntiga:'2046',horario:'13:00:00',telefone:'21960212117',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'167.563.607-95',ext:'ext_livianna'},
+  {grootId:'2629218',nome:'Bruna Caroline Mendonça sponton',matricula:'',coordenador:'MARIO SILVA',escala:'SVC - G2 - 13H / 17H / 18H / 22H48',obs:'Deslig',escalaAntiga:'2046',horario:'13:00:00',telefone:'21969418878',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'127.995227-00',ext:'ext_brsponto'},
+  {grootId:'2132227',nome:'Bruno Lima',matricula:'',coordenador:'FILIPI DA MATA',escala:'SVC - G4 - 13H / 17H / 18H / 22H48',obs:'Deslig',escalaAntiga:'2048',horario:'13:00:00',telefone:'21968245139',sexo:'M',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'123.070.897-99',ext:'ext_brli'},
+  {grootId:'1964420',nome:'Danielle Andreina Mendes José',matricula:'',coordenador:'EDIO SANTOS',escala:'SVC - C4 - 06H / 10H / 11H / 15H48',obs:'Deslig',escalaAntiga:'2427',horario:'06:00:00',telefone:'21974252645',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'199.110.667-03',ext:'ext_andreind'},
+  {grootId:'2613748',nome:'Filipe Mendes da Silva',matricula:'',coordenador:'BRUNO NARDOTO',escala:'SVC - B4 - 05H / 09H / 10H / 14H48',obs:'Deslig',escalaAntiga:'2450',horario:'05:00:00',telefone:'21980996243',sexo:'M',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'141.875.087-59',ext:'ext_fimendes'},
+  {grootId:'2613452',nome:'Guilherme Do Nascimento Vianna',matricula:'',coordenador:'JONATHAN LOUVISI',escala:'SVC - C2 - 05H / 09H / 10H / 14H48',obs:'Deslig',escalaAntiga:'2453',horario:'05:00:00',telefone:'21994598485',sexo:'M',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'188.992.617-50',ext:'ext_guiviann'},
+  {grootId:'2416010',nome:'Luana da Silva dos Santos',matricula:'',coordenador:'ALINE ODOM',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'21982410789',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'158.239.727-92',ext:'ext_luansano'},
+  {grootId:'1690680',nome:'NATIELLE BEZERRA DA SILVA',matricula:'',coordenador:'DYENIS MENDES',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'219 9044-1987',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'008.959.771-09',ext:'ext_natibeze'},
+  {grootId:'2613457',nome:'Patrick michel do Nascimento Nogueira',matricula:'',coordenador:'DYENIS MENDES',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'21965302515',sexo:'M',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'145.975.697-58',ext:'ext_patrmich'},
+  {grootId:'2613821',nome:'Pedro Felipe Rodrigues Sousa Tavares Cahé',matricula:'',coordenador:'DYENIS MENDES',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'21991853964',sexo:'M',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'197.415.637-01',ext:'ext_pecahe'},
+  {grootId:'2613455',nome:'Renan bezerra de Souza',matricula:'',coordenador:'ADNILSON TAVARES',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'21993217732',sexo:'M',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'160.297.927-84',ext:'ext_bezrenan'},
+  {grootId:'2613757',nome:'Rogério luiz Santos do Nascimento',matricula:'',coordenador:'ADNILSON TAVARES',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'21988832185',sexo:'M',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'196.213.387-78',ext:'ext_rogerion'},
+  {grootId:'2613456',nome:'Sthefany Morete Conceição',matricula:'',coordenador:'ADNILSON TAVARES',escala:'SVC - G1 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'1333',horario:'08:00:00',telefone:'21965738429',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'211.968.817-66',ext:'ext_stmorete'},
+  {grootId:'2631595',nome:'Thaciane Oazem Custódio',matricula:'',coordenador:'FILIPI DA MATA',escala:'SVC - A2 - 14H / 18H / 19H / 23H48',obs:'Deslig',escalaAntiga:'2312',horario:'14:00:00',telefone:'21988870206',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'172.108.847-42',ext:'ext_robertca'},
+  {grootId:'2613758',nome:'Thais Oliveira dos Santos',matricula:'',coordenador:'MARIO SILVA',escala:'SVC - A3 - 14H / 18H / 19H / 23H48',obs:'Deslig',escalaAntiga:'2313',horario:'14:00:00',telefone:'21978995440',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'065.413.087-64',ext:'ext_thaoli'},
+  {grootId:'2613747',nome:'Veronica juliano Bonavita da Silva',matricula:'',coordenador:'EDIO SANTOS',escala:'SVC - C4 - 06H / 10H / 11H / 15H48',obs:'Deslig',escalaAntiga:'2427',horario:'06:00:00',telefone:'',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'139.590.037-06',ext:'ext_verjulia'},
+  {grootId:'2457911',nome:'Vitoria Rodrigues Sousa dos Santos',matricula:'',coordenador:'ALINE ODOM',escala:'SVC - G2 - 08H / 12H / 13H / 17H48',obs:'Deslig',escalaAntiga:'59',horario:'08:00:00',telefone:'21976880347',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'219.961.297-08',ext:'ext_rosousvi'},
+  {grootId:'2646853',nome:'MAYARA ALVES DE OLIVEIRA',matricula:'',coordenador:'FILIPI DA MATA',escala:'SVC - G1 - 13H / 17H / 18H / 22H48',obs:'Deslig',escalaAntiga:'2045',horario:'13:00:00',telefone:'21966502570',sexo:'F',cargo:'AUXILIAR LOGISTICO I',origem:'MERCADO LIVRE SC - RIO DE JANEIRO',tipo:'Fixo',setor:'',cpf:'173.047.307-57',ext:'ext_alomayar'}
+];
+
+function standbyNormName(v){
+  try{return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase();}
+  catch(e){return String(v||'').replace(/\s+/g,' ').trim().toUpperCase();}
+}
+function applyStandbySeed20260906(){
+  var changed=false;
+  STANDBY_SEED_20260906.forEach(function(src){
+    var inactive = INACTIVE.find(function(e){
+      return String(e.grootId||e.id||'')===src.grootId || standbyNormName(e.nome)===standbyNormName(src.nome);
+    });
+    if(inactive) return; // já desligado: nunca reativa automaticamente
+    var emp = ALL.find(function(e){
+      return String(e.grootId||e.id||'')===src.grootId || standbyNormName(e.nome)===standbyNormName(src.nome);
+    });
+    if(!emp){ emp={id:src.grootId}; ALL.push(emp); changed=true; }
+    ['grootId','nome','matricula','coordenador','escala','obs','escalaAntiga','horario','sexo','cargo','origem','tipo','setor','cpf','ext'].forEach(function(k){
+      if(src[k]!==undefined && src[k]!==null){ if(emp[k]!==src[k]){ emp[k]=src[k]; changed=true; } }
+    });
+    if(src.telefone && contacts[emp.id]!==src.telefone){ contacts[emp.id]=src.telefone; changed=true; }
+    var arr=Array.isArray(emp.demDates)?emp.demDates.slice():[];
+    if(!arr.some(function(v){return String(v||'').indexOf(STANDBY_PREFIX)===0;})){
+      arr.push(STANDBY_PREFIX + '2026-09-06'); emp.demDates=arr; changed=true;
+    }
+  });
+  if(changed){
+    ALL.sort(function(a,b){return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR',{sensitivity:'base'});});
+    rebuildById(); saveContacts(); saveRoster(); rebuildFilterLists(); markHeavyViewsDirty();
+  }
+  renderStandbyTable();
+}
+
+function getStandbyDate(rec){
+  var arr = (rec && Array.isArray(rec.demDates)) ? rec.demDates : [];
+  for(var i=0;i<arr.length;i++){
+    var v = String(arr[i] || '');
+    if(v.indexOf(STANDBY_PREFIX) === 0) return v.slice(STANDBY_PREFIX.length) || '';
+  }
+  return '';
+}
+
+function isStandby(rec){ return !!getStandbyDate(rec); }
+
+function setStandbyStatus(msg, ok){
+  var el = document.getElementById('standby-status');
+  if(!el) return;
+  el.textContent = msg || '';
+  el.style.color = ok===false ? '#a32020' : '#536579';
+}
+
+function renderStandbyTable(){
+  var body = document.getElementById('standby-table-body');
+  var empty = document.getElementById('standby-empty');
+  var list = document.getElementById('standby-people-list');
+  if(!body) return;
+
+  var standbyRows = ALL.filter(isStandby).slice().sort(function(a,b){
+    return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
+  });
+
+  if(list){
+    list.innerHTML = ALL.filter(function(e){ return !isStandby(e); }).slice().sort(function(a,b){
+      return String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
+    }).map(function(e){
+      return '<option value="'+esc(e.id)+' — '+esc(e.nome)+'"></option>';
+    }).join('');
+  }
+
+  if(!standbyRows.length){
+    body.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+
+  body.innerHTML = standbyRows.map(function(e){
+    return '<tr>'+
+      '<td>'+esc(e.grootId||e.id||'')+'</td>'+
+      '<td><b>'+esc(e.nome||'')+'</b></td>'+
+      '<td>'+esc(e.matricula||'')+'</td>'+
+      '<td>'+esc(e.coordenador||'')+'</td>'+
+      '<td>'+esc(e.escala||'')+'</td>'+
+      '<td>'+esc(e.obs||'')+'</td>'+
+      '<td>'+esc(e.escalaAntiga||'')+'</td>'+
+      '<td>'+esc(e.horario||'')+'</td>'+
+      '<td>'+esc(contacts[e.id]||e.telefone||'')+'</td>'+
+      '<td>'+esc(e.sexo||'')+'</td>'+
+      '<td>'+esc(e.cargo||'')+'</td>'+
+      '<td>'+esc(e.origem||'')+'</td>'+
+      '<td>'+esc(e.tipo||'')+'</td>'+
+      '<td>'+esc(e.setor||'')+'</td>'+
+      '<td>'+esc(e.cpf||'')+'</td>'+
+      '<td>'+esc(e.ext||'')+'</td>'+
+      '<td>'+esc(formatDateBR(getStandbyDate(e)))+'</td>'+
+      '<td style="white-space:nowrap">'+
+        '<button type="button" class="standby-dismiss-btn" data-standby-dismiss="'+esc(e.id)+'" style="background:#a32020;color:#fff;border-color:#a32020">Remover</button> '+
+        '<button type="button" class="standby-cancel-btn" data-standby-cancel="'+esc(e.id)+'" style="background:#fff;color:#536579;border:1px solid #ccd6e2">Tirar do standby</button>'+
+      '</td>'+
+      '</tr>';
+  }).join('');
+
+  body.querySelectorAll('.standby-dismiss-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ dismissStandbyEmployee(btn.dataset.standbyDismiss); });
+  });
+  body.querySelectorAll('.standby-cancel-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ cancelStandbyEmployee(btn.dataset.standbyCancel); });
+  });
+}
+
+function addEmployeeToStandby(id){
+  ensureOperator(function(){
+    var emp = byId[id];
+    if(!emp){ setStandbyStatus('Colaborador não encontrado.', false); return; }
+    if(isStandby(emp)){ setStandbyStatus('Esse colaborador já está em standby.', false); return; }
+    var arr = Array.isArray(emp.demDates) ? emp.demDates.slice() : [];
+    arr = arr.filter(function(v){ return String(v||'').indexOf(STANDBY_PREFIX)!==0; });
+    arr.push(STANDBY_PREFIX + todayStr());
+    emp.demDates = arr;
+    saveRoster();
+    renderStandbyTable();
+    var inp = document.getElementById('standby-person-input');
+    if(inp) inp.value = '';
+    setStandbyStatus((emp.nome||id)+' adicionado ao standby.', true);
+    logActivity('cadastro', (emp.nome||id)+' adicionado ao standby para desligamento.');
+  });
+}
+
+function addStandbyFromInput(){
+  var inp = document.getElementById('standby-person-input');
+  if(!inp) return;
+  var raw = String(inp.value||'').trim();
+  if(!raw){ setStandbyStatus('Escolha um colaborador.', false); return; }
+  var id = raw.indexOf(' — ')>=0 ? raw.split(' — ')[0].trim() : raw;
+  var emp = byId[id];
+  if(!emp){
+    var norm = raw.toLocaleLowerCase('pt-BR');
+    emp = ALL.find(function(e){ return String(e.nome||'').toLocaleLowerCase('pt-BR')===norm; });
+    if(emp) id = emp.id;
+  }
+  if(!emp){ setStandbyStatus('Selecione um nome válido da lista.', false); return; }
+  addEmployeeToStandby(id);
+}
+
+function cancelStandbyEmployee(id){
+  ensureOperator(function(){
+    var emp = byId[id];
+    if(!emp) return;
+    emp.demDates = (Array.isArray(emp.demDates)?emp.demDates:[]).filter(function(v){
+      return String(v||'').indexOf(STANDBY_PREFIX)!==0;
+    });
+    saveRoster();
+    renderStandbyTable();
+    setStandbyStatus((emp.nome||id)+' retirado do standby.', true);
+    logActivity('cadastro', (emp.nome||id)+' retirado do standby.');
+  });
+}
+
+function dismissStandbyEmployee(id){
+  ensureOperator(function(){
+    var emp = byId[id];
+    if(!emp) return;
+    var nome = emp.nome || id;
+    var dates = (Array.isArray(emp.demDates)?emp.demDates:[]).filter(function(v){
+      var sv = String(v||'');
+      return sv.indexOf(STANDBY_PREFIX)!==0 && sv.indexOf(TERMINATION_TYPE_PREFIX)!==0;
+    });
+    dates.push(TERMINATION_TYPE_PREFIX + 'DEMISSAO');
+    moveToInactive(id, dates);
+    renderStandbyTable();
+    setStandbyStatus(nome+' movido para Inativos em '+formatDateBR(todayStr())+'.', true);
+    logActivity('cadastro', nome+' removido do standby e movido para Inativos em '+todayStr()+'.');
+  });
+}
+
+safeOn('standby-add-btn', 'click', addStandbyFromInput);
+safeOn('standby-person-input', 'keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); addStandbyFromInput(); } });
+
 var TERMINATION_TYPE_PREFIX = '__TIPO_DESLIGAMENTO__:';
 
 function getTerminationType(rec){
@@ -6180,7 +6456,8 @@ function getTerminationType(rec){
 
 function getTerminationDates(rec){
   return ((rec && Array.isArray(rec.demDates)) ? rec.demDates : []).filter(function(v){
-    return String(v || '').indexOf(TERMINATION_TYPE_PREFIX) !== 0;
+    var sv = String(v || '');
+    return sv.indexOf(TERMINATION_TYPE_PREFIX) !== 0 && sv.indexOf(STANDBY_PREFIX) !== 0;
   });
 }
 
@@ -6206,6 +6483,7 @@ function setTerminationType(id, value){
 
 // ---------- Aba Inativos ----------
 function renderInactiveTable(){
+  renderStandbyTable();
   var body = document.getElementById('inativos-table-body');
   var empty = document.getElementById('inativos-empty');
   if(!body) return;
@@ -6400,7 +6678,15 @@ if(sbReady){
       if(activeTabName==='grupos'){ safeInit('tabela de grupos (visível)', function(){ renderGroupsTable(); groupsDirty=false; }); }
       if(activeTabName==='inativos'){ safeInit('tabela de inativos (visível)', function(){ renderInactiveTable(); inactiveDirty=false; }); }
     }
-  }).catch(function(err){ console.error('[KN] Supabase: erro na reconciliação inicial:', err); });
+    // Só aplica a lista pré-carregada depois de conhecer o estado do banco remoto,
+    // para nunca reativar automaticamente alguém que já tenha sido desligado.
+    safeInit('lista inicial de standby 06/09/2026', applyStandbySeed20260906);
+  }).catch(function(err){
+    console.error('[KN] Supabase: erro na reconciliação inicial:', err);
+    safeInit('lista inicial de standby local 06/09/2026', applyStandbySeed20260906);
+  });
+}else{
+  safeInit('lista inicial de standby local 06/09/2026', applyStandbySeed20260906);
 }
 
 // Ativa sincronização instantânea entre celular e computador.
@@ -7671,7 +7957,7 @@ window.logActivity = logActivity;
 
   var FIELDS = [
     ['grootId','Groot ID'],['nome','Nome'],['matricula','Matrícula'],['coordenador','Coordenador'],
-    ['escala','ESCALA'],['escalaAntiga','Escala Antiga'],['horario','HORÁRIO'],['telefone','Telefone'],
+    ['escala','ESCALA'],['obs','Obs'],['escalaAntiga','Escala Antiga'],['horario','HORÁRIO'],['telefone','Telefone'],
     ['sexo','SEXO'],['cargo','CARGO'],['origem','ORIGEM'],['tipo','TIPO'],['setor','Setor'],
     ['cpf','CPF'],['ext','EXT']
   ];
@@ -8022,13 +8308,13 @@ window.logActivity = logActivity;
     var shown=0;
     arr.forEach(function(e,idx){
       if(!passesColumnFilters(e)) return;
-      var hay=[e.grootId,e.nome,e.matricula,e.coordenador,e.escala,e.horario,e.cargo,e.origem,e.ext,e.cpf,e.setor]
+      var hay=[e.grootId,e.nome,e.matricula,e.coordenador,e.escala,e.obs,e.horario,e.cargo,e.origem,e.ext,e.cpf,e.setor]
         .join(' ').toLowerCase();
       if(q && hay.indexOf(q)<0) return;
       html+=rowHtml(e,idx,false);
       shown++;
     });
-    body.innerHTML=html || '<tr><td colspan="16" style="padding:18px;text-align:center;color:#718096">Nenhum colaborador encontrado.</td></tr>';
+    body.innerHTML=html || '<tr><td colspan="18" style="padding:12px;text-align:center;color:#718096">Nenhum colaborador encontrado.</td></tr>';
     var el=document.getElementById('groups-db-count');
     if(el) el.textContent = (shown!==arr.length) ? (shown+' de '+arr.length) : arr.length;
     bindColumnFilterButtons();
@@ -8059,8 +8345,8 @@ window.logActivity = logActivity;
         if(val.length>maxLen) maxLen=val.length;
       });
       // ~7px por caractere na fonte de 11px usada na tabela + folga pro padding/botão de filtro
-      var px=Math.max(Math.round(maxLen*7.2)+28, key==='sexo'?48:64);
-      px=Math.min(px, 420); // teto pra colunas de texto muito longo não estourarem a tela
+      var px=Math.max(Math.round(maxLen*6.25)+10, key==='sexo'?38:44);
+      px=Math.min(px, 360); // teto pra colunas de texto muito longo não estourarem a tela
       rows.forEach(function(tr){
         var cell=tr.children[colIdx];
         var input=cell && cell.querySelector('input,select');
