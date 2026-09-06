@@ -24,38 +24,6 @@ tr.standby-highlight td:nth-child(4){
   display:none;
 }
 
-
-/* GRUPOS: tabela compacta, sem espaços largos entre as colunas */
-#panel-grupos .groups-db-table{
-  border-collapse:collapse !important;
-  border-spacing:0 !important;
-  width:max-content !important;
-  min-width:100% !important;
-}
-#panel-grupos .groups-db-table th,
-#panel-grupos .groups-db-table td{
-  padding:1px 2px !important;
-  margin:0 !important;
-  line-height:1.05 !important;
-  height:26px !important;
-  white-space:nowrap !important;
-}
-#panel-grupos .groups-db-table input,
-#panel-grupos .groups-db-table select{
-  margin:0 !important;
-  padding:1px 2px !important;
-  border-radius:2px !important;
-  min-height:22px !important;
-  height:22px !important;
-  line-height:20px !important;
-  box-sizing:border-box !important;
-}
-#panel-grupos .groups-db-table .col-filter-btn,
-#panel-grupos .groups-db-table .col-copy-btn{
-  margin-left:1px !important;
-  padding:0 1px !important;
-}
-
 </style>
 
 <style>
@@ -280,6 +248,16 @@ th{background:var(--header);position:sticky;top:0;font-weight:700;cursor:default
 tbody tr:nth-child(even){background:#fbfbfa}
 tbody tr:hover{background:#eef2ec}
 .tablewrap{max-height:560px;overflow:auto;border:1px solid var(--border-strong);border-radius:4px}
+#panel-inativos th,
+#panel-inativos td{
+  padding:1px 6px;
+  line-height:1.2;
+  border-color:#9aa2ab;
+}
+#panel-inativos td button{
+  padding:2px 8px;
+  font-size:11px;
+}
 .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700}
 .b-P{background:#d9f2df;color:#176b34}
 .b-F{background:#ff2b2b;color:#fff}
@@ -436,13 +414,13 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 }
 #panel-sheet .sheet-table th,
 #panel-sheet .sheet-table td{
-  height:40px;
-  padding:5px 6px;
+  padding:1px 6px;
   border-right:1px solid var(--border);
-  border-bottom:1px solid var(--border);
+  border-bottom:1px solid #9aa2ab;
   background:#fff;
   vertical-align:middle;
   overflow:hidden;
+  line-height:1.2;
 }
 #panel-sheet .sheet-table thead th{
   position:sticky;
@@ -496,18 +474,20 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 #panel-sheet .contact-input{
   width:114px;
   min-width:114px;
-  padding:4px 5px!important;
+  padding:1px 5px!important;
   font-size:11px!important;
+  line-height:1.2!important;
 }
 #panel-sheet .whatsapp-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:28px;
-  height:28px;
+  width:19px;
+  height:19px;
   padding:0;
   border-radius:50%;
 }
+#panel-sheet .whatsapp-btn svg{width:12px;height:12px}
 #panel-sheet .date-head{
   width:86px;
   min-width:86px;
@@ -519,16 +499,18 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
   min-width:86px;
   max-width:86px;
   text-align:center;
-  padding:4px!important;
+  padding:1px!important;
 }
 #panel-sheet .status-chip{
   width:76px;
-  min-height:28px;
+  min-height:19px;
+  padding:1px 3px;
   border-radius:5px;
   border:1px solid #c6cbc5;
   background:#fff;
   font-size:11px;
   font-weight:700;
+  line-height:1.2;
   cursor:pointer;
 }
 #panel-sheet .status-chip[data-status="P"]{background:#d9f2df;color:#155d2a;border-color:#8bc79a}
@@ -1379,15 +1361,15 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
   white-space:nowrap;font-weight:800
 }
 #panel-grupos .groups-db-table td{
-  border-right:1px solid #d7dde5;border-bottom:1px solid #d7dde5;
-  padding:2px;background:#fff;white-space:nowrap
+  border-right:1px solid #d7dde5;border-bottom:1px solid #9aa2ab;
+  padding:0 4px;background:#fff;white-space:nowrap
 }
 #panel-grupos .groups-db-table tr:nth-child(even) td{background:#f7f9fc}
 #panel-grupos .groups-db-table tr.groups-db-new td{background:#fff9dc}
 #panel-grupos .groups-db-table input,
 #panel-grupos .groups-db-table select{
   width:100%;min-width:64px;border:1px solid transparent;background:transparent;
-  font-size:11px;padding:4px 6px;height:30px;box-sizing:border-box
+  font-size:11px;padding:1px 4px;line-height:1.2;box-sizing:border-box
 }
 #panel-grupos .groups-db-table input:focus,
 #panel-grupos .groups-db-table select:focus{
@@ -1396,11 +1378,11 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 /* Larguras reais são calculadas em JS (autosizeColumns) de acordo com o
    conteúdo de cada coluna — os valores acima são só o mínimo de segurança
    antes da primeira renderização. */
-#panel-grupos .groups-db-table td:nth-child(9) select{width:48px;padding:4px 2px;text-align:center;text-align-last:center}
-#panel-grupos .groups-db-row-actions{display:flex;gap:4px;padding:2px}
+#panel-grupos .groups-db-table td:nth-child(10) select{width:48px;padding:1px;text-align:center;text-align-last:center}
+#panel-grupos .groups-db-row-actions{display:flex;gap:4px;padding:1px}
 #panel-grupos .groups-db-row-actions button{
-  border:1px solid #ccd6e2;background:#fff;border-radius:5px;padding:4px 7px;
-  font-size:9px;cursor:pointer;white-space:nowrap
+  border:1px solid #ccd6e2;background:#fff;border-radius:5px;padding:1px 6px;
+  font-size:9px;line-height:1.3;cursor:pointer;white-space:nowrap
 }
 #panel-grupos .groups-db-row-actions .save{background:#2f7658;color:#fff;border-color:#2f7658}
 #panel-grupos .groups-db-row-actions .del{color:#a32020}
@@ -1409,12 +1391,13 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
    tabela: Grupos e Planilha) ---- */
 #panel-grupos .groups-db-table th{position:sticky;top:0}
 .col-filter-btn{
-  margin-left:5px;border:none;background:rgba(255,255,255,.18);color:#fff;
-  width:18px;height:18px;line-height:16px;border-radius:3px;cursor:pointer;
-  font-size:9px;vertical-align:middle;padding:0
+  margin-left:4px;border:none;background:transparent;color:rgba(255,255,255,.5);
+  width:16px;height:16px;line-height:14px;border-radius:3px;cursor:pointer;
+  font-size:9px;vertical-align:middle;padding:0;opacity:.85;
+  transition:opacity .15s,background-color .15s,color .15s;
 }
-.col-filter-btn:hover{background:rgba(255,255,255,.32)}
-.col-filter-btn.active{background:#ffd166;color:#3a2a00}
+.col-filter-btn:hover{background:rgba(255,255,255,.2);color:#fff;opacity:1}
+.col-filter-btn.active{background:transparent;color:#ffd166;opacity:1}
 .col-copy-btn{
   margin-left:3px;border:none;background:rgba(255,255,255,.18);color:#fff;
   width:18px;height:18px;line-height:16px;border-radius:3px;cursor:pointer;
@@ -1914,22 +1897,22 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
       <table class="groups-db-table">
         <thead>
           <tr>
-            <th>Groot ID <button type="button" class="col-filter-btn" data-ff="grootId" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="grootId" title="Copiar coluna">⧉</button></th>
-            <th>Nome <button type="button" class="col-filter-btn" data-ff="nome" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="nome" title="Copiar coluna">⧉</button></th>
-            <th>Matrícula <button type="button" class="col-filter-btn" data-ff="matricula" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="matricula" title="Copiar coluna">⧉</button></th>
-            <th>Coordenador <button type="button" class="col-filter-btn" data-ff="coordenador" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="coordenador" title="Copiar coluna">⧉</button></th>
-            <th>ESCALA <button type="button" class="col-filter-btn" data-ff="escala" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="escala" title="Copiar coluna">⧉</button></th>
-            <th>Obs <button type="button" class="col-filter-btn" data-ff="obs" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="obs" title="Copiar coluna">⧉</button></th>
-            <th>Escala Antiga <button type="button" class="col-filter-btn" data-ff="escalaAntiga" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="escalaAntiga" title="Copiar coluna">⧉</button></th>
-            <th>HORÁRIO <button type="button" class="col-filter-btn" data-ff="horario" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="horario" title="Copiar coluna">⧉</button></th>
-            <th>Telefone <button type="button" class="col-filter-btn" data-ff="telefone" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="telefone" title="Copiar coluna">⧉</button></th>
-            <th>SEXO <button type="button" class="col-filter-btn" data-ff="sexo" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="sexo" title="Copiar coluna">⧉</button></th>
-            <th>CARGO <button type="button" class="col-filter-btn" data-ff="cargo" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="cargo" title="Copiar coluna">⧉</button></th>
-            <th>ORIGEM <button type="button" class="col-filter-btn" data-ff="origem" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="origem" title="Copiar coluna">⧉</button></th>
-            <th>TIPO <button type="button" class="col-filter-btn" data-ff="tipo" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="tipo" title="Copiar coluna">⧉</button></th>
-            <th>Setor <button type="button" class="col-filter-btn" data-ff="setor" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="setor" title="Copiar coluna">⧉</button></th>
-            <th>CPF <button type="button" class="col-filter-btn" data-ff="cpf" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="cpf" title="Copiar coluna">⧉</button></th>
-            <th>EXT <button type="button" class="col-filter-btn" data-ff="ext" title="Filtrar">▾</button><button type="button" class="col-copy-btn" data-cf="ext" title="Copiar coluna">⧉</button></th>
+            <th>Groot ID <button type="button" class="col-filter-btn" data-ff="grootId" title="Filtrar">▾</button></th>
+            <th>Nome <button type="button" class="col-filter-btn" data-ff="nome" title="Filtrar">▾</button></th>
+            <th>Matrícula <button type="button" class="col-filter-btn" data-ff="matricula" title="Filtrar">▾</button></th>
+            <th>Coordenador <button type="button" class="col-filter-btn" data-ff="coordenador" title="Filtrar">▾</button></th>
+            <th>ESCALA <button type="button" class="col-filter-btn" data-ff="escala" title="Filtrar">▾</button></th>
+            <th>Obs <button type="button" class="col-filter-btn" data-ff="obs" title="Filtrar">▾</button></th>
+            <th>Escala Antiga <button type="button" class="col-filter-btn" data-ff="escalaAntiga" title="Filtrar">▾</button></th>
+            <th>HORÁRIO <button type="button" class="col-filter-btn" data-ff="horario" title="Filtrar">▾</button></th>
+            <th>Telefone <button type="button" class="col-filter-btn" data-ff="telefone" title="Filtrar">▾</button></th>
+            <th>SEXO <button type="button" class="col-filter-btn" data-ff="sexo" title="Filtrar">▾</button></th>
+            <th>CARGO <button type="button" class="col-filter-btn" data-ff="cargo" title="Filtrar">▾</button></th>
+            <th>ORIGEM <button type="button" class="col-filter-btn" data-ff="origem" title="Filtrar">▾</button></th>
+            <th>TIPO <button type="button" class="col-filter-btn" data-ff="tipo" title="Filtrar">▾</button></th>
+            <th>Setor <button type="button" class="col-filter-btn" data-ff="setor" title="Filtrar">▾</button></th>
+            <th>CPF <button type="button" class="col-filter-btn" data-ff="cpf" title="Filtrar">▾</button></th>
+            <th>EXT <button type="button" class="col-filter-btn" data-ff="ext" title="Filtrar">▾</button></th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -2108,7 +2091,7 @@ function rosterRowFor(e, ativo){
     escala: e.escala||null,
     escala_antiga: e.escalaAntiga||null,
     horario: e.horario||null,
-    telefone: contacts[e.id]||null,
+    telefone: (typeof contacts!=='undefined' && contacts ? contacts[e.id] : null)||null,
     sexo: e.sexo||null,
     cargo: e.cargo||null,
     origem: e.origem||null,
@@ -2768,6 +2751,14 @@ try{
 try{ var savedInactiveLocal = JSON.parse(localStorage.getItem(INACTIVE_KEY) || 'null'); if(Array.isArray(savedInactiveLocal)){ INACTIVE = savedInactiveLocal; } }catch(e){}
 try{ var savedDemLocal = JSON.parse(localStorage.getItem(DEMREC_KEY) || 'null'); if(savedDemLocal && typeof savedDemLocal==='object'){ demRecords = savedDemLocal; } }catch(e){}
 try{ dedupeRoster(); }catch(err){ console.error('[KN] falha ao remover duplicados no carregamento:', err); }
+try{
+  // Nome/Coordenador vindos em CAIXA ALTA (cadastro antigo, importações
+  // anteriores) viram Caixa de Título — deixa a tabela bem menos larga.
+  ALL.forEach(function(e){
+    if(e.nome) e.nome = toTitleCase(e.nome);
+    if(e.coordenador) e.coordenador = toTitleCase(e.coordenador);
+  });
+}catch(err){ console.error('[KN] falha ao normalizar maiúsculas dos nomes:', err); }
 
 var state = {}; // { id: {status, hora} }
 var currentDate = todayStr();
@@ -5801,6 +5792,14 @@ function renderHCCards(){
 }
 
 // ---------- Aba Grupos: cadastro de colaboradores ----------
+// Deixa nomes e coordenadores em "Caixa de Título" (só a primeira letra de
+// cada palavra maiúscula) em vez de TUDO MAIÚSCULO — reduz muito a largura
+// visual do texto e some com aquele efeito de coluna gigante na tabela.
+function toTitleCase(s){
+  return String(s||'').toLowerCase().replace(/(^|[\s\-'\.\/])\p{L}/gu, function(m){
+    return m.toUpperCase();
+  });
+}
 function normHeaderKey(s){
   return String(s||'')
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -5814,6 +5813,9 @@ var ROSTER_FIELD_ALIASES = {
   'matricula': 'matricula',
   'coordenador': 'coordenador',
   'escala': 'escala',
+  'obs': 'obs',
+  'observacao': 'obs',
+  'observação': 'obs',
   'escala antiga': 'escalaAntiga',
   'horario': 'horario',
   'telefone': 'telefone',
@@ -5844,7 +5846,7 @@ function parseRosterLines(text){
   if(!lines.length) return {parsed:parsed, errors:errors};
 
   var expectedFields = [
-    'status','grootId','nome','matricula','coordenador','escala','obs',
+    'status','grootId','nome','matricula','coordenador','escala',
     'escalaAntiga','horario','telefone','sexo','cargo','origem',
     'tipo','setor','cpf','ext'
   ];
@@ -5873,7 +5875,7 @@ function parseRosterLines(text){
       });
     }else if(cols.length >= 12){
       // Planilha colada SEM cabeçalho:
-      // Status | Groot ID | Nome | Matrícula | Coordenador | ESCALA | Obs |
+      // Status | Groot ID | Nome | Matrícula | Coordenador | ESCALA |
       // Escala Antiga | HORÁRIO | Telefone | SEXO | CARGO | ORIGEM |
       // TIPO | Setor | CPF | EXT
       expectedFields.forEach(function(field, idx){
@@ -5894,6 +5896,10 @@ function parseRosterLines(text){
         telefone: cols[5]||''
       };
     }
+
+    // Nome/Coordenador colados em CAIXA ALTA viram Caixa de Título.
+    if(obj.nome) obj.nome = toTitleCase(obj.nome);
+    if(obj.coordenador) obj.coordenador = toTitleCase(obj.coordenador);
 
     // Groot ID é o identificador principal. Matrícula serve como reserva.
     if(!obj.id && obj.grootId) obj.id = obj.grootId;
@@ -6092,10 +6098,10 @@ function removeGroupsFromText(){
 }
 
 function exportRosterCsv(){
-  var lines = ['ID,Groot ID,Nome,Matrícula,Coordenador,Escala,Obs,Escala Antiga,Horário,Telefone,Sexo,Cargo,Origem,Tipo,Setor,CPF,EXT'];
+  var lines = ['ID,Groot ID,Nome,Matrícula,Coordenador,Escala,Escala Antiga,Horário,Telefone,Sexo,Cargo,Origem,Tipo,Setor,CPF,EXT'];
   ALL.forEach(function(e){
     var phone = contacts[e.id] || '';
-    lines.push([e.id, e.grootId, e.nome, e.matricula, e.coordenador, e.escala, e.obs, e.escalaAntiga, e.horario, phone, e.sexo, e.cargo, e.origem, e.tipo, e.setor, e.cpf, e.ext].map(function(v){
+    lines.push([e.id, e.grootId, e.nome, e.matricula, e.coordenador, e.escala, e.escalaAntiga, e.horario, phone, e.sexo, e.cargo, e.origem, e.tipo, e.setor, e.cpf, e.ext].map(function(v){
       var s = String(v==null?'':v);
       return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
     }).join(','));
@@ -6124,7 +6130,6 @@ function renderGroupsTable(){
       '<td>'+esc(e.matricula||'')+'</td>'+
       '<td>'+esc(e.coordenador)+'</td>'+
       '<td>'+esc(e.escala)+'</td>'+
-      '<td>'+esc(e.obs||'')+'</td>'+
       '<td>'+esc(e.escalaAntiga||'')+'</td>'+
       '<td>'+esc(e.horario)+'</td>'+
       '<td>'+esc(phone)+'</td>'+
@@ -6511,7 +6516,7 @@ function renderInactiveTable(){
       '<td>'+esc(e.horario)+'</td>'+
       '<td>'+
         '<select class="termination-type-select" data-term-id="'+esc(e.id)+'" '+
-          'style="min-width:165px;padding:6px 28px 6px 8px;border:1px solid #ccd6e2;border-radius:6px;background:#fff;color:#243447">'+
+          'style="min-width:165px;padding:1px 22px 1px 6px;font-size:11px;border:1px solid #ccd6e2;border-radius:6px;background:#fff;color:#243447">'+
           '<option value="DEMISSAO"'+(termType==='DEMISSAO'?' selected':'')+'>Demissão</option>'+
           '<option value="PEDIU_DEMISSAO"'+(termType==='PEDIU_DEMISSAO'?' selected':'')+'>Pediu desligamento</option>'+
         '</select>'+
@@ -8314,7 +8319,7 @@ window.logActivity = logActivity;
       html+=rowHtml(e,idx,false);
       shown++;
     });
-    body.innerHTML=html || '<tr><td colspan="18" style="padding:12px;text-align:center;color:#718096">Nenhum colaborador encontrado.</td></tr>';
+    body.innerHTML=html || '<tr><td colspan="17" style="padding:18px;text-align:center;color:#718096">Nenhum colaborador encontrado.</td></tr>';
     var el=document.getElementById('groups-db-count');
     if(el) el.textContent = (shown!==arr.length) ? (shown+' de '+arr.length) : arr.length;
     bindColumnFilterButtons();
@@ -8344,9 +8349,13 @@ window.logActivity = logActivity;
         var val=input ? (input.value||'') : '';
         if(val.length>maxLen) maxLen=val.length;
       });
-      // ~7px por caractere na fonte de 11px usada na tabela + folga pro padding/botão de filtro
-      var px=Math.max(Math.round(maxLen*6.25)+10, key==='sexo'?38:44);
-      px=Math.min(px, 360); // teto pra colunas de texto muito longo não estourarem a tela
+      // ~7.4px por caractere pra texto TUDO MAIÚSCULO (Escala, Cargo, Origem, Tipo...).
+      // Nome/Coordenador agora ficam em Caixa de Título (maioria minúscula), que é mais
+      // estreita — usa um multiplicador menor só pra esses dois, senão a coluna fica com
+      // sobra de espaço mesmo depois de deixar de ser CAIXA ALTA.
+      var CHAR_W = (key==='nome' || key==='coordenador') ? 6.1 : 7.4;
+      var px=Math.max(Math.round(maxLen*CHAR_W)+10, key==='sexo'?48:56);
+      px=Math.min(px, 420); // teto pra colunas de texto muito longo não estourarem a tela
       rows.forEach(function(tr){
         var cell=tr.children[colIdx];
         var input=cell && cell.querySelector('input,select');
