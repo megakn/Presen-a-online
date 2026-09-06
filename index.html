@@ -2731,6 +2731,11 @@ function saveDemRecords(){
   try{ localStorage.setItem(DEMREC_KEY, JSON.stringify(demRecords)); }catch(e){}
   if(window.storage){ try{ window.storage.set(DEMREC_KEY, JSON.stringify(demRecords), false); }catch(e){} }
 }
+// Carrega Inativos ANTES de reconciliar o cadastro ativo com o cadastro
+// embutido (abaixo) — precisa saber quem já foi movido pra Inativos pra não
+// trazer essa pessoa de volta pra lista de ativos só porque ela ainda existe
+// no cadastro embutido original.
+try{ var savedInactiveLocal = JSON.parse(localStorage.getItem(INACTIVE_KEY) || 'null'); if(Array.isArray(savedInactiveLocal)){ INACTIVE = savedInactiveLocal; } }catch(e){}
 try{
   var savedRosterLocal = JSON.parse(localStorage.getItem(ROSTER_KEY) || 'null');
   if(Array.isArray(savedRosterLocal) && savedRosterLocal.length){
@@ -2739,16 +2744,19 @@ try{
     // Em vez de trocar ALL por inteiro pelo cache antigo, só ACRESCENTA ao cache
     // quem já está no cadastro atual (ALL) e ainda não está salvo localmente —
     // assim nunca perde gente nova nem perde edições locais já feitas.
+    // Mas nunca ressuscita quem já foi movido pra Inativos (senão a pessoa
+    // volta a contar como ativa toda vez que o arquivo é reaberto).
     var savedIdsLocal = {};
     savedRosterLocal.forEach(function(e){ savedIdsLocal[e.id] = true; });
+    var inactiveIdsLocal = {};
+    INACTIVE.forEach(function(e){ inactiveIdsLocal[e.id] = true; });
     ALL.forEach(function(e){
-      if(!savedIdsLocal[e.id]) savedRosterLocal.push(e);
+      if(!savedIdsLocal[e.id] && !inactiveIdsLocal[e.id]) savedRosterLocal.push(e);
     });
     ALL = savedRosterLocal;
     rebuildById();
   }
 }catch(e){}
-try{ var savedInactiveLocal = JSON.parse(localStorage.getItem(INACTIVE_KEY) || 'null'); if(Array.isArray(savedInactiveLocal)){ INACTIVE = savedInactiveLocal; } }catch(e){}
 try{ var savedDemLocal = JSON.parse(localStorage.getItem(DEMREC_KEY) || 'null'); if(savedDemLocal && typeof savedDemLocal==='object'){ demRecords = savedDemLocal; } }catch(e){}
 try{ dedupeRoster(); }catch(err){ console.error('[KN] falha ao remover duplicados no carregamento:', err); }
 try{
@@ -5846,7 +5854,7 @@ function parseRosterLines(text){
   if(!lines.length) return {parsed:parsed, errors:errors};
 
   var expectedFields = [
-    'status','grootId','nome','matricula','coordenador','escala',
+    'status','grootId','nome','matricula','coordenador','escala','obs',
     'escalaAntiga','horario','telefone','sexo','cargo','origem',
     'tipo','setor','cpf','ext'
   ];
