@@ -2790,7 +2790,11 @@ try{
 // adiciona os novos IDs e retira da lista ativa os IDs que não existem mais.
 (function(){
   try{
-    var MIGRATION_KEY = 'presenca:official_roster:369:2026-09-06:v2';
+    var MIGRATION_KEY = 'presenca:official_roster:369:2026-09-06:v3';
+    var alreadyMigrated = false;
+    try{ alreadyMigrated = localStorage.getItem(MIGRATION_KEY)==='1'; }catch(_e){}
+    if(alreadyMigrated) return;
+
     var officialRoster = JSON.parse(document.getElementById('emp-data').textContent || '[]');
     if(!Array.isArray(officialRoster) || officialRoster.length !== 369) return;
 
@@ -2854,6 +2858,37 @@ try{
     console.error('[KN] falha ao aplicar lista oficial de 369 colaboradores:', err);
   }
 })();
+
+// ===== PROTEÇÃO DA LISTA OFICIAL DE 369 =====
+var KN_OFFICIAL_ACTIVE_IDS_369 = (function(){
+  var ids = {};
+  try{
+    var r = JSON.parse(document.getElementById('emp-data').textContent || '[]');
+    (Array.isArray(r)?r:[]).forEach(function(e){ ids[String(e.id||'')] = true; });
+  }catch(_e){}
+  return ids;
+})();
+var KN_OBSOLETE_IDS_20260906 = {
+  "2613445":true,
+  "2613816":true,
+  "2613818":true,
+  "2636264":true
+};
+function knIsAllowedOfficialActive(e){
+  var id=String((e&&e.id)||'');
+  return !!KN_OFFICIAL_ACTIVE_IDS_369[id] && !KN_OBSOLETE_IDS_20260906[id];
+}
+function knRemoveObsoleteFromActive(){
+  var before=(ALL||[]).length;
+  ALL=(ALL||[]).filter(function(e){ return knIsAllowedOfficialActive(e); });
+  if(ALL.length!==before) rebuildById();
+  return before-ALL.length;
+}
+try{
+  if(knRemoveObsoleteFromActive()>0){
+    localStorage.setItem(ROSTER_KEY, JSON.stringify(ALL));
+  }
+}catch(_e){}
 
 var state = {}; // { id: {status, hora} }
 var currentDate = todayStr();
@@ -6661,6 +6696,7 @@ function mergeRosterFromCloud(cloudRows){
   var changed = false;
   cloudRows.forEach(function(ce){
     if(!ce || ce.id==null) return;
+    if(!knIsAllowedOfficialActive(ce)) return;
     var le = localById[ce.id];
     if(!le){
       ALL.push(ce);
@@ -6734,6 +6770,8 @@ if(window.storage){
       }
     }catch(e){}
     if(changed){
+      knRemoveObsoleteFromActive();
+      try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(ALL)); }catch(_e){}
       safeInit('filtros (após sincronizar nuvem)', rebuildFilterLists);
       markHeavyViewsDirty();
       safeInit('tabela de presença (após sincronizar nuvem)', renderAll);
@@ -6755,7 +6793,25 @@ if(sbReady){
     var changed = false;
     try{
       if(Array.isArray(rosterRows) && rosterRows.length){
-        var ativosRows = rosterRows.filter(function(r){ return r.ativo; }).map(sbRowToEmp);
+        // Se os 4 registros antigos ainda vierem ativos do banco, move a cópia
+        // recebida para Inativos antes de qualquer renderização.
+        rosterRows.forEach(function(r){
+          var rid=String(r.id||'');
+          if(KN_OBSOLETE_IDS_20260906[rid]){
+            var empOld=sbRowToEmp(r);
+            var existsInactive=INACTIVE.some(function(x){ return String(x.id||'')===rid; });
+            if(!existsInactive){
+              empOld.inactivatedAt=empOld.inactivatedAt || todayStr();
+              INACTIVE.push(empOld);
+              changed=true;
+            }
+          }
+        });
+
+        var ativosRows = rosterRows
+          .filter(function(r){ return r.ativo; })
+          .map(sbRowToEmp)
+          .filter(knIsAllowedOfficialActive);
         var inativosRows = rosterRows.filter(function(r){ return !r.ativo; }).map(sbRowToEmp);
         if(mergeRosterFromCloud(ativosRows)){ changed = true; }
         if(mergeInactiveFromCloud(inativosRows)){ changed = true; }
@@ -6777,6 +6833,9 @@ if(sbReady){
       }
     }catch(err){ console.error('[KN] Supabase: erro ao reconciliar dados recebidos:', err); }
     if(changed){
+      knRemoveObsoleteFromActive();
+      try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(ALL)); }catch(_e){}
+      try{ sbSaveRoster(); }catch(_e){}
       safeInit('filtros (após sincronizar Supabase)', rebuildFilterLists);
       markHeavyViewsDirty();
       safeInit('tabela de presença (após sincronizar Supabase)', renderAll);
