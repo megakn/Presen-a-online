@@ -2758,6 +2758,17 @@ try{
   }
 }catch(e){}
 try{ var savedDemLocal = JSON.parse(localStorage.getItem(DEMREC_KEY) || 'null'); if(savedDemLocal && typeof savedDemLocal==='object'){ demRecords = savedDemLocal; } }catch(e){}
+try{
+  // Conserta corrupção que pode ter ficado salva de sessões antigas (antes
+  // desse conserto existir): alguém que ficou duplicado ao mesmo tempo em
+  // Ativos e em Inativos. Inativos sempre vence — remove de ALL quem também
+  // está em INACTIVE.
+  var inactiveIdsNow = {};
+  INACTIVE.forEach(function(e){ inactiveIdsNow[e.id] = true; });
+  var beforeCleanupLen = ALL.length;
+  ALL = ALL.filter(function(e){ return !inactiveIdsNow[e.id]; });
+  if(ALL.length !== beforeCleanupLen) rebuildById();
+}catch(err){ console.error('[KN] falha ao limpar ativos duplicados com inativos:', err); }
 try{ dedupeRoster(); }catch(err){ console.error('[KN] falha ao remover duplicados no carregamento:', err); }
 try{
   // Nome/Coordenador vindos em CAIXA ALTA (cadastro antigo, importações
@@ -5386,6 +5397,18 @@ var BUILTIN_FOLGAS_2026 = [
 ];
 window.BUILTIN_FOLGAS_2026 = BUILTIN_FOLGAS_2026; // calendário oficial disponível para a consulta por data
 
+// Escala nova do turno da madrugada (começa 22H) — folga FIXA todo sábado e
+// domingo, ao contrário das outras escalas (que rodam num calendário
+// rotativo). Essa escala ainda não está na tabela BUILTIN_FOLGAS_2026 acima,
+// então sem essa regra ela nunca aparecia como "de folga" no fim de semana.
+window.isFixedWeekendScale = function(escala){
+  return /22H\s*\/\s*03H\s*\/\s*04H\s*\/\s*08H/i.test(String(escala||''));
+};
+window.isWeekendDate = function(y,m,d){
+  var wd = new Date(y, m-1, d).getDay(); // 0=domingo, 6=sábado
+  return wd===0 || wd===6;
+};
+
 function loadBuiltinFolgas2026(){
   var ta = document.getElementById('escala-folga-text');
   var statusEl = document.getElementById('escala-folga-status');
@@ -5853,6 +5876,9 @@ function parseRosterLines(text){
   var parsed = [], errors = [];
   if(!lines.length) return {parsed:parsed, errors:errors};
 
+  // Ordem real da planilha de origem (aba GRUPOS): Status, Groot ID, Nome,
+  // Matrícula, Coordenador, ESCALA, Obs, Escala Antiga, HORÁRIO, Telefone,
+  // SEXO, CARGO, ORIGEM, TIPO, Setor, CPF, EXT.
   var expectedFields = [
     'status','grootId','nome','matricula','coordenador','escala','obs',
     'escalaAntiga','horario','telefone','sexo','cargo','origem',
@@ -6106,10 +6132,10 @@ function removeGroupsFromText(){
 }
 
 function exportRosterCsv(){
-  var lines = ['ID,Groot ID,Nome,Matrícula,Coordenador,Escala,Escala Antiga,Horário,Telefone,Sexo,Cargo,Origem,Tipo,Setor,CPF,EXT'];
+  var lines = ['ID,Groot ID,Nome,Matrícula,Coordenador,Escala,Obs,Escala Antiga,Horário,Telefone,Sexo,Cargo,Origem,Tipo,Setor,CPF,EXT'];
   ALL.forEach(function(e){
     var phone = contacts[e.id] || '';
-    lines.push([e.id, e.grootId, e.nome, e.matricula, e.coordenador, e.escala, e.escalaAntiga, e.horario, phone, e.sexo, e.cargo, e.origem, e.tipo, e.setor, e.cpf, e.ext].map(function(v){
+    lines.push([e.id, e.grootId, e.nome, e.matricula, e.coordenador, e.escala, e.obs, e.escalaAntiga, e.horario, phone, e.sexo, e.cargo, e.origem, e.tipo, e.setor, e.cpf, e.ext].map(function(v){
       var s = String(v==null?'':v);
       return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
     }).join(','));
@@ -6922,6 +6948,10 @@ function foCopyPrevious(){
 function foIsOffEmployee(e,date){
   var ds=monthStates[date] || getLocalDayState(date) || {};
   if(ds[e.id] && ds[e.id].status==='FO') return true;
+  if(window.isFixedWeekendScale(e.escala)){
+    var p=String(date||'').split('-');
+    if(p.length===3 && window.isWeekendDate(Number(p[0]),Number(p[1]),Number(p[2]))) return true;
+  }
   var scale=foNorm(e.escala);
   return !!(foCalendarData && foCalendarData[scale] && foCalendarData[scale][date]);
 }
@@ -7366,6 +7396,7 @@ window.logActivity = logActivity;
     var s=normScale(scale), p=String(date||'').split('-');
     if(p.length!==3) return false;
     var y=Number(p[0]), m=Number(p[1]), d=Number(p[2]);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
     if(y!==2026 || [9,10,11].indexOf(m)<0){
       // For manually saved months, use the interactive calendar store when available.
       try{
@@ -7547,6 +7578,7 @@ window.logActivity = logActivity;
     if(p.length!==3) return false;
     var y=Number(p[0]), m=Number(p[1]), d=Number(p[2]);
     var s=norm(scale);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
 
     // Read saved manual calendars first.
     try{
@@ -7726,6 +7758,7 @@ window.logActivity = logActivity;
     var p=String(date||'').split('-');
     if(p.length!==3) return false;
     var y=Number(p[0]), m=Number(p[1]), d=Number(p[2]), s=norm(scale);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
 
     try{
       var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
@@ -7869,6 +7902,7 @@ window.logActivity = logActivity;
     var p=String(date||'').split('-');
     if(p.length!==3) return false;
     var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
 
     try{
       var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
@@ -7936,12 +7970,19 @@ window.logActivity = logActivity;
       return;
     }
 
+    var totalMen=0, totalWomen=0, totalBlank=0;
+    working.forEach(function(g){ totalMen+=g.men; totalWomen+=g.women; totalBlank+=g.blank; });
+
     box.innerHTML=
+      (totalBlank>0 ? '<div class="fo-note" style="margin-bottom:8px">'+totalBlank+
+        ' pessoa(s) trabalhando nesta data ainda estão sem o campo <b>Sexo</b> preenchido no cadastro — '+
+        'por isso não entram em Homens/Mulheres.</div>' : '')+
       '<table class="fo-working-table">'+
-      '<thead><tr><th>Escala</th><th>Total</th></tr></thead><tbody>'+
+      '<thead><tr><th>Escala</th><th>Homens</th><th>Mulheres</th><th>Total</th></tr></thead><tbody>'+
       working.map(function(g){
-        return '<tr data-fo-scale="'+esc(g.label)+'"><td>'+esc(g.label)+'</td><td>'+g.total+'</td></tr>';
+        return '<tr data-fo-scale="'+esc(g.label)+'"><td>'+esc(g.label)+'</td><td>'+g.men+'</td><td>'+g.women+'</td><td>'+g.total+'</td></tr>';
       }).join('')+
+      '<tr style="font-weight:800;background:#f7f9fc"><td>Total geral</td><td>'+totalMen+'</td><td>'+totalWomen+'</td><td>'+(totalMen+totalWomen+totalBlank)+'</td></tr>'+
       '</tbody></table>';
   }
 
@@ -8819,6 +8860,7 @@ window.logActivity = logActivity;
     var s=norm(escala), p=String(date||'').split('-');
     if(!s || p.length!==3) return null; // null = não sabemos (sem escala cadastrada)
     var y=Number(p[0]), m=Number(p[1]), d=Number(p[2]);
+    if(window.isFixedWeekendScale(escala) && window.isWeekendDate(y,m,d)) return true;
     try{
       var obj=JSON.parse(localStorage.getItem('kn_scale_fo_calendar_v3')||'{}')||{};
       var key=Object.keys(obj).find(function(k){return norm(k)===s;});
@@ -8943,6 +8985,7 @@ window.logActivity = logActivity;
     var p=String(date||'').split('-');
     if(p.length!==3) return false;
     var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
 
     try{
       var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
@@ -9072,6 +9115,7 @@ window.logActivity = logActivity;
     var p=String(date||'').split('-');
     if(p.length!==3) return false;
     var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
 
     try{
       var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
@@ -9219,6 +9263,7 @@ window.logActivity = logActivity;
     var p=String(date||'').split('-');
     if(p.length!==3) return false;
     var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
 
     try{
       var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
@@ -9342,6 +9387,7 @@ window.logActivity = logActivity;
     var p=String(date||'').split('-');
     if(p.length!==3) return false;
     var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]),s=norm(scale);
+    if(window.isFixedWeekendScale(scale) && window.isWeekendDate(y,m,d)) return true;
 
     try{
       var stores=['kn_scale_fo_calendar_v3','kn_scale_fo_calendar_v2'];
@@ -9408,7 +9454,16 @@ window.logActivity = logActivity;
       return;
     }
 
+    // Quantas pessoas (dentre as mostradas) ainda não têm o campo Sexo
+    // preenchido no cadastro — sem isso, Homens/Mulheres nunca fecha com o
+    // Total da escala, e parece que a conta "não está funcionando".
+    var semSexo=0;
+    shown.forEach(function(g){ semSexo += (g.total - g.men - g.women); });
+
     box.innerHTML=
+      (semSexo>0 ? '<div class="fo-note" style="margin-bottom:8px">'+semSexo+
+        ' pessoa(s) nesta lista ainda não têm o campo <b>Sexo</b> preenchido no cadastro — '+
+        'por isso Homens + Mulheres pode ficar menor que o Total da escala.</div>' : '')+
       '<table class="fo-present-table"><thead><tr><th>Escala</th><th>Homens</th><th>Mulheres</th><th>Total</th></tr></thead><tbody>'+
       shown.map(function(g,i){
         return '<tr class="fo-present-row" data-present-index="'+i+'">'+
@@ -9416,7 +9471,7 @@ window.logActivity = logActivity;
         '</tr>'+
         '<tr class="fo-off-detail-row" data-present-detail="'+i+'"><td colspan="4" class="fo-off-detail-cell">'+
           g.people.map(function(e){
-            var sx=sex(e), sxLabel=sx==='M'?'Homem':(sx==='F'?'Mulher':'');
+            var sx=sex(e), sxLabel=sx==='M'?'Homem':(sx==='F'?'Mulher':'(sem Sexo cadastrado)');
             return '<div class="fo-off-person"><span>'+esc(e.nome||'')+'</span><span>'+esc(sxLabel)+'</span></div>';
           }).join('')+
         '</td></tr>';
