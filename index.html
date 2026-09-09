@@ -5988,6 +5988,10 @@ function toTitleCase(s){
     return m.toUpperCase();
   });
 }
+// Exposta em window porque a tabela "Banco de dados dos colaboradores" (aba
+// Grupos) roda num <script> separado, com seu próprio escopo isolado — sem
+// isso, ela não enxerga essa função e a lista fica em branco.
+window.toTitleCase = toTitleCase;
 function normHeaderKey(s){
   return String(s||'')
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -8259,13 +8263,18 @@ window.logActivity = logActivity;
   function roster(){
     return Array.isArray(window.ALL) ? window.ALL : [];
   }
+  // window.toTitleCase vem de outro <script> (esta tabela roda isolada) —
+  // com fallback pro valor original caso ele ainda não tenha carregado.
+  function titleCase(s){
+    return (typeof window.toTitleCase==='function') ? window.toTitleCase(s) : String(s||'');
+  }
   function fieldValue(e, key){
     if(key==='telefone'){
       return (e && e.id && typeof window.getContact==='function') ? (window.getContact(e.id)||'') : '';
     }
     // Mesma normalização usada na Planilha — evita a mesma pessoa aparecer
     // duas vezes no filtro (uma em Caixa de Título, outra em MAIÚSCULO).
-    if((key==='nome' || key==='coordenador') && e && e[key]) return toTitleCase(e[key]);
+    if((key==='nome' || key==='coordenador') && e && e[key]) return titleCase(e[key]);
     return e && e[key]!=null ? e[key] : '';
   }
   // ---- filtro estilo Excel por coluna ----
@@ -8659,8 +8668,8 @@ window.logActivity = logActivity;
     });
     // Nome/Coordenador digitados em CAIXA ALTA viram Caixa de Título, senão
     // a mesma pessoa acaba aparecendo duas vezes nos filtros da planilha.
-    if(obj.nome) obj.nome = toTitleCase(obj.nome);
-    if(obj.coordenador) obj.coordenador = toTitleCase(obj.coordenador);
+    if(obj.nome) obj.nome = titleCase(obj.nome);
+    if(obj.coordenador) obj.coordenador = titleCase(obj.coordenador);
     // Groot ID só é obrigatório pra colaborador NOVO — quem já existe usa o
     // ID interno que já tem (muitos dos 371 cadastros base nunca tiveram
     // Groot ID preenchido, e isso não pode impedir de salvar Sexo/Cargo/etc.).
