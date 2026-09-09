@@ -3430,6 +3430,23 @@ function flashScanTick(ok){
   scanTickTimer = setTimeout(function(){ tick.classList.remove('show'); }, ok ? 700 : 900);
 }
 
+// Verifica se o colaborador está marcado como FOLGA (manual ou automática pelo
+// calendário) no dia atual. Usado pra confirmar antes de sobrescrever a
+// planilha de presença quando alguém bipa o crachá estando de folga.
+function isEmployeeOnFolgaToday(id, emp){
+  var rec = state[id];
+  if(rec && rec.status) return rec.status === 'FO';
+  if(typeof foIsOffEmployee === 'function' && emp && foIsOffEmployee(emp, currentDate)) return true;
+  return false;
+}
+
+function confirmFolgaScan(emp){
+  return window.confirm(
+    (emp.nome||'Colaborador')+' está marcado(a) como FOLGA hoje ('+formatDateBR(currentDate)+').\n\n' +
+    'Confirma que quer alterar a planilha de presença e registrar presença mesmo assim?'
+  );
+}
+
 function onScanSuccess(decodedText){
   var id = decodedText.trim();
   var now = Date.now();
@@ -3451,6 +3468,18 @@ function onScanSuccess(decodedText){
   flashScanTick(true);
   if(lastScan.id === id && (now - lastScan.t) < 5000){ return; }
   lastScan = {id:id, t:now};
+
+  if(isEmployeeOnFolgaToday(id, emp)){
+    var proceedFolga = confirmFolgaScan(emp);
+    if(!proceedFolga){
+      confirmEl.style.display = 'block';
+      confirmEl.style.borderColor = 'var(--border)';
+      confirmEl.style.background = '#f4f6f3';
+      confirmEl.innerHTML = '<b>'+emp.nome+'</b><br>Está de folga hoje — presença NÃO foi alterada na planilha.';
+      return;
+    }
+  }
+
   playScanBeep(true);
   var hora = nowTime();
   setStatus(id, 'P', hora);
@@ -3962,9 +3991,13 @@ function showGlobalScanToast(ok, msg){
         } else {
           var emp = byId[code];
           if(emp){
-            var hora = nowTime();
-            setStatus(code, 'P', hora);
-            showGlobalScanToast(true, 'Presença registrada: '+emp.nome+' às '+hora);
+            if(isEmployeeOnFolgaToday(code, emp) && !confirmFolgaScan(emp)){
+              showGlobalScanToast(false, emp.nome+' está de folga — presença não alterada.');
+            } else {
+              var hora = nowTime();
+              setStatus(code, 'P', hora);
+              showGlobalScanToast(true, 'Presença registrada: '+emp.nome+' às '+hora);
+            }
           } else {
             showGlobalScanToast(false, 'Código não reconhecido: '+code);
           }
@@ -4925,11 +4958,23 @@ function populateCodeEscalaFilter(){
     }
 
     function renderList(filterText){
-      var ft = String(filterText || '').toLocaleLowerCase('pt-BR');
+      var ft = String(filterText || '').toLocaleLowerCase('pt-BR').trim();
       var html = '';
+      var ftRegex = null;
+      if(ft){
+        // Usa fronteira de palavra pra "22h" não bater dentro de "22h48"
+        // (escala que TERMINA às 22h48, não que COMEÇA às 22h).
+        try{
+          ftRegex = new RegExp('(^|[^a-z0-9])' + ft.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)', 'i');
+        }catch(e){ ftRegex = null; }
+      }
 
       values.forEach(function(v){
-        if(ft && String(v).toLocaleLowerCase('pt-BR').indexOf(ft) < 0) return;
+        var vLower = String(v).toLocaleLowerCase('pt-BR');
+        if(ft){
+          var matches = ftRegex ? ftRegex.test(vLower) : (vLower.indexOf(ft) >= 0);
+          if(!matches) return;
+        }
 
         var checked = currentSelected.has(v);
 
