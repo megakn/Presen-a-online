@@ -3072,7 +3072,7 @@ function sbBroadcastRegistro(id, date, status, hora){
 }
 
 function sbFallbackPullCurrentDate(){
-  if(!sbReady || sbLiveConnected || document.hidden) return;
+  if(!sbReady || document.hidden) return;
 
   var now = Date.now();
   if(now - sbLastFallbackSyncAt < 1800) return;
