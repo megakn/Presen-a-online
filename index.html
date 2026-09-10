@@ -6764,6 +6764,11 @@ safeInit('identificação inicial', function(){
 safeInit('log de leitura', function(){ document.getElementById('scan-log').dataset.empty = '1'; });
 safeInit('tabela de presença do dia', function(){ loadState(currentDate); });
 safeInit('seletores de data', initDateSelectors);
+// Liga a sincronização ao vivo (canal Realtime do Supabase + verificação
+// automática a cada 2,2s como reforço). Essa função já existia no código,
+// mas nunca era chamada em lugar nenhum — por isso a tabela só atualizava
+// quando a página era recarregada manualmente.
+safeInit('presença em tempo real', initSupabaseLivePresence);
 // Planilha, Grupos, Inativos e códigos são carregados sob demanda ao abrir a aba.
 
 // Junta o cadastro vindo da nuvem com o que já está carregado:
