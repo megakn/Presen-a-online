@@ -1392,6 +1392,29 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 }
 #panel-grupos .groups-db-row-actions .save{background:#2f7658;color:#fff;border-color:#2f7658}
 #panel-grupos .groups-db-row-actions .del{color:#a32020}
+#panel-grupos .groups-db-row-actions .paint{padding:1px 5px}
+
+/* ---- pintar linha/coluna (aba Grupos) ---- */
+.col-paint-btn{
+  margin-left:2px;border:none;background:transparent;
+  width:16px;height:16px;line-height:14px;border-radius:3px;cursor:pointer;
+  font-size:9px;vertical-align:middle;padding:0;opacity:.75;
+  transition:opacity .15s,background-color .15s;
+}
+.col-paint-btn:hover{background:rgba(255,255,255,.2);opacity:1}
+.col-paint-btn.has-color{opacity:1;outline:1px solid rgba(255,255,255,.6)}
+.gdb-paint-pop{
+  position:fixed;z-index:9998;background:#fff;border:1px solid #ccd6e2;border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px;font-size:12px;color:#243447;width:164px
+}
+.gdb-paint-pop .gdb-swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.gdb-paint-pop .gdb-swatch{
+  width:22px;height:22px;border-radius:5px;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0
+}
+.gdb-paint-pop .gdb-swatch:hover{outline:2px solid #24599a;outline-offset:1px}
+.gdb-paint-pop .gdb-clear{
+  width:100%;border:1px solid #ccd6e2;border-radius:6px;padding:6px;cursor:pointer;font-size:11px;background:#fff
+}
 
 /* ---- filtro estilo Excel no título da coluna (reutilizado em qualquer
    tabela: Grupos e Planilha) ---- */
@@ -1903,22 +1926,22 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
       <table class="groups-db-table">
         <thead>
           <tr>
-            <th>Groot ID <button type="button" class="col-filter-btn" data-ff="grootId" title="Filtrar">▾</button></th>
-            <th>Nome <button type="button" class="col-filter-btn" data-ff="nome" title="Filtrar">▾</button></th>
-            <th>Matrícula <button type="button" class="col-filter-btn" data-ff="matricula" title="Filtrar">▾</button></th>
-            <th>Coordenador <button type="button" class="col-filter-btn" data-ff="coordenador" title="Filtrar">▾</button></th>
-            <th>ESCALA <button type="button" class="col-filter-btn" data-ff="escala" title="Filtrar">▾</button></th>
-            <th>Obs <button type="button" class="col-filter-btn" data-ff="obs" title="Filtrar">▾</button></th>
-            <th>Escala Antiga <button type="button" class="col-filter-btn" data-ff="escalaAntiga" title="Filtrar">▾</button></th>
-            <th>HORÁRIO <button type="button" class="col-filter-btn" data-ff="horario" title="Filtrar">▾</button></th>
-            <th>Telefone <button type="button" class="col-filter-btn" data-ff="telefone" title="Filtrar">▾</button></th>
-            <th>SEXO <button type="button" class="col-filter-btn" data-ff="sexo" title="Filtrar">▾</button></th>
-            <th>CARGO <button type="button" class="col-filter-btn" data-ff="cargo" title="Filtrar">▾</button></th>
-            <th>ORIGEM <button type="button" class="col-filter-btn" data-ff="origem" title="Filtrar">▾</button></th>
-            <th>TIPO <button type="button" class="col-filter-btn" data-ff="tipo" title="Filtrar">▾</button></th>
-            <th>Setor <button type="button" class="col-filter-btn" data-ff="setor" title="Filtrar">▾</button></th>
-            <th>CPF <button type="button" class="col-filter-btn" data-ff="cpf" title="Filtrar">▾</button></th>
-            <th>EXT <button type="button" class="col-filter-btn" data-ff="ext" title="Filtrar">▾</button></th>
+            <th>Groot ID <button type="button" class="col-filter-btn" data-ff="grootId" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>Nome <button type="button" class="col-filter-btn" data-ff="nome" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>Matrícula <button type="button" class="col-filter-btn" data-ff="matricula" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>Coordenador <button type="button" class="col-filter-btn" data-ff="coordenador" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>ESCALA <button type="button" class="col-filter-btn" data-ff="escala" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>Obs <button type="button" class="col-filter-btn" data-ff="obs" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>Escala Antiga <button type="button" class="col-filter-btn" data-ff="escalaAntiga" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>HORÁRIO <button type="button" class="col-filter-btn" data-ff="horario" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>Telefone <button type="button" class="col-filter-btn" data-ff="telefone" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>SEXO <button type="button" class="col-filter-btn" data-ff="sexo" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>CARGO <button type="button" class="col-filter-btn" data-ff="cargo" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>ORIGEM <button type="button" class="col-filter-btn" data-ff="origem" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>TIPO <button type="button" class="col-filter-btn" data-ff="tipo" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>Setor <button type="button" class="col-filter-btn" data-ff="setor" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>CPF <button type="button" class="col-filter-btn" data-ff="cpf" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
+            <th>EXT <button type="button" class="col-filter-btn" data-ff="ext" title="Filtrar">▾</button><button type="button" class="col-paint-btn" title="Pintar coluna">🎨</button></th>
             <th>Ações</th>
           </tr>
         </thead>
@@ -8255,6 +8278,63 @@ window.logActivity = logActivity;
     ['cpf','CPF'],['ext','EXT']
   ];
 
+  // ---- pintar linha/coluna — só um destaque visual, guardado à parte do
+  // cadastro (por ID do colaborador, e por nome da coluna), sobrevive a
+  // recarregar a página igual o resto do app.
+  var ROW_COLOR_KEY = 'presenca:grupos:rowColors:v1';
+  var COL_COLOR_KEY = 'presenca:grupos:colColors:v1';
+  var ROW_COLORS = {}, COL_COLORS = {};
+  try{ ROW_COLORS = JSON.parse(localStorage.getItem(ROW_COLOR_KEY)||'{}') || {}; }catch(e){ ROW_COLORS = {}; }
+  try{ COL_COLORS = JSON.parse(localStorage.getItem(COL_COLOR_KEY)||'{}') || {}; }catch(e){ COL_COLORS = {}; }
+  function saveRowColors(){ try{ localStorage.setItem(ROW_COLOR_KEY, JSON.stringify(ROW_COLORS)); }catch(e){} }
+  function saveColColors(){ try{ localStorage.setItem(COL_COLOR_KEY, JSON.stringify(COL_COLORS)); }catch(e){} }
+
+  var PAINT_SWATCHES = ['#ffdcdc','#ffe8c2','#fff6b8','#d9f2c4','#c7ecdb','#c6e6ff','#d8d3ff','#f3d4f0','#e2e2e2','#ffffff'];
+
+  function closePaintPopover(){
+    var pop=document.getElementById('gdb-paint-pop');
+    if(pop) pop.remove();
+    document.removeEventListener('mousedown', onPaintPopOutside, true);
+  }
+  function onPaintPopOutside(ev){
+    var pop=document.getElementById('gdb-paint-pop');
+    if(pop && !pop.contains(ev.target)) closePaintPopover();
+  }
+  // Abre uma paletinha de cores ancorada perto do botão clicado. onPick(cor)
+  // é chamado com '' quando a pessoa escolhe "Remover cor".
+  function openPaintPopover(anchorEl, onPick){
+    closePaintPopover();
+    var pop=document.createElement('div');
+    pop.id='gdb-paint-pop';
+    pop.className='gdb-paint-pop';
+    pop.innerHTML =
+      '<div class="gdb-swatches">'+
+        PAINT_SWATCHES.map(function(c){ return '<button type="button" class="gdb-swatch" data-color="'+c+'" style="background:'+c+'"></button>'; }).join('')+
+      '</div>'+
+      '<button type="button" class="gdb-clear">Remover cor</button>';
+    document.body.appendChild(pop);
+    var rect=anchorEl.getBoundingClientRect();
+    var top=rect.bottom+4, left=Math.min(rect.left, window.innerWidth-172);
+    pop.style.top=Math.max(8,top)+'px';
+    pop.style.left=Math.max(8,left)+'px';
+    if(top+120>window.innerHeight){ pop.style.top=Math.max(8, rect.top-124)+'px'; }
+    pop.querySelectorAll('.gdb-swatch').forEach(function(sw){
+      sw.addEventListener('click', function(){ onPick(sw.dataset.color); closePaintPopover(); });
+    });
+    pop.querySelector('.gdb-clear').addEventListener('click', function(){ onPick(''); closePaintPopover(); });
+    setTimeout(function(){ document.addEventListener('mousedown', onPaintPopOutside, true); }, 0);
+  }
+  function updatePaintButtonStates(){
+    document.querySelectorAll('#panel-grupos .groups-db-table thead .col-paint-btn').forEach(function(btn){
+      var th=btn.closest('th');
+      var filterBtn=th && th.querySelector('.col-filter-btn');
+      var key=filterBtn && filterBtn.dataset.ff;
+      var color=key ? COL_COLORS[key] : '';
+      if(color){ btn.style.background=color; btn.classList.add('has-color'); }
+      else{ btn.style.background=''; btn.classList.remove('has-color'); }
+    });
+  }
+
   function esc(v){
     return String(v==null?'':v).replace(/[&<>"']/g,function(c){
       return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
@@ -8577,22 +8657,28 @@ window.logActivity = logActivity;
     }
   }
   function rowHtml(e, idx, isNew){
+    // Cor da linha (por ID do colaborador) tem prioridade sobre a cor da
+    // coluna quando as duas estão marcadas na mesma célula.
+    var rowColor = (!isNew && e && e.id) ? (ROW_COLORS[e.id]||'') : '';
     var t='<tr data-db-index="'+idx+'"'+(isNew?' class="groups-db-new"':'')+'>';
     FIELDS.forEach(function(f){
       var key=f[0], val = fieldValue(e, key);
+      var bg = rowColor || COL_COLORS[key] || '';
+      var styleAttr = bg ? ' style="background:'+bg+'"' : '';
       if(key==='sexo'){
-        t += '<td><select data-field="'+key+'">'+
+        t += '<td><select data-field="'+key+'"'+styleAttr+'>'+
           '<option value=""'+(!val?' selected':'')+'></option>'+
           '<option value="M"'+(String(val).toUpperCase()==='M'?' selected':'')+'>M</option>'+
           '<option value="F"'+(String(val).toUpperCase()==='F'?' selected':'')+'>F</option>'+
           '</select></td>';
       }else{
-        t += '<td><input data-field="'+key+'" value="'+esc(val)+'"></td>';
+        t += '<td><input data-field="'+key+'" value="'+esc(val)+'"'+styleAttr+'></td>';
       }
     });
     t += '<td><div class="groups-db-row-actions">'+
       '<button type="button" class="save" data-db-action="save">Salvar</button>'+
       '<button type="button" class="del" data-db-action="delete">Excluir</button>'+
+      (isNew?'':'<button type="button" class="paint" data-db-action="paint" title="Pintar linha">🎨</button>')+
       '</div></td></tr>';
     return t;
   }
@@ -8603,6 +8689,22 @@ window.logActivity = logActivity;
   function render(){
     var body=document.getElementById('groups-db-body');
     if(!body) return;
+    // Guarda o campo (e a posição do cursor) que estava com foco antes de
+    // recriar a tabela — sem isso, cada salvar/filtrar tirava o foco de
+    // quem estava digitando no meio de uma linha.
+    var restoreFocus=null;
+    var active=document.activeElement;
+    if(active && body.contains(active) && active.dataset && active.dataset.field){
+      var activeTr=active.closest('tr[data-db-index]');
+      if(activeTr){
+        restoreFocus={
+          idx: activeTr.dataset.dbIndex,
+          field: active.dataset.field,
+          selStart: (typeof active.selectionStart==='number') ? active.selectionStart : null,
+          selEnd: (typeof active.selectionEnd==='number') ? active.selectionEnd : null
+        };
+      }
+    }
     var q=String((document.getElementById('groups-db-search')||{}).value||'').toLowerCase().trim();
     var arr=roster();
     var html='';
@@ -8620,7 +8722,18 @@ window.logActivity = logActivity;
     if(el) el.textContent = (shown!==arr.length) ? (shown+' de '+arr.length) : arr.length;
     bindColumnFilterButtons();
     updateFilterButtonStates();
+    updatePaintButtonStates();
     autosizeColumns();
+    if(restoreFocus){
+      var newTr=body.querySelector('tr[data-db-index="'+restoreFocus.idx+'"]');
+      var newField=newTr ? newTr.querySelector('[data-field="'+restoreFocus.field+'"]') : null;
+      if(newField){
+        newField.focus();
+        if(restoreFocus.selStart!=null && newField.setSelectionRange){
+          try{ newField.setSelectionRange(restoreFocus.selStart, restoreFocus.selEnd); }catch(e){}
+        }
+      }
+    }
   }
   // Ajusta a largura de cada coluna pelo tamanho real do que está dentro
   // dela (igual "autoajustar largura da coluna" do Excel) — mede o maior
@@ -8800,6 +8913,73 @@ window.logActivity = logActivity;
         var tr=btn.closest('tr');
         if(btn.dataset.dbAction==='save') saveRow(tr);
         if(btn.dataset.dbAction==='delete') deleteRow(tr);
+        if(btn.dataset.dbAction==='paint'){
+          var idx=parseInt(tr.dataset.dbIndex,10);
+          var emp=roster()[idx];
+          if(!emp || !emp.id) return;
+          openPaintPopover(btn, function(color){
+            if(color) ROW_COLORS[emp.id]=color; else delete ROW_COLORS[emp.id];
+            saveRowColors();
+            render();
+          });
+        }
+      });
+      // Salva a linha sozinho quando o foco sai dela de vez (Tab, clicar em
+      // outra linha, trocar de aba) — sem precisar lembrar de clicar em
+      // "Salvar" toda hora. Linha nova (ainda sem Groot ID salvo) fica de
+      // fora — essa continua exigindo o botão, porque o Groot ID é obrigatório.
+      body.addEventListener('focusout', function(ev){
+        var field=ev.target.closest && ev.target.closest('[data-field]');
+        if(!field) return;
+        var tr=field.closest('tr[data-db-index]');
+        if(!tr || tr.classList.contains('groups-db-new')) return;
+        var idx=parseInt(tr.dataset.dbIndex,10);
+        if(isNaN(idx) || idx<0) return;
+        setTimeout(function(){
+          if(!document.body.contains(tr)) return; // linha já foi removida/re-renderizada nesse meio-tempo
+          var activeNow=document.activeElement;
+          if(activeNow && tr.contains(activeNow)) return; // ainda editando a mesma linha
+          saveRow(tr);
+        }, 0);
+      });
+      // Tab no último campo pula direto pro primeiro campo da próxima linha
+      // (sem passar pelos botões Salvar/Excluir/Pintar); Shift+Tab no
+      // primeiro campo volta pro último campo da linha anterior. Continua
+      // dentro da mesma linha, o Tab normal do navegador já resolve.
+      body.addEventListener('keydown', function(ev){
+        if(ev.key!=='Tab') return;
+        var field=ev.target.closest && ev.target.closest('[data-field]');
+        if(!field) return;
+        var tr=field.closest('tr[data-db-index]');
+        if(!tr) return;
+        var firstKey=FIELDS[0][0], lastKey=FIELDS[FIELDS.length-1][0];
+        if(!ev.shiftKey && field.dataset.field===lastKey){
+          var nextTr=tr.nextElementSibling;
+          while(nextTr && !nextTr.matches('tr[data-db-index]')) nextTr=nextTr.nextElementSibling;
+          var target=nextTr ? nextTr.querySelector('[data-field="'+firstKey+'"]') : null;
+          if(target){ ev.preventDefault(); target.focus(); if(target.select) target.select(); }
+        }else if(ev.shiftKey && field.dataset.field===firstKey){
+          var prevTr=tr.previousElementSibling;
+          while(prevTr && !prevTr.matches('tr[data-db-index]')) prevTr=prevTr.previousElementSibling;
+          var target2=prevTr ? prevTr.querySelector('[data-field="'+lastKey+'"]') : null;
+          if(target2){ ev.preventDefault(); target2.focus(); if(target2.select) target2.select(); }
+        }
+      });
+    }
+    if(!document.body.dataset.gdbColPaintBound){
+      document.body.dataset.gdbColPaintBound='1';
+      document.addEventListener('click', function(ev){
+        var btn=ev.target.closest && ev.target.closest('#panel-grupos .groups-db-table thead .col-paint-btn');
+        if(!btn) return;
+        var th=btn.closest('th');
+        var filterBtn=th && th.querySelector('.col-filter-btn');
+        var key=filterBtn && filterBtn.dataset.ff;
+        if(!key) return;
+        openPaintPopover(btn, function(color){
+          if(color) COL_COLORS[key]=color; else delete COL_COLORS[key];
+          saveColColors();
+          render();
+        });
       });
     }
     render();
