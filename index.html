@@ -246,6 +246,32 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .stat b{font-size:20px}
 .stat span{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
 .statgrid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.stat.stat-clickable{cursor:pointer;transition:transform .08s ease,box-shadow .08s ease;user-select:none}
+.stat.stat-clickable:hover{box-shadow:0 0 0 2px rgba(0,0,0,.12) inset;transform:translateY(-1px)}
+.stat.stat-clickable:active{transform:translateY(0)}
+.stat.stat-clickable.stat-filter-active{box-shadow:0 0 0 2px var(--accent-dark, #1457a6) inset}
+.stat.stat-horario-pend{background:var(--header);border:2px solid transparent;min-width:46px;padding:3px 8px;gap:0}
+.stat.stat-horario-pend b{color:var(--text);font-size:16px}
+.stat.stat-horario-pend span{color:var(--text-muted);font-size:9px}
+.stat.stat-horario-pend.stat-empty{background:var(--header);border-color:transparent;opacity:.55}
+.stat.stat-horario-pend.stat-empty b{color:var(--text-muted)}
+.stat.stat-horario-pend.stat-empty span{color:var(--text-muted)}
+.chip-note-mark{font-size:9px;vertical-align:2px;margin-left:1px}
+.status-chip.status-has-obs{box-shadow:0 0 0 1px #0b6e63 inset}
+#te-notices-panel{margin:0 0 10px}
+#te-notices-panel:empty{margin:0;display:none}
+.te-notice-box{
+  background:#e0f9f5;border:1.5px solid #5fc9ba;border-radius:6px;padding:8px 12px;
+}
+.te-notice-title{font-weight:800;font-size:12.5px;color:#0b6e63;margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.te-notice-item{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;
+  font-size:12.5px;padding:4px 0;border-top:1px solid rgba(11,110,99,.18);
+}
+.te-notice-item:first-of-type{border-top:none}
+.te-notice-item b{color:#0b6e63}
+.te-notice-item .te-notice-when{color:#0b6e63;opacity:.75;font-size:11px}
+.te-notice-item .te-notice-obs{flex:1 1 260px;color:#124b44}
 .confirm{border:1px solid var(--success);background:#eaf3ee;border-radius:6px;padding:12px 14px;margin-top:12px;display:none}
 .confirm b{color:var(--accent-dark)}
 table{border-collapse:collapse;width:100%;font-size:12.5px;background:#fff}
@@ -272,6 +298,7 @@ tbody tr:hover{background:#eef2ec}
 .b-DEM{background:#fff0a8;color:#735b00}
 .b-BH{background:#ffe0b2;color:#9a4f00}
 .b-TF{background:#eadcff;color:#6336a3}
+.b-TE{background:#cdf5f0;color:#0b6e63}
 .b-FA{background:#ffdff0;color:#9b2d67}
 .b-{background:#efefec;color:var(--text-muted)}
 select.statusedit{font-size:12px;padding:4px 7px;font-weight:700}
@@ -282,6 +309,7 @@ select.statusedit{font-size:12px;padding:4px 7px;font-weight:700}
 .status-DEM{background:#fff0a8;color:#735b00;border-color:#dfc85e}
 .status-BH{background:#ffe0b2;color:#9a4f00;border-color:#e8aa55}
 .status-TF{background:#eadcff;color:#6336a3;border-color:#b596df}
+.status-TE{background:#cdf5f0;color:#0b6e63;border-color:#5fc9ba}
 .status-FA{background:#ffdff0;color:#9b2d67;border-color:#e6a0c6}
 .stat.status-stat{border-width:2px}
 .stat-p{background:#e8f7ec;border-color:#79bd8a}.stat-p b{color:#176b34}
@@ -291,6 +319,7 @@ select.statusedit{font-size:12px;padding:4px 7px;font-weight:700}
 .stat-dem{background:#fff7cc;border-color:#dfc85e}.stat-dem b{color:#735b00}
 .stat-bh{background:#fff0d8;border-color:#e8aa55}.stat-bh b{color:#9a4f00}
 .stat-tf{background:#f1e9ff;border-color:#b596df}.stat-tf b{color:#6336a3}
+.stat-te{background:#e0f9f5;border-color:#5fc9ba}.stat-te b{color:#0b6e63}
 .stat-fa{background:#ffeaf5;border-color:#e6a0c6}.stat-fa b{color:#9b2d67}
 .toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .ms-filter{position:relative}
@@ -372,6 +401,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 .day-status.status-DEM{background:#fff2a8;color:#725b00;border-color:#d5bd43}
 .day-status.status-BH{background:#ffe0b2;color:#8a4b00;border-color:#e5a04d}
 .day-status.status-TF{background:#eadcff;color:#60349a;border-color:#b99be3}
+.day-status.status-TE{background:#cdf5f0;color:#0b6e63;border-color:#5fc9ba}
 .day-status.status-FA{background:#ffdff0;color:#8b2f61;border-color:#e8a1c9}
 .day-status:not([class*="status-"]){background:#fff;color:#666}
 .today-col{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent)}
@@ -526,6 +556,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 #panel-sheet .status-chip[data-status="DEM"]{background:#fff2a8;color:#725b00;border-color:#d5bd43}
 #panel-sheet .status-chip[data-status="BH"]{background:#ffe0b2;color:#8a4b00;border-color:#e5a04d}
 #panel-sheet .status-chip[data-status="TF"]{background:#eadcff;color:#60349a;border-color:#b99be3}
+#panel-sheet .status-chip[data-status="TE"]{background:#cdf5f0;color:#0b6e63;border-color:#5fc9ba}
 #panel-sheet .status-chip[data-status="FA"]{background:#ffdff0;color:#8b2f61;border-color:#e8a1c9}
 #panel-sheet .status-chip.status-auto{background:#eef5ff;color:#174f91;border-color:#8bb8e8;border-style:dashed}
 
@@ -555,6 +586,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 #status-popover button[data-v="DEM"]{background:#fff2a8}
 #status-popover button[data-v="BH"]{background:#ffe0b2}
 #status-popover button[data-v="TF"]{background:#eadcff}
+#status-popover button[data-v="TE"]{background:#cdf5f0}
 #status-popover button[data-v="FA"]{background:#ffdff0}
 
 #panel-sheet .date-select{
@@ -1601,18 +1633,22 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
   </div>
 
   <div id="stats-date-label" class="muted no-print" style="margin:-4px 0 6px;font-weight:700"></div>
-  <div class="statgrid no-print">
-    <div class="stat"><b id="st-total">0</b><span>Colaboradores</span></div>
-    <div class="stat status-stat stat-p"><b id="st-p">0</b><span>Presença</span></div>
-    <div class="stat status-stat stat-f"><b id="st-f">0</b><span>ABS (Falta/Atestado)</span></div>
-    <div class="stat status-stat stat-fo"><b id="st-fo">0</b><span>Folga</span></div>
-    <div class="stat status-stat stat-at"><b id="st-at">0</b><span>Atraso</span></div>
-    <div class="stat status-stat stat-dem"><b id="st-dem">0</b><span>Demissão</span></div>
-    <div class="stat status-stat stat-bh"><b id="st-bh">0</b><span>BH</span></div>
-    <div class="stat status-stat stat-tf"><b id="st-tf">0</b><span>Troca de folga</span></div>
-    <div class="stat status-stat stat-fa"><b id="st-fa">0</b><span>Folga aniversário</span></div>
-    <div class="stat"><b id="st-pend">0</b><span>Pendentes</span></div>
+  <div id="main-stat-grid" class="statgrid no-print">
+    <div class="stat stat-clickable" data-status-filter="" data-reset-folga="1"><b id="st-total">0</b><span>Colaboradores</span></div>
+    <div class="stat status-stat stat-p stat-clickable" data-status-filter="P"><b id="st-p">0</b><span>Presença</span></div>
+    <div class="stat status-stat stat-f stat-clickable" data-status-filter="F_ATEST"><b id="st-f">0</b><span>ABS (Falta/Atestado)</span></div>
+    <div class="stat status-stat stat-fo stat-clickable" data-status-filter="FO"><b id="st-fo">0</b><span>Folga</span></div>
+    <div class="stat status-stat stat-at stat-clickable" data-status-filter="AT"><b id="st-at">0</b><span>Atraso</span></div>
+    <div class="stat status-stat stat-dem stat-clickable" data-status-filter="DEM"><b id="st-dem">0</b><span>Demissão</span></div>
+    <div class="stat status-stat stat-bh stat-clickable" data-status-filter="BH"><b id="st-bh">0</b><span>BH</span></div>
+    <div class="stat status-stat stat-tf stat-clickable" data-status-filter="TF"><b id="st-tf">0</b><span>Troca de folga</span></div>
+    <div class="stat status-stat stat-te stat-clickable" data-status-filter="TE"><b id="st-te">0</b><span>Troca de Escala</span></div>
+    <div class="stat status-stat stat-fa stat-clickable" data-status-filter="FA"><b id="st-fa">0</b><span>Folga aniversário</span></div>
+    <div class="stat stat-clickable" data-status-filter="EMPTY"><b id="st-pend">0</b><span>Pendentes</span></div>
   </div>
+
+  <div id="horario-pend-label" class="muted no-print" style="margin:-2px 0 6px;font-weight:700;font-size:11.5px">Pendentes de batida por horário (turno)</div>
+  <div id="horario-pend-grid" class="statgrid no-print"></div>
 
   <div id="panel-scan" class="panel active">
     <div class="card">
@@ -1670,6 +1706,7 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
         <option value="F_ATEST">Falta + Atestado</option>
         <option value="BH">BH - Banco de horas</option>
         <option value="TF">Troca de folga</option>
+        <option value="TE">Troca de Escala</option>
         <option value="FA">Folga de aniversário</option>
         <option value="DEM">Demissão</option>
         <option value="EMPTY">Sem registro</option>
@@ -1680,7 +1717,13 @@ textarea{font-family:inherit;font-size:12.5px;border:1px solid var(--border-stro
 
       <button type="button" id="sheet-date-today">Hoje</button>
       <span id="sheet-date-filter-label" class="filter-hint"></span>
+
+      <label for="sheet-hide-folga" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;cursor:pointer;margin-left:6px">
+        <input type="checkbox" id="sheet-hide-folga" checked>
+        Ocultar folgas
+      </label>
     </div>
+    <div id="te-notices-panel" class="no-print"></div>
     <p class="scroll-hint no-print">↔ Arraste a tabela para o lado pra ver Contato, Escala, Horário e as datas</p>
     <div id="sheet-scroll" class="sheet-scroll">
       <table class="sheet-table">
@@ -3339,6 +3382,7 @@ document.querySelectorAll('.tab').forEach(function(btn){
 
     // Cards do topo são leves.
     if(typeof updateStatsCards === 'function') updateStatsCards();
+    if(typeof updateStatCardActiveHighlight === 'function') updateStatCardActiveHighlight();
 
     // Conteúdo pesado só depois que o navegador já exibiu a aba.
     afterPaint(function(){
@@ -4131,6 +4175,7 @@ var STATUS_OPTIONS = [
   {v:'DEM', label:'Demissão'},
   {v:'BH', label:'BH - Banco de horas'},
   {v:'TF', label:'Troca de folga'},
+  {v:'TE', label:'Troca de Escala'},
   {v:'FA', label:'Folga de aniversário'}
 ];
 function applyStatusColor(sel){
@@ -4200,7 +4245,7 @@ function openWhatsApp(emp){
 }
 
 function shortStatusOptions(selected){
-  var labels = {'':'—','P':'P','FO':'FO','AT':'AT','F':'F','DEM':'DEM','BH':'BH','TF':'TF','FA':'FA'};
+  var labels = {'':'—','P':'P','FO':'FO','AT':'AT','F':'F','DEM':'DEM','BH':'BH','TF':'TF','TE':'TE','FA':'FA'};
   return STATUS_OPTIONS.map(function(opt){
     return '<option value="'+opt.v+'"'+(selected===opt.v?' selected':'')+'>'+labels[opt.v]+'</option>';
   }).join('');
@@ -4215,7 +4260,7 @@ function monthDates(ym){
 }
 
 function statusShort(v){
-  return ({'':'—','P':'P','FO':'FO','AT':'AT','F':'F','ATEST':'ATEST','DEM':'DEM','BH':'BH','TF':'TF','FA':'FA'})[v] || '—';
+  return ({'':'—','P':'P','FO':'FO','AT':'AT','F':'F','ATEST':'ATEST','DEM':'DEM','BH':'BH','TF':'TF','TE':'TE','FA':'FA'})[v] || '—';
 }
 // ---- filtro estilo Excel por coluna, na Planilha (mesmo padrão da aba
 // Grupos) — Contato usa o mapa `contacts`, os demais são campos direto
@@ -4273,13 +4318,34 @@ function openStatusPopover(btn){
   pop.querySelectorAll('button').forEach(function(b){
     b.addEventListener('click', function(){
       if(!statusPopoverTarget) return;
-      var id = statusPopoverTarget.dataset.id;
-      var date = statusPopoverTarget.dataset.day;
+      var btnEl = statusPopoverTarget;
+      var id = btnEl.dataset.id;
+      var date = btnEl.dataset.day;
       var val = b.dataset.v;
-      statusPopoverTarget.dataset.status = val;
-      statusPopoverTarget.textContent = statusShort(val);
+
+      // "Troca de Escala" pede uma observação — é assim que o responsável
+      // avisa pra que horário/escala a pessoa vai mudar e a partir de
+      // quando. Cancelar o aviso cancela a marcação também, pra nunca
+      // ficar um "TE" sem explicação nenhuma na planilha.
+      var obsText;
+      if(val === 'TE'){
+        var dsNow = monthStates[date] || {};
+        if(date===currentDate) dsNow = state;
+        var existingObs = (dsNow[id] && dsNow[id].obs) || '';
+        var quemNome = byId[id] ? byId[id].nome : id;
+        obsText = prompt('Troca de Escala de '+quemNome+':\nDescreva pra qual horário/escala vai mudar e a partir de quando (esse aviso fica visível pra quem olhar a planilha).', existingObs);
+        if(obsText === null){ closeStatusPopover(); return; }
+        obsText = obsText.trim();
+      }
+
+      var suppressThis = (val === 'FO') && typeof folgaCellsSuppressed === 'function' && folgaCellsSuppressed();
+      btnEl.dataset.status = suppressThis ? '' : val;
+      btnEl.classList.remove('status-auto');
+      btnEl.classList.toggle('status-has-obs', !!obsText && !suppressThis);
+      btnEl.innerHTML = suppressThis ? '—' : (statusShort(val) + (obsText ? ' <span class="chip-note-mark">📝</span>' : ''));
+      btnEl.title = suppressThis ? '' : (obsText || '');
       closeStatusPopover();
-      applyDayStatus(id, date, val);
+      applyDayStatus(id, date, val, obsText);
     });
   });
 }
@@ -4287,19 +4353,23 @@ function openStatusPopover(btn){
 // Aplica um status (id + data) e cuida da contagem de "Demissão".
 // Marcar DEM em 3 datas diferentes pra mesma pessoa move ela automaticamente
 // pra aba Inativos (some da Planilha e da aba Grupos).
-function applyDayStatus(id, date, val){
+// "obs" é a observação livre (usada em "Troca de Escala", pra comunicar
+// pra qual horário a pessoa vai mudar).
+function applyDayStatus(id, date, val, obs){
   ensureOperator(function(){
     var ds = monthStates[date] || {};
-    var old = ds[id] || {status:'',hora:''};
+    var old = ds[id] || {status:'',hora:'',obs:''};
 
     // Uma escolha manual feita agora sempre prevalece sobre uma restauração antiga.
     unmarkDemCleared(id, date);
 
-    ds[id] = {status:val, hora:val==='P' ? (old.hora || nowTime()) : ''};
+    var newRec = {status:val, hora:val==='P' ? (old.hora || nowTime()) : ''};
+    if(val === 'TE' && obs){ newRec.obs = obs; }
+    ds[id] = newRec;
     monthStates[date] = ds;
     saveDayState(date, ds);
-    sbSaveRegistro(id, date, val, ds[id].hora);
-    logActivity('presenca-planilha', (byId[id] ? byId[id].nome : id)+' -> '+val+' ('+date+')');
+    sbSaveRegistro(id, date, val, newRec.hora);
+    logActivity('presenca-planilha', (byId[id] ? byId[id].nome : id)+' -> '+val+' ('+date+')'+(newRec.obs ? ' — obs: '+newRec.obs : ''));
     if(date===currentDate) state = ds;
 
     if(val==='DEM'){
@@ -4313,6 +4383,19 @@ function applyDayStatus(id, date, val){
     // Atualização leve: só os cards do topo (a linha da planilha já foi
     // atualizada na hora, direto no botão que foi clicado).
     updateStatsCards();
+    if(activeTabName === 'sheet' && typeof renderTeNotices === 'function') renderTeNotices();
+
+    // Se essa mudança faz a linha sair do filtro de status ou do "Ocultar
+    // folgas" que está ativo agora na Planilha (ex.: acabou de marcar Folga
+    // com o filtro ligado), some só essa linha da tela na hora — sem
+    // redesenhar a tabela inteira de novo.
+    if(activeTabName === 'sheet' && byId[id]){
+      var chipEl = document.querySelector('.status-chip[data-id="'+id+'"][data-day="'+date+'"]');
+      var trEl = chipEl && chipEl.closest('tr');
+      if(trEl && typeof rowMatchesStatusFilter === 'function' && !rowMatchesStatusFilter(byId[id])){
+        trEl.remove();
+      }
+    }
   });
 }
 
@@ -4553,16 +4636,72 @@ function effectiveStatus(emp, date){
   return '';
 }
 
+// Registro completo (status, hora, obs) marcado manualmente pra alguém num
+// dia — sem cair pra FO automático (diferente de effectiveStatus). Usado
+// onde a observação (obs) importa, como no painel de avisos de Troca de
+// Escala.
+function getDayRecord(emp, date){
+  var ds = monthStates[date] || {};
+  if(date===currentDate) ds = state;
+  return (ds && ds[emp.id]) || null;
+}
+
+// Diz se, agora, uma célula marcada como Folga (manual ou automática pelo
+// calendário) deve aparecer em branco na Planilha. Isso vale sempre que
+// "Ocultar folgas" está marcado — em QUALQUER visão (filtro "Todos", um
+// status específico, "Sem registro", os cards de pendente por horário
+// etc.) — com uma única exceção: quando a pessoa pediu pra ver Folga de
+// propósito (filtro de status = "Folga"), aí sim a folga aparece. Fora
+// isso, folga só volta a aparecer se o usuário desmarcar a caixa.
+function folgaCellsSuppressed(){
+  var hideFolgaEl = document.getElementById('sheet-hide-folga');
+  var hideFolga = !hideFolgaEl || hideFolgaEl.checked;
+  if(!hideFolga) return false;
+  var filterEl = document.getElementById('sheet-status-filter');
+  var filter = filterEl ? filterEl.value : '';
+  return filter !== 'FO';
+}
+
 function rowMatchesStatusFilter(emp){
   var filterEl = document.getElementById('sheet-status-filter');
   var filter = filterEl ? filterEl.value : '';
+
+  // Por padrão (nenhum filtro de status escolhido), a Planilha principal não
+  // mostra quem está de folga (manual ou automática pelo calendário) — some
+  // da lista pra não poluir o dia a dia com quem não precisa de nenhuma
+  // ação. Checa as DUAS colunas de data visíveis: se a pessoa está de folga
+  // em qualquer uma das duas, a linha some nessa visão padrão. Assim que um
+  // filtro de status específico é escolhido (pelo combo ou por um card,
+  // incluindo "Folga" e "Pendentes"), esse filtro manda sozinho — "Ocultar
+  // folgas" não entra mais no meio, senão o número batido no card nunca
+  // bateria com o que aparece na tabela.
+  var hideFolgaEl = document.getElementById('sheet-hide-folga');
+  var hideFolga = !hideFolgaEl || hideFolgaEl.checked;
+  if(hideFolga && !filter){
+    var isFolgaInAnyVisibleDate = selectedSheetDates.some(function(date){
+      return date && effectiveStatus(emp, date) === 'FO';
+    });
+    if(isFolgaInAnyVisibleDate) return false;
+  }
+
   if(!filter) return true;
+
+  // "Sem registro" (Pendentes) e "Folga" são estados automáticos — quase
+  // toda data futura ainda "sem registro" (ninguém bate presença antes do
+  // dia acontecer) e o calendário pode marcar folga automática pra
+  // qualquer data. Checar as duas colunas visíveis pra esses dois faria o
+  // filtro pegar gente de uma data futura que nem chegou ainda, sem bater
+  // com o número mostrado nos cards. Por isso os dois usam só a data em
+  // foco (a mesma que os cards do topo usam). Os status marcados à mão (P,
+  // Falta, Atraso, Demissão, BH, Troca de folga, Folga aniversário)
+  // continuam olhando as duas colunas, útil pra comparar os dois dias.
+  var focusDate = selectedSheetDates[0];
+  if(filter === 'EMPTY') return !effectiveStatus(emp, focusDate);
+  if(filter === 'FO') return effectiveStatus(emp, focusDate) === 'FO';
 
   var sts = selectedSheetDates.map(function(date){
     return effectiveStatus(emp, date);
   });
-
-  if(filter === 'EMPTY') return sts.some(function(v){ return !v; });
   if(filter === 'F_ATEST') return sts.some(function(v){ return v === 'F' || v === 'ATEST'; });
   return sts.some(function(v){ return v === filter; });
 }
@@ -4584,6 +4723,7 @@ function renderSheet(){
   var rows = filteredEmployees().filter(rowMatchesStatusFilter);
   var body = document.getElementById('sheet-body');
   if(!body) return;
+  var suppressFolga = folgaCellsSuppressed();
 
   var today = todayStr();
   var h1 = document.getElementById('date-head-1');
@@ -4603,8 +4743,15 @@ function renderSheet(){
       if(date===currentDate) ds = state;
       var rec = ds[e.id] || {status:''};
       var autoFo = !rec.status && typeof foIsOffEmployee==='function' && foIsOffEmployee(e, date);
-      var label = autoFo ? 'FO' : statusShort(rec.status||'');
-      return '<td class="status-cell'+(date===today?' today-date':'')+'"><button type="button" class="status-chip'+(autoFo?' status-auto':'')+'" data-id="'+esc(e.id)+'" data-day="'+date+'" data-status="'+esc(rec.status||'')+'"'+(autoFo?' title="Folga automática pelo calendário — clique pra confirmar/alterar"':'')+'>'+label+'</button></td>';
+      var isFolgaCell = autoFo || rec.status === 'FO';
+      var suppressed = suppressFolga && isFolgaCell;
+      var label = suppressed ? '—' : (autoFo ? 'FO' : statusShort(rec.status||''));
+      var hasObs = !suppressed && !!(rec.obs && String(rec.obs).trim());
+      var chipTitle = suppressed ? '' : (hasObs ? rec.obs : (autoFo ? 'Folga automática pelo calendário — clique pra confirmar/alterar' : ''));
+      var noteMark = hasObs ? ' <span class="chip-note-mark">📝</span>' : '';
+      var chipStatusAttr = suppressed ? '' : (rec.status||'');
+      var chipAutoClass = (!suppressed && autoFo) ? ' status-auto' : '';
+      return '<td class="status-cell'+(date===today?' today-date':'')+'"><button type="button" class="status-chip'+chipAutoClass+(hasObs?' status-has-obs':'')+'" data-id="'+esc(e.id)+'" data-day="'+date+'" data-status="'+esc(chipStatusAttr)+'"'+(chipTitle?' title="'+esc(chipTitle)+'"':'')+'>'+label+noteMark+'</button></td>';
     }).join('');
     var standbyNow = (typeof isStandby==='function' && isStandby(e));
     return '<tr'+(standbyNow?' class="standby-highlight"':'')+'>'+
@@ -4644,6 +4791,42 @@ function renderSheet(){
   });
 
   adjustSheetColumnWidths();
+  renderTeNotices(dates);
+}
+
+// Painel de avisos de "Troca de Escala" — fica ACIMA da tabela, sempre
+// visível (sem precisar passar o mouse em cima de um chip), pra o
+// responsável ver antes de marcar presença que aquele horário/vaga já vai
+// mudar de dono. Mostra todo mundo com status "TE" e observação nas duas
+// datas visíveis da Planilha agora.
+function renderTeNotices(dates){
+  var panel = document.getElementById('te-notices-panel');
+  if(!panel) return;
+  var items = [];
+  (dates || selectedSheetDates).forEach(function(date){
+    if(!date) return;
+    (ALL || []).forEach(function(e){
+      var rec = getDayRecord(e, date);
+      if(rec && rec.status === 'TE' && rec.obs && String(rec.obs).trim()){
+        items.push({ emp: e, date: date, obs: String(rec.obs).trim() });
+      }
+    });
+  });
+  if(!items.length){ panel.innerHTML = ''; return; }
+  items.sort(function(a, b){
+    return String(a.emp.nome||'').localeCompare(String(b.emp.nome||''), 'pt-BR');
+  });
+  panel.innerHTML =
+    '<div class="te-notice-box">' +
+      '<p class="te-notice-title">📣 Trocas de Escala avisadas ('+items.length+') — confira antes de marcar presença</p>' +
+      items.map(function(it){
+        return '<div class="te-notice-item">' +
+          '<b>'+esc(it.emp.nome||it.emp.id)+'</b>' +
+          '<span class="te-notice-when">('+esc(it.emp.horario||'')+' · '+formatDateBR(it.date)+')</span>' +
+          '<span class="te-notice-obs">'+esc(it.obs)+'</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
 }
 
 // Quando sobra espaço em branco depois da última coluna de data (tela
@@ -4674,7 +4857,10 @@ window.addEventListener('resize', function(){
   });
 })();
 coordSel.addEventListener('change', renderSheet);
-horarioSel.addEventListener('change', renderSheet);
+horarioSel.addEventListener('change', function(){
+  renderSheet();
+  if(typeof updateStatCardActiveHighlight === 'function') updateStatCardActiveHighlight();
+});
 var sheetStatusFilter = document.getElementById('sheet-status-filter');
 if(sheetStatusFilter) sheetStatusFilter.addEventListener('change', renderSheet);
 
@@ -5320,7 +5506,7 @@ safeInit('campos de tamanho personalizado', updateCustomSizeFields);
 safeInit('lista de escalas dos códigos', populateCodeEscalaFilter);
 
 // ---------- Importar planilha (Excel/CSV) ----------
-var VALID_IMPORT_STATUSES = ['P','FO','AT','F','ATEST','DEM','BH','TF','FA'];
+var VALID_IMPORT_STATUSES = ['P','FO','AT','F','ATEST','DEM','BH','TF','TE','FA'];
 
 function excelDateToISO(v){
   // Aceita: número de série do Excel, ou texto "dd/mm/aaaa" / "dd-mm-aaaa" / "aaaa-mm-dd".
@@ -5731,7 +5917,7 @@ function updateStatsCards(){
   });
   var statsEmployees = Object.keys(uniqueMap).map(function(k){ return uniqueMap[k]; });
   var total = statsEmployees.length;
-  var p=0,f=0,fo=0,at=0,dem=0,bh=0,tf=0,fa=0,pend=0;
+  var p=0,f=0,fo=0,at=0,dem=0,bh=0,tf=0,te=0,fa=0,pend=0;
   statsEmployees.forEach(function(e){
     var st = src[e.id] ? src[e.id].status : '';
     // Falta e Atestado (isolado ou combinado com falta) contam juntos como
@@ -5748,6 +5934,7 @@ function updateStatsCards(){
     }
     else if(st==='BH') bh++;
     else if(st==='TF') tf++;
+    else if(st==='TE') te++;
     else if(st==='FA') fa++;
     else if(!st && typeof foIsOffEmployee==='function' && foIsOffEmployee(e, statsSourceDate())){
       // Ninguém marcou status nesse dia, mas o calendário de folgas (FO)
@@ -5765,9 +5952,11 @@ function updateStatsCards(){
   document.getElementById('st-dem').textContent = dem;
   document.getElementById('st-bh').textContent = bh;
   document.getElementById('st-tf').textContent = tf;
+  document.getElementById('st-te').textContent = te;
   document.getElementById('st-fa').textContent = fa;
   document.getElementById('st-pend').textContent = pend;
   updateStatsDateLabel();
+  if(typeof renderHorarioPendCards === 'function') renderHorarioPendCards();
 }
 
 // Os cards do topo (Presença/Falta/Folga...) mostram os números da data que
@@ -5790,6 +5979,149 @@ function statsSourceState(){
 function updateStatsDateLabel(){
   var el = document.getElementById('stats-date-label');
   if(el) el.textContent = 'Dados de ' + formatDateBR(statsSourceDate());
+}
+
+// Realça o card que corresponde ao filtro de status aplicado agora na Planilha,
+// pra ficar claro qual card foi clicado (ou qual filtro está ativo).
+function updateStatCardActiveHighlight(){
+  var filterEl = document.getElementById('sheet-status-filter');
+  var current = filterEl ? filterEl.value : '';
+  document.querySelectorAll('#main-stat-grid .stat-clickable').forEach(function(card){
+    var cardFilter = card.dataset.statusFilter || '';
+    card.classList.toggle('stat-filter-active', activeTabName==='sheet' && current===cardFilter);
+  });
+  var horarioVal = (typeof horarioSel !== 'undefined' && horarioSel) ? horarioSel.value : '';
+  document.querySelectorAll('#horario-pend-grid .stat-clickable').forEach(function(card){
+    var match = activeTabName==='sheet' && current==='EMPTY' && horarioVal === (card.dataset.horarioPend || '');
+    card.classList.toggle('stat-filter-active', match);
+  });
+}
+
+// ---------- Cards do topo clicáveis: filtram direto na Planilha ----------
+// Cada card (Presença, Falta/Atestado, Folga, Atraso...) vira um atalho:
+// clicar nele já pula pra aba Planilha com o filtro de status correspondente
+// aplicado, mostrando só aquele grupo — sem precisar abrir o combo "Status"
+// manualmente. Os demais filtros da Planilha (busca, coordenador, escala,
+// horário, filtros de coluna) são limpos no clique, pra garantir que o que
+// aparece bate com o número mostrado no card.
+function focusSheetScroll(){
+  var scrollEl = document.getElementById('sheet-scroll');
+  if(scrollEl && scrollEl.scrollIntoView) scrollEl.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function resetOtherSheetFilters(opts){
+  opts = opts || {};
+  var search = document.getElementById('sheet-search');
+  if(search) search.value = '';
+  if(typeof coordSel !== 'undefined' && coordSel) coordSel.value = '';
+  if(!opts.keepHorario && typeof horarioSel !== 'undefined' && horarioSel) horarioSel.value = '';
+  if(typeof selectedEscalas !== 'undefined' && selectedEscalas){
+    selectedEscalas.clear();
+    document.querySelectorAll('#escala-filter-list input[type=checkbox]').forEach(function(chk){ chk.checked = false; });
+    if(typeof updateEscalaBtnLabel === 'function') updateEscalaBtnLabel();
+  }
+  if(typeof sheetColumnFilters !== 'undefined'){
+    Object.keys(sheetColumnFilters).forEach(function(k){ delete sheetColumnFilters[k]; });
+  }
+  document.querySelectorAll('#panel-sheet .col-filter-btn').forEach(function(btn){ btn.classList.remove('active'); });
+}
+// Aplica um filtro de status (e opcionalmente um horário específico) e já
+// pula pra aba Planilha mostrando o resultado — usado tanto pelos cards do
+// topo quanto pelos cards de "pendente por horário".
+function goToSheetWithFilter(statusValue, opts){
+  opts = opts || {};
+  resetOtherSheetFilters({keepHorario: !!opts.horario});
+  var sel = document.getElementById('sheet-status-filter');
+  if(sel) sel.value = statusValue;
+  if(opts.horario && typeof horarioSel !== 'undefined' && horarioSel){
+    horarioSel.value = opts.horario;
+  }
+  if(opts.resetFolga){
+    var hideFolgaEl = document.getElementById('sheet-hide-folga');
+    if(hideFolgaEl) hideFolgaEl.checked = false;
+  }
+  var tabBtn = document.querySelector('.tab[data-tab="sheet"]');
+  if(activeTabName === 'sheet'){
+    renderSheet();
+  }else if(tabBtn){
+    tabBtn.click();
+  }
+  updateStatCardActiveHighlight();
+  afterPaint(function(){
+    updateStatCardActiveHighlight();
+    focusSheetScroll();
+  });
+}
+(function(){
+  document.querySelectorAll('#main-stat-grid .stat-clickable').forEach(function(card){
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('role', 'button');
+    card.title = 'Clique para ver esse grupo direto na Planilha';
+    function activate(){
+      goToSheetWithFilter(card.dataset.statusFilter || '', { resetFolga: !!card.dataset.resetFolga });
+    }
+    card.addEventListener('click', activate);
+    card.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); activate(); }
+    });
+  });
+})();
+
+if(sheetStatusFilter){
+  sheetStatusFilter.addEventListener('change', updateStatCardActiveHighlight);
+}
+var sheetHideFolgaCb = document.getElementById('sheet-hide-folga');
+if(sheetHideFolgaCb){
+  sheetHideFolgaCb.addEventListener('change', renderSheet);
+}
+
+// ---------- Cards "Pendentes por horário" ----------
+// Um card pra cada horário/turno cadastrado, mostrando quantas pessoas
+// daquele turno ainda não bateram presença (mesmo critério do card
+// "Pendentes" do topo: sem status marcado e sem folga automática pelo
+// calendário). Clicar num card já filtra a Planilha nesse horário + status
+// "Sem registro". Refeito a cada updateStatsCards() pra ficar sempre atual.
+function renderHorarioPendCards(){
+  var container = document.getElementById('horario-pend-grid');
+  if(!container) return;
+  var src = statsSourceState();
+  var d = statsSourceDate();
+  var uniqueMap = {};
+  (ALL || []).forEach(function(e){
+    var key = String(e.id || e.grootId || e.matricula || e.nome || '').trim();
+    if(key) uniqueMap[key] = e;
+  });
+  var statsEmployees = Object.keys(uniqueMap).map(function(k){ return uniqueMap[k]; });
+
+  var byHorario = {};
+  statsEmployees.forEach(function(e){
+    var h = e.horario || '';
+    if(!h) return;
+    if(!byHorario[h]) byHorario[h] = { horario: h, pend: 0 };
+    var st = src[e.id] ? src[e.id].status : '';
+    var isPend = !st && !(typeof foIsOffEmployee === 'function' && foIsOffEmployee(e, d));
+    if(isPend) byHorario[h].pend++;
+  });
+
+  var horarios = Object.keys(byHorario).sort();
+  if(!horarios.length){ container.innerHTML = ''; return; }
+
+  container.innerHTML = horarios.map(function(h){
+    var info = byHorario[h];
+    var label = h.length >= 5 ? h.slice(0, 5) : h; // "05:00:00" -> "05:00"
+    var empty = info.pend === 0;
+    return '<div class="stat stat-clickable stat-horario-pend'+(empty ? ' stat-empty' : '')+'" data-horario-pend="'+esc(h)+'" tabindex="0" role="button" title="Ver quem ainda não bateu presença no turno '+esc(label)+'">'+
+      '<b>'+info.pend+'</b><span>'+esc(label)+'</span></div>';
+  }).join('');
+
+  container.querySelectorAll('.stat-horario-pend').forEach(function(card){
+    function activate(){
+      goToSheetWithFilter('EMPTY', { horario: card.dataset.horarioPend });
+    }
+    card.addEventListener('click', activate);
+    card.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); activate(); }
+    });
+  });
 }
 
 // ---------- Aba Cards HC: volumetria, até 8h e quadro completo, hoje x ontem ----------
