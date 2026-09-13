@@ -5329,13 +5329,6 @@ function initSupabase(){
   }
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   sbReady = true;
-
-  // Expõe o MESMO cliente Supabase usado pelo Presença KN para módulos
-  // independentes da página, como a aba Atestados.
-  // Antes, o cliente "sb" ficava preso dentro desta função principal e
-  // a aba Atestados procurava window.sb, recebendo "Supabase não conectado".
-  window.sb = sb;
-  window.knSupabase = sb;
 }
 safeInit('conexão com Supabase', initSupabase);
 
@@ -7603,6 +7596,25 @@ async function createAtestadoRequest(emp){
   return token;
 }
 
+// Encurta o link antes de mandar pro colaborador — um link cru do
+// github.io com um token de 32+ caracteres no final fica enorme e passa
+// impressão de spam/phishing no WhatsApp. Se o encurtador não responder
+// (rede bloqueando, fora do ar etc.), usa o link completo mesmo, sem travar
+// o envio por causa disso.
+async function shortenLink(url){
+  try{
+    var ctrl = new AbortController();
+    var timer = setTimeout(function(){ ctrl.abort(); }, 3000);
+    var res = await fetch('https://tinyurl.com/api-create.php?url='+encodeURIComponent(url), {signal: ctrl.signal});
+    clearTimeout(timer);
+    if(!res.ok) return url;
+    var short = (await res.text()).trim();
+    return /^https?:\/\//.test(short) ? short : url;
+  }catch(e){
+    console.warn('[KN] Não consegui encurtar o link do atestado, usando o link completo:', e);
+    return url;
+  }
+}
 async function openWhatsApp(emp){
   var phone = whatsappPhone(contacts[emp.id] || '');
   if(!phone){
@@ -7611,12 +7623,17 @@ async function openWhatsApp(emp){
   }
   try{
     var token = await createAtestadoRequest(emp);
-    var link = new URL('atestado.html?token='+encodeURIComponent(token), window.location.href).href;
+    var fullLink = new URL('atestado.html?token='+encodeURIComponent(token), window.location.href).href;
+    var link = await shortenLink(fullLink);
+    // Mensagem normal primeiro, o link sozinho numa linha só (mais curto e
+    // menos "estranho" de clicar), e só depois do link o pedido de
+    // informar os dias — em vez de misturar tudo num parágrafo só.
     var msg = 'Olá, '+firstName(emp.nome)+', tudo bem? Aqui é da operação KN.\n'+
       'Notamos a sua ausência no expediente de hoje e gostaríamos de saber se está tudo bem com você.\n\n'+
-      'Caso possua atestado ou comprovante médico, envie pelo link abaixo e informe a quantidade de dias de afastamento:\n'+
+      'Se tiver atestado ou comprovante médico, envie por aqui:\n'+
       link+'\n\n'+
-      'Se não houver atestado, por favor entre em contato conosco para nos dar um retorno.\n'+
+      'Depois de enviar, nos informe quantos dias de afastamento constam no atestado.\n\n'+
+      'Se não tiver atestado, por favor nos dê um retorno por aqui mesmo.\n'+
       'Ficamos no aguardo!';
     window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(phone)+'&text='+encodeURIComponent(msg)+'&type=phone_number&app_absent=0', '_blank', 'noopener,noreferrer');
   }catch(err){
@@ -15085,19 +15102,23 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){
 var panel=document.getElementById('panel-atestados');if(!panel)return;var $=function(id){return document.getElementById(id)},rot=0,currentId=null,items=[],loading=false;
 var TABLE='kn_atestado_solicitacoes', BUCKETS=['atestados','kn-atestados','kn_atestados','atestados-medicos'];
-function atDb(){return window.knSupabase||window.sb||null}
 function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
 function initials(n){return String(n||'').split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return x[0]}).join('').toUpperCase()}
 function pad(n){return String(n).padStart(2,'0')}
 function fmtDate(v){if(!v)return '';var m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+'/'+m[2]+'/'+m[1]:String(v)}
 function fmtDT(v){if(!v)return '';var d=new Date(v);if(isNaN(d))return String(v);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+', '+pad(d.getHours())+':'+pad(d.getMinutes())}
 function now(){var d=new Date();return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes())}
-function normStatus(s){s=String(s||'').toUpperCase();if(s==='APROVADO')return 'APROVADO';if(s==='RECUSADO'||s==='REJEITADO')return 'RECUSADO';return 'RECEBIDO'}
+// O banco (kn_atestado_solicitacoes) só aceita status='aguardando'|'recebido'|
+// 'conferido'|'cancelado' (constraint kn_atestado_solicitacoes_status_check).
+// 'conferido' = atestado aprovado; 'cancelado' = atestado recusado. O app usa
+// APROVADO/RECUSADO internamente só pra exibir na tela.
+function normStatus(s){s=String(s||'').toUpperCase();if(s==='APROVADO'||s==='CONFERIDO')return 'APROVADO';if(s==='RECUSADO'||s==='REJEITADO'||s==='CANCELADO')return 'RECUSADO';return 'RECEBIDO'}
+function statusParaBanco(s){s=String(s||'').toUpperCase();if(s==='APROVADO')return 'conferido';if(s==='RECUSADO')return 'cancelado';return s.toLowerCase()}
 function cls(s){return s==='APROVADO'?'aprovado':s==='RECUSADO'?'recusado':'recebido'}
 function label(s){return s==='APROVADO'?'Aprovado':s==='RECUSADO'?'Recusado':'Recebido'}
 function rosterFor(id,nome){try{var a=(window.ALL||[]).find(function(e){return String(e.id)===String(id)||String(e.matricula||'')===String(id)||String(e.nome||'').toLowerCase()===String(nome||'').toLowerCase()});return a||{}}catch(e){return {}}}
 function mapRow(r){var emp=rosterFor(r.colaborador_id,r.colaborador_nome);return {id:String(r.id),raw:r,token:r.token||'',nome:r.colaborador_nome||emp.nome||'Colaborador',matricula:r.colaborador_id||emp.id||emp.matricula||'',coordenador:r.coordenador||emp.coordenador||emp.coord||'',escala:r.escala||emp.escala||'',horario:r.horario||emp.horario||'',ausencia:fmtDate(r.data_ausencia||r.data_inicio),inicio:fmtDate(r.data_inicio),fim:fmtDate(r.data_fim),dias:r.dias==null?'':String(r.dias),envio:fmtDT(r.recebido_em||r.atualizado_em||r.criado_em),obs:r.observacao||r.obs||'',status:normStatus(r.status),update:fmtDT(r.atualizado_em||r.recebido_em||r.criado_em),docUrl:r.documento_url||r.arquivo_url||r.url||'',docPath:r.documento_path||r.arquivo_path||r.storage_path||r.caminho_arquivo||'',docType:r.mime_type||r.tipo_arquivo||''}}
-async function loadReal(showError){if(loading)return false;loading=true;var btn=$('at-refresh');if(btn){btn.disabled=true;btn.textContent='Atualizando...'}var ok=false;try{var db=window.knSupabase||window.sb;if(!db)throw new Error('Supabase não conectado');var res=await db.from(TABLE).select('*').neq('status','aguardando').order('criado_em',{ascending:false});if(res.error)throw res.error;items=(res.data||[]).map(mapRow);render();ok=true}catch(e){console.error('[KN Atestados] Falha ao carregar:',e);if(showError)alert('Não consegui atualizar os atestados do Supabase.\n\n'+(e.message||e))}finally{loading=false;if(btn){btn.disabled=false;btn.textContent='↻  Atualizar lista'}}return ok}
+async function loadReal(showError){if(loading)return false;loading=true;var btn=$('at-refresh');if(btn){btn.disabled=true;btn.textContent='Atualizando...'}var ok=false;try{if(!window.sb)throw new Error('Supabase não conectado');var res=await window.sb.from(TABLE).select('*').neq('status','aguardando').order('criado_em',{ascending:false});if(res.error)throw res.error;items=(res.data||[]).map(mapRow);render();ok=true}catch(e){console.error('[KN Atestados] Falha ao carregar:',e);if(showError)alert('Não consegui atualizar os atestados do Supabase.\n\n'+(e.message||e))}finally{loading=false;if(btn){btn.disabled=false;btn.textContent='↻  Atualizar lista'}}return ok}
 // Tentativa silenciosa: se a primeira carga falhar (rede lenta pra abrir a
 // conexão com o Supabase logo no início, comum em rede corporativa), tenta
 // de novo sozinho mais 3 vezes (2s, 4s, 8s) antes de desistir — sem esse
@@ -15114,8 +15135,8 @@ function render(){var q=($('at-search').value||'').trim().toLowerCase(),f=$('at-
 function setStatusUI(s){var b=$('at-status');b.textContent=s;b.className='at-badge'+(s==='APROVADO'?' approved':s==='RECUSADO'?' rejected':'');$('at-aprovar').disabled=s==='APROVADO';$('at-aprovar').textContent=s==='APROVADO'?'✓  Atestado aprovado':'✓  Aprovar atestado'}
 async function resolveDoc(x){if(x.docUrl)return x.docUrl;var paths=[];if(x.docPath)paths.push(x.docPath);if(x.token){paths.push(x.token);}
  for(var bi=0;bi<BUCKETS.length;bi++){var b=BUCKETS[bi];try{
-   if(x.docPath){var sg=await atDb().storage.from(b).createSignedUrl(x.docPath,3600);if(!sg.error&&sg.data&&sg.data.signedUrl){x.docUrl=sg.data.signedUrl;return x.docUrl}}
-   if(x.token){var ls=await atDb().storage.from(b).list(x.token,{limit:20,sortBy:{column:'created_at',order:'desc'}});if(!ls.error&&ls.data&&ls.data.length){var f=ls.data.find(function(z){return z.name&&!z.name.startsWith('.')});if(f){x.docPath=x.token+'/'+f.name;x.docType=(f.metadata&&f.metadata.mimetype)||x.docType;var sg2=await atDb().storage.from(b).createSignedUrl(x.docPath,3600);if(!sg2.error&&sg2.data&&sg2.data.signedUrl){x.docUrl=sg2.data.signedUrl;return x.docUrl}var pub=atDb().storage.from(b).getPublicUrl(x.docPath);if(pub.data&&pub.data.publicUrl){x.docUrl=pub.data.publicUrl;return x.docUrl}}}}
+   if(x.docPath){var sg=await window.sb.storage.from(b).createSignedUrl(x.docPath,3600);if(!sg.error&&sg.data&&sg.data.signedUrl){x.docUrl=sg.data.signedUrl;return x.docUrl}}
+   if(x.token){var ls=await window.sb.storage.from(b).list(x.token,{limit:20,sortBy:{column:'created_at',order:'desc'}});if(!ls.error&&ls.data&&ls.data.length){var f=ls.data.find(function(z){return z.name&&!z.name.startsWith('.')});if(f){x.docPath=x.token+'/'+f.name;x.docType=(f.metadata&&f.metadata.mimetype)||x.docType;var sg2=await window.sb.storage.from(b).createSignedUrl(x.docPath,3600);if(!sg2.error&&sg2.data&&sg2.data.signedUrl){x.docUrl=sg2.data.signedUrl;return x.docUrl}var pub=window.sb.storage.from(b).getPublicUrl(x.docPath);if(pub.data&&pub.data.publicUrl){x.docUrl=pub.data.publicUrl;return x.docUrl}}}}
  }catch(e){}}
  return ''}
 function showDoc(x,url){var paper=$('at-paper');paper.innerHTML='';paper.style.padding='0';paper.style.minHeight='355px';paper.style.display='flex';paper.style.alignItems='center';paper.style.justifyContent='center';paper.style.overflow='hidden';if(!url){paper.innerHTML='<div style="font-family:Arial,sans-serif;text-align:center;padding:40px;color:#6b7f99"><b>Documento não localizado</b><br><small>O registro chegou ao Supabase, mas não consegui abrir o arquivo do Storage.</small></div>';return}var isPdf=/pdf/i.test(x.docType||'')||/\.pdf(?:\?|$)/i.test(url);if(isPdf){paper.innerHTML='<iframe src="'+esc(url)+'" style="width:100%;height:430px;border:0;background:#fff" title="Atestado enviado"></iframe>'}else{paper.innerHTML='<img src="'+esc(url)+'" alt="Atestado enviado" style="display:block;max-width:100%;max-height:470px;width:auto;height:auto;object-fit:contain;margin:auto">'}paper.dataset.docUrl=url}
@@ -15124,8 +15145,23 @@ function closePin(){$('at-pin').classList.remove('open');$('at-pin').setAttribut
 function back(){closePin();$('at-preview').classList.remove('open');$('at-detail-view').classList.remove('open');document.body.classList.remove('at-modal-open');currentId=null;render()}
 function dbPayload(x){return {data_inicio:toISO($('at-inicio').value),data_fim:toISO($('at-fim').value),dias:parseInt($('at-dias').value||'0',10)||null,observacao:$('at-obs').value.trim()}}
 function toISO(v){var m=String(v||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?m[3]+'-'+m[2]+'-'+m[1]:v||null}
-async function save(showMsg){var x=items.find(function(i){return i.id===currentId});if(!x)return false;var payload=dbPayload(x),res=await atDb().from(TABLE).update(payload).eq('id',x.id);if(res.error){console.error(res.error);if(showMsg)alert('Não consegui salvar as alterações no Supabase.');return false}x.inicio=$('at-inicio').value.trim();x.fim=$('at-fim').value.trim();x.dias=$('at-dias').value.trim();x.obs=$('at-obs').value.trim();x.update=now();$('at-update').textContent=x.update;render();if(showMsg)alert('Alterações do atestado salvas.');return true}
-async function updateStatus(status){var x=items.find(function(i){return i.id===currentId});if(!x)return false;var res=await atDb().from(TABLE).update({status:status.toLowerCase()}).eq('id',x.id);if(res.error){console.error(res.error);alert('Não consegui atualizar o status no Supabase.');return false}x.status=status;x.update=now();$('at-update').textContent=x.update;setStatusUI(status);render();return true}
+// Lista cada data (YYYY-MM-DD) entre início e fim, inclusive, na ordem certa.
+function diasEntreISO(iniISO,fimISO){var out=[];if(!iniISO||!fimISO)return out;var d=new Date(iniISO+'T00:00:00'),f=new Date(fimISO+'T00:00:00');if(isNaN(d)||isNaN(f)||d>f)return out;var guard=0;while(d<=f&&guard<400){out.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));d.setDate(d.getDate()+1);guard++}return out}
+// Ao aprovar um atestado, marca sozinho cada dia do período (início ao fim)
+// como "AT" na Planilha principal desse colaborador — sem isso, o
+// coordenador teria que marcar cada dia manualmente depois de aprovar.
+function marcarDiasAtestadoNaPlanilha(x){
+  try{
+    var emp=rosterFor(x.raw&&x.raw.colaborador_id,x.nome);
+    if(!emp||!emp.id){console.warn('[KN Atestados] Colaborador não encontrado na Planilha — dias do atestado não foram marcados automaticamente.');return}
+    var dias=diasEntreISO(toISO($('at-inicio').value),toISO($('at-fim').value));
+    if(!dias.length)return;
+    dias.forEach(function(dt){if(typeof window.applyDayStatus==='function')window.applyDayStatus(emp.id,dt,'AT')});
+    if(typeof window.renderSheet==='function')window.renderSheet();
+  }catch(e){console.error('[KN Atestados] Falha ao marcar dias na Planilha:',e)}
+}
+async function save(showMsg){var x=items.find(function(i){return i.id===currentId});if(!x)return false;var payload=dbPayload(x),res=await window.sb.from(TABLE).update(payload).eq('id',x.id);if(res.error){console.error(res.error);if(showMsg)alert('Não consegui salvar as alterações no Supabase.\n\n'+(res.error.message||''));return false}x.inicio=$('at-inicio').value.trim();x.fim=$('at-fim').value.trim();x.dias=$('at-dias').value.trim();x.obs=$('at-obs').value.trim();x.update=now();$('at-update').textContent=x.update;render();if(showMsg)alert('Alterações do atestado salvas.');return true}
+async function updateStatus(status){var x=items.find(function(i){return i.id===currentId});if(!x)return false;var res=await window.sb.from(TABLE).update({status:statusParaBanco(status)}).eq('id',x.id);if(res.error){console.error(res.error);alert('Não consegui atualizar o status no Supabase.\n\n'+(res.error.message||''));return false}x.status=status;x.update=now();$('at-update').textContent=x.update;setStatusUI(status);if(status==='APROVADO')marcarDiasAtestadoNaPlanilha(x);render();return true}
 function openPin(){save(false);$('at-pin').classList.add('open');$('at-pin').setAttribute('aria-hidden','false');setTimeout(function(){panel.querySelector('.at-pin-digits input').focus()},40)}
 $('at-list-body').addEventListener('click',function(e){var b=e.target.closest('[data-at-open]');if(b)openDetail(b.getAttribute('data-at-open'))});$('at-search').addEventListener('input',render);$('at-status-filter').addEventListener('change',render);$('at-refresh').onclick=function(){loadReal(true)};
 $('at-back').onclick=back;$('at-close').onclick=back;$('at-cancelar').onclick=back;$('at-salvar').onclick=function(){save(true)};$('at-aprovar').onclick=openPin;$('at-pin-x').onclick=closePin;$('at-pin-cancel').onclick=closePin;
