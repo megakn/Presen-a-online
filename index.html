@@ -7395,17 +7395,44 @@ function firstName(nome){
   return p[0] || '';
 }
 
-function openWhatsApp(emp){
+async function createAtestadoRequest(emp){
+  if(!sbReady || !sb){
+    throw new Error('Banco Supabase indisponível.');
+  }
+  var result = await sb.rpc('kn_atestado_criar_solicitacao', {
+    p_colaborador_id: String(emp.id || ''),
+    p_colaborador_nome: String(emp.nome || ''),
+    p_data_ausencia: currentDate || todayStr()
+  });
+  if(result.error) throw result.error;
+  var token = '';
+  if(typeof result.data === 'string') token = result.data;
+  else if(Array.isArray(result.data) && result.data.length) token = result.data[0].token || result.data[0].kn_atestado_criar_solicitacao || '';
+  else if(result.data && typeof result.data === 'object') token = result.data.token || result.data.kn_atestado_criar_solicitacao || '';
+  if(!token) throw new Error('O banco não retornou o token do atestado.');
+  return token;
+}
+
+async function openWhatsApp(emp){
   var phone = whatsappPhone(contacts[emp.id] || '');
   if(!phone){
     alert('Cadastre o contato deste colaborador primeiro.');
     return;
   }
-  var msg = 'Olá, '+firstName(emp.nome)+', tudo bem? Aqui é da operação KN.\n'+
-    'Notamos a sua ausência no expediente de hoje e gostaríamos de saber se está tudo bem com você.\n'+
-    'Por favor, assim que puder, entre em contato conosco para nos dar um retorno e, caso tenha ocorrido algum imprevisto, lembre-se de nos enviar o comprovante ou atestado médico correspondente.\n'+
-    'Ficamos no aguardo!';
-  window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(phone)+'&text='+encodeURIComponent(msg)+'&type=phone_number&app_absent=0', '_blank', 'noopener,noreferrer');
+  try{
+    var token = await createAtestadoRequest(emp);
+    var link = new URL('atestado.html?token='+encodeURIComponent(token), window.location.href).href;
+    var msg = 'Olá, '+firstName(emp.nome)+', tudo bem? Aqui é da operação KN.\n'+
+      'Notamos a sua ausência no expediente de hoje e gostaríamos de saber se está tudo bem com você.\n\n'+
+      'Caso possua atestado ou comprovante médico, envie pelo link abaixo e informe a quantidade de dias de afastamento:\n'+
+      link+'\n\n'+
+      'Se não houver atestado, por favor entre em contato conosco para nos dar um retorno.\n'+
+      'Ficamos no aguardo!';
+    window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(phone)+'&text='+encodeURIComponent(msg)+'&type=phone_number&app_absent=0', '_blank', 'noopener,noreferrer');
+  }catch(err){
+    console.error('[KN] Falha ao gerar link de atestado:', err);
+    alert('Não foi possível gerar o link do atestado. Primeiro execute o arquivo supabase_atestados.sql no Supabase e tente novamente.');
+  }
 }
 
 function shortStatusOptions(selected){
