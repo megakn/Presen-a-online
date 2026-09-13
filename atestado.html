@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Envio de Atestado • Presença KN</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#eef4ff 0,#f7f9fc 36%,#f3f6fb 100%)}
+.top{background:#0f3b82;color:#fff;padding:18px 18px 42px;box-shadow:0 8px 24px rgba(15,59,130,.18)}
+.topin{max-width:680px;margin:auto;display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:12px;background:#fff;color:#0f3b82;display:grid;place-items:center;font-weight:900}.brand b{display:block;font-size:18px}.brand span{font-size:12px;opacity:.84}
+.wrap{max-width:680px;margin:-24px auto 32px;padding:0 14px}.card{background:#fff;border:1px solid #dfe7f2;border-radius:18px;box-shadow:0 14px 36px rgba(36,58,95,.11);padding:20px}.intro h1{font-size:22px;margin:0 0 7px}.intro p{margin:0;color:#627089;line-height:1.45}.person{margin:18px 0 8px;padding:13px 14px;border-radius:12px;background:#f6f9ff;border:1px solid #dbe7fb}.person strong{display:block;font-size:16px}.person small{color:#68758c}
+label{display:block;font-size:13px;font-weight:800;margin:16px 0 7px;color:#344158}.req{color:#c62d2d}.field{width:100%;border:1px solid #cbd6e5;border-radius:11px;padding:12px 13px;font:inherit;background:#fff;outline:none}.field:focus{border-color:#2d69c7;box-shadow:0 0 0 3px rgba(45,105,199,.11)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.upload{border:1.5px dashed #9db2d0;border-radius:14px;padding:18px;text-align:center;background:#fafcff;cursor:pointer}.upload:hover{background:#f4f8ff}.upload input{display:none}.upicon{font-size:28px}.upload b{display:block;margin-top:5px}.upload span{display:block;font-size:12px;color:#6a778d;margin-top:4px}.filename{margin-top:9px;font-size:12px;font-weight:700;color:#24559e;word-break:break-all}.preview{display:none;margin-top:12px;max-width:100%;max-height:290px;border-radius:12px;border:1px solid #d7e0ec;object-fit:contain}.period{margin-top:12px;padding:11px 12px;background:#f8fafc;border-radius:10px;border:1px solid #e4e9f1;font-size:13px;color:#48566b}.btn{width:100%;margin-top:20px;border:0;border-radius:12px;background:#1463c5;color:#fff;font-weight:900;font-size:15px;padding:14px;cursor:pointer;box-shadow:0 8px 18px rgba(20,99,197,.22)}.btn:disabled{opacity:.55;cursor:wait}.msg{display:none;margin-top:14px;padding:12px;border-radius:11px;font-size:13px;line-height:1.4}.msg.ok{display:block;background:#edf9f0;border:1px solid #a9ddb6;color:#176333}.msg.err{display:block;background:#fff1f1;border:1px solid #efb9b9;color:#9b2525}.loading{padding:32px;text-align:center;color:#66748a}.foot{text-align:center;color:#7b8799;font-size:11px;margin-top:14px}.hidden{display:none!important}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.card{padding:16px}.intro h1{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="top"><div class="topin"><div class="logo">KN</div><div class="brand"><b>Presença KN</b><span>Envio seguro de atestado</span></div></div></div>
+<main class="wrap">
+  <section class="card">
+    <div id="loading" class="loading">Validando seu link…</div>
+    <div id="invalid" class="msg err hidden">Este link é inválido, expirou ou já foi utilizado. Entre em contato com a operação KN.</div>
+    <div id="formbox" class="hidden">
+      <div class="intro"><h1>Enviar atestado</h1><p>Envie a imagem ou PDF do documento e informe o período do afastamento.</p></div>
+      <div class="person"><strong id="person-name">—</strong><small id="absence-date">Ausência: —</small></div>
+      <form id="form">
+        <label>Atestado / comprovante <span class="req">*</span></label>
+        <label class="upload" for="file">
+          <div class="upicon">📎</div><b>Toque para escolher ou fotografar</b><span>Imagem ou PDF • até 10 MB</span>
+          <input id="file" type="file" accept="image/*,application/pdf" required>
+          <div id="filename" class="filename"></div>
+        </label>
+        <img id="preview" class="preview" alt="Pré-visualização do atestado">
+        <div class="grid">
+          <div><label for="start">Início do atestado <span class="req">*</span></label><input class="field" id="start" type="date" required></div>
+          <div><label for="days">Quantidade de dias <span class="req">*</span></label><input class="field" id="days" type="number" min="1" max="180" step="1" inputmode="numeric" placeholder="Ex.: 3" required></div>
+        </div>
+        <div id="period" class="period">Informe a data de início e a quantidade de dias.</div>
+        <label for="obs">Observação <span style="font-weight:500;color:#8190a5">(opcional)</span></label>
+        <textarea class="field" id="obs" rows="3" maxlength="500" placeholder="Alguma informação adicional"></textarea>
+        <button class="btn" id="submit" type="submit">Enviar atestado</button>
+        <div id="message" class="msg"></div>
+      </form>
+    </div>
+  </section>
+  <div class="foot">Presença KN • O documento é usado somente para o controle interno de afastamento.</div>
+</main>
+<script>
+const SUPABASE_URL='https://facxgnlcwvextltxpbqn.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhY3hnbmxjd3ZleHRsdHhwYnFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMjI2MDQsImV4cCI6MjEwMzY5ODYwNH0.k_m_d2FS3wBmz__XkvBIGq9gIpf4vqVIqxnsjOd2ERo';
+const BUCKET='kn-atestados';
+const token=new URLSearchParams(location.search).get('token')||'';
+let requestData=null;
+const $=id=>document.getElementById(id);
+function brDate(iso){if(!iso)return '—';const p=iso.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:iso}
+function headers(json=true){const h={'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY};if(json)h['Content-Type']='application/json';return h}
+async function rpc(name,body){const r=await fetch(SUPABASE_URL+'/rest/v1/rpc/'+name,{method:'POST',headers:headers(true),body:JSON.stringify(body)});let data=null;try{data=await r.json()}catch(_){data=await r.text().catch(()=>null)}if(!r.ok)throw new Error((data&&data.message)||('Erro '+r.status));return data}
+function endDate(start,days){if(!start||!days)return'';const [y,m,d]=start.split('-').map(Number);const dt=new Date(y,m-1,d);dt.setDate(dt.getDate()+Number(days)-1);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0')}
+function updatePeriod(){const s=$('start').value,d=Number($('days').value||0);$('period').textContent=(s&&d>0)?('Período: '+brDate(s)+' até '+brDate(endDate(s,d))+' • '+d+(d===1?' dia':' dias')):'Informe a data de início e a quantidade de dias.'}
+async function init(){
+  if(!token){$('loading').classList.add('hidden');$('invalid').classList.remove('hidden');return}
+  try{
+    const data=await rpc('kn_atestado_validar_token',{p_token:token});
+    const row=Array.isArray(data)?data[0]:data;
+    if(!row){throw new Error('Link inválido')}
+    requestData=row;
+    $('person-name').textContent=row.colaborador_nome||'Colaborador';
+    $('absence-date').textContent='Ausência registrada em: '+brDate(row.data_ausencia);
+    $('start').value=row.data_ausencia||'';
+    updatePeriod();
+    $('loading').classList.add('hidden');$('formbox').classList.remove('hidden');
+  }catch(e){console.error(e);$('loading').classList.add('hidden');$('invalid').classList.remove('hidden')}
+}
+$('start').addEventListener('change',updatePeriod);$('days').addEventListener('input',updatePeriod);
+$('file').addEventListener('change',()=>{const f=$('file').files[0];$('filename').textContent=f?f.name:'';$('preview').style.display='none';if(f&&f.type.startsWith('image/')){const u=URL.createObjectURL(f);$('preview').src=u;$('preview').style.display='block'}});
+$('form').addEventListener('submit',async ev=>{
+  ev.preventDefault();const f=$('file').files[0],start=$('start').value,days=Number($('days').value||0),obs=$('obs').value.trim();const msg=$('message');
+  msg.className='msg';msg.textContent='';
+  if(!f||!start||days<1){msg.className='msg err';msg.textContent='Preencha os campos obrigatórios.';return}
+  if(f.size>10*1024*1024){msg.className='msg err';msg.textContent='O arquivo ultrapassa 10 MB.';return}
+  const allowed=f.type.startsWith('image/')||f.type==='application/pdf';if(!allowed){msg.className='msg err';msg.textContent='Envie uma imagem ou PDF.';return}
+  $('submit').disabled=true;$('submit').textContent='Enviando…';
+  try{
+    const safe=(f.name||'atestado').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-100);
+    const path=token+'/'+Date.now()+'_'+safe;
+    const up=await fetch(SUPABASE_URL+'/storage/v1/object/'+BUCKET+'/'+encodeURI(path),{method:'POST',headers:{'apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+SUPABASE_ANON_KEY,'Content-Type':f.type||'application/octet-stream','x-upsert':'false'},body:f});
+    if(!up.ok){let er={};try{er=await up.json()}catch(_){};throw new Error(er.message||'Falha ao enviar arquivo')}
+    const ok=await rpc('kn_atestado_registrar',{p_token:token,p_data_inicio:start,p_dias:days,p_arquivo_path:path,p_arquivo_nome:f.name||'atestado',p_arquivo_tipo:f.type||'',p_observacao:obs});
+    if(ok!==true && !(Array.isArray(ok)&&ok[0]===true))throw new Error('Não foi possível concluir o registro.');
+    msg.className='msg ok';msg.innerHTML='<b>Atestado enviado com sucesso.</b><br>O documento já foi recebido pela operação KN.';
+    $('submit').textContent='Enviado ✓';
+    Array.from($('form').elements).forEach(el=>{if(el.id!=='submit')el.disabled=true});
+  }catch(e){console.error(e);msg.className='msg err';msg.textContent='Não foi possível enviar: '+e.message;$('submit').disabled=false;$('submit').textContent='Enviar atestado'}
+});
+init();
+</script>
+</body>
+</html>
