@@ -1709,6 +1709,7 @@ body{margin:0!important;min-height:100vh}
 .tab{
   width:100%!important;min-height:42px!important;padding:0 13px!important;
   display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:11px!important;
   border:0!important;border-radius:9px!important;background:transparent!important;
   color:#344054!important;font-size:13px!important;font-weight:650!important;
   box-shadow:none!important;text-align:left!important;
@@ -1716,6 +1717,14 @@ body{margin:0!important;min-height:100vh}
 .tab:hover{background:#f5f8fc!important;color:#1d2939!important}
 .tab.active{background:#eaf2fb!important;color:#245f99!important;font-weight:800!important}
 .tab.active::after{content:"Ativo";margin-left:auto;padding:3px 7px;border-radius:6px;background:#d7e7f8;color:#245f99;font-size:9px;font-weight:800}
+.tab-ico{flex:0 0 18px!important;width:18px!important;height:18px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;color:inherit!important}
+.tab-ico svg{width:100%!important;height:100%!important;display:block!important}
+#at-nav-badge.at-nav-badge{
+  margin-left:auto!important;min-width:19px!important;height:19px!important;padding:0 6px!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  border-radius:999px!important;background:#f0973d!important;color:#fff!important;
+  font-size:10.5px!important;font-weight:800!important;line-height:1!important;
+}
 /* Header */
 header{
   min-height:64px!important;margin:0 0 16px!important;padding:2px 0 12px!important;
@@ -3945,10 +3954,10 @@ button{
   display:inline-block!important;
   font-size:12px!important;
   line-height:1!important;
-  margin-left:0!important;
-  order:-1!important;
+  margin-left:auto!important;
+  order:2!important;
 }
-.te-tab-label{display:inline-block!important}
+.te-tab-label{display:inline-block!important;order:1!important}
 
 /* ===== SENHA PEQUENA E DISCRETA, LOGO ABAIXO DA ABA ===== */
 #te-pin-pop{
@@ -4418,6 +4427,128 @@ button{
   },800);
 })();
 </script>
+<style id="kn-atestados-functional-css">
+#panel-atestados{padding:22px 26px!important;background:#f3f7fb;min-height:calc(100vh - 92px);color:#10284a}
+#panel-atestados *{box-sizing:border-box}
+.at-page{max-width:1320px;margin:0 auto;font-family:inherit}
+.at-list-view,.at-detail-view{width:100%}
+.at-list-top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:22px}
+.at-eyebrow{font-size:11px;letter-spacing:1.3px;font-weight:900;color:#2471cf;text-transform:uppercase;margin-bottom:8px}.at-list-top h2{font-size:31px;line-height:1;margin:0;color:#10284a;font-weight:500}.at-list-top p{margin:11px 0 0;color:#6a7d9d;font-size:14px}
+.at-refresh{height:42px;padding:0 16px;border:1px solid #c9d9eb;border-radius:9px;background:#fff;color:#1266bd;font-weight:800;cursor:pointer}.at-refresh:hover{background:#f7fbff}
+.at-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:24px}.at-stat{background:#fff;border:1px solid #d4e2f0;border-radius:12px;min-height:106px;padding:21px 20px;display:flex;align-items:center;gap:16px}.at-stat.wait{border-color:#f0d3b4;background:#fffdfb}.at-stat.ok{border-color:#bfe5d2;background:#fbfffd}.at-stat-ico{width:43px;height:43px;border-radius:10px;display:grid;place-items:center;background:#dceeff;color:#0878e4;font-size:21px;font-weight:900;flex:0 0 43px}.at-stat.wait .at-stat-ico{background:#fff0df;color:#f59e0b}.at-stat.ok .at-stat-ico{background:#ddf5e8;color:#12a160}.at-stat small{display:block;color:#5e7190;font-size:12px;margin-bottom:3px}.at-stat b{display:block;font-size:27px;line-height:1;color:#12345b}.at-stat em{display:block;font-style:normal;color:#8a9ab4;font-size:11px;margin-top:7px}
+.at-list-card{background:#fff;border:1px solid #d6e2ef;border-radius:13px;overflow:hidden}.at-list-card-head{padding:22px 24px 10px;display:flex;justify-content:space-between;align-items:flex-start}.at-list-card-head h3{margin:0;color:#0c2f57;font-size:18px;font-weight:600}.at-list-card-head p{margin:8px 0 0;color:#8392aa;font-size:12px}.at-count-chip{background:#f1f5f9;color:#657895;border-radius:6px;padding:8px 11px;font-size:12px;font-weight:800}
+.at-tools{display:flex;justify-content:space-between;gap:12px;padding:8px 24px 18px}.at-searchbox{position:relative;max-width:315px;width:100%}.at-searchbox span{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#7187a4}.at-searchbox input{width:100%;height:40px;border:1px solid #cfdae8;border-radius:7px;padding:0 12px 0 36px;outline:none}.at-searchbox input:focus,.at-status-filter:focus{border-color:#4f9cf0;box-shadow:0 0 0 2px rgba(42,139,238,.10)}.at-status-filter{height:40px;min-width:178px;border:1px solid #cfdae8;border-radius:7px;background:#fff;padding:0 12px;color:#526887}
+.at-table-wrap{overflow:auto;border-top:1px solid #e5edf5}.at-table{width:100%;border-collapse:collapse;min-width:920px}.at-table th{height:43px;text-align:left;padding:0 24px;color:#8b9ab2;font-size:10px;letter-spacing:.55px;font-weight:900}.at-table td{padding:13px 24px;border-top:1px solid #edf2f7;color:#334d70;font-size:12px;vertical-align:middle}.at-person{display:flex;align-items:center;gap:11px}.at-avatar{width:30px;height:30px;border-radius:7px;background:#e0efff;color:#1476d2;display:grid;place-items:center;font-size:10px;font-weight:900}.at-person-name{border:0;background:transparent;padding:0;color:#123b69;font-weight:800;cursor:pointer;text-align:left}.at-person-name:hover{text-decoration:underline;color:#0877e0}.at-sub{display:block;color:#96a4b9;font-size:10px;margin-top:4px}.at-status-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-weight:800;font-size:10px}.at-status-pill.recebido{background:#fff1df;color:#cc7500}.at-status-pill.aprovado{background:#dcf7e9;color:#07894b}.at-status-pill.recusado{background:#ffe6e6;color:#c93434}.at-dot{width:6px;height:6px;border-radius:50%;background:currentColor}.at-open-row{width:35px;height:35px;border:1px solid #d4e1ee;border-radius:50%;background:#fff;color:#6e91b6;font-size:18px;cursor:pointer}.at-open-row:hover{background:#eef7ff;color:#0878e4}.at-empty{text-align:center!important;padding:35px!important;color:#8798ae!important}
+/* detalhes */
+.at-detail-view{display:none}.at-detail-view.open{display:block}.at-backline{display:flex;align-items:center;gap:10px;margin-bottom:10px}.at-back{border:0;background:transparent;color:#2471cf;font-weight:800;cursor:pointer;padding:6px 0}.at-wrap{max-width:1220px;margin:0 auto}.at-card{background:#fff;border:1px solid #d7e5f3;border-radius:16px;box-shadow:0 14px 38px rgba(21,55,88,.12);overflow:hidden}.at-head{display:flex;align-items:center;gap:14px;padding:18px 20px 15px;background:linear-gradient(135deg,#fff,#f4f9ff);border-bottom:1px solid #d9e7f4}.at-title-icon{width:52px;height:52px;border-radius:13px;background:linear-gradient(145deg,#1797ff,#0873da);display:grid;place-items:center;color:#fff;box-shadow:0 8px 18px rgba(0,122,230,.25);flex:0 0 52px}.at-head h2{margin:0;font-size:27px;line-height:1.05;color:#10284a}.at-head p{margin:5px 0 0;color:#5f7190;font-size:14px}.at-close{margin-left:auto;width:40px;height:40px;border:1px solid #d9e4ef;border-radius:9px;background:#fff;color:#17375f;font-size:25px;line-height:1;cursor:pointer}.at-body{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);gap:12px;padding:14px;background:#fff}.at-left,.at-right{min-width:0}.at-section{border:1px solid #d8e5f1;border-radius:12px;overflow:hidden;margin-bottom:10px;background:#fff}.at-sec-title{display:flex;align-items:center;gap:9px;padding:12px 15px 9px;font-weight:800;font-size:14px;border-bottom:1px solid #edf2f7}.at-blue{color:#087ef0}.at-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;padding:11px 15px 14px}.at-field label,.at-mini label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}.at-input{width:100%;height:40px;border:1px solid #d4e1ed;border-radius:8px;background:#f6f9fc;padding:8px 12px;font:inherit;font-size:14px;font-weight:700;color:#162b49;outline:none}.at-input:focus,.at-textarea:focus{background:#fff;border-color:#2e91ed;box-shadow:0 0 0 2px rgba(46,145,237,.10)}.at-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:14px 15px;background:linear-gradient(90deg,#eef7ff,#e9f4ff)}.at-obs{padding:11px 15px 14px}.at-textarea{width:100%;min-height:72px;resize:vertical;border:1px solid #d4e1ed;border-radius:8px;background:#f7f9fc;padding:12px;font:inherit;font-size:13px;color:#334e70;outline:none}.at-status-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:4px 15px 14px}.at-badge{display:inline-flex;align-items:center;padding:7px 15px;border-radius:10px;background:#cfe8ff;color:#0a7ee8;font-weight:900}.at-badge.approved{background:#d9f7e7;color:#0f8a4c}.at-badge.rejected{background:#ffe0e0;color:#dc2626}
+.at-doc-card{height:100%;border:1px solid #cfe0ef;border-radius:12px;overflow:hidden;background:#f1f8ff}.at-doc-head{padding:12px 15px 9px;border-bottom:1px solid #d5e5f4}.at-doc-head b{font-size:16px}.at-doc-head span{display:block;color:#6c7d99;font-size:12px;margin-top:4px}.at-doc-area{padding:11px}.at-paper-wrap{transition:.25s transform;transform-origin:center}.at-paper{background:#fff;min-height:355px;border:1px solid #d7d7d7;box-shadow:0 4px 13px rgba(19,46,73,.18);padding:22px 25px;color:#203555;font-family:Georgia,'Times New Roman',serif;cursor:zoom-in}.at-clinic{display:flex;justify-content:space-between;align-items:flex-start}.at-clinic b{font-family:Arial,sans-serif}.at-med-title{font-family:Arial,sans-serif;font-weight:900;font-size:17px;margin-top:32px}.at-paper p{line-height:1.7;font-size:12px}.at-hand{font-family:'Brush Script MT','Segoe Script',cursive;color:#1546a0;font-size:18px;border-bottom:1px solid #8b98aa;padding:0 8px}.at-sign{margin:32px auto 0;width:58%;text-align:center;border-top:1px solid #77869b;padding-top:5px;font-family:Arial,sans-serif;font-size:11px}.at-doc-actions{display:flex;justify-content:center;gap:12px;padding:4px 12px 13px}.at-btn{height:40px;border-radius:8px;padding:0 16px;border:1px solid #d2dfed;background:#fff;color:#17375f;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center}.at-btn:hover{filter:brightness(.98);box-shadow:0 3px 9px rgba(15,64,110,.12)}.at-footer{display:flex;align-items:center;gap:10px;padding:13px 16px;border-top:1px solid #e3edf5;background:#fff}.at-spacer{flex:1}.at-reject{border-color:#ffb8b8;background:#fff5f5;color:#e11d28}.at-primary{border-color:#087be7;background:#087be7;color:#fff;min-width:185px}.at-save{border-color:#9ac8f2;background:#eef7ff;color:#0872d4}.at-footer .at-btn{height:45px}
+.at-pin{position:fixed;z-index:10020;inset:0;background:rgba(16,40,74,.18);display:none;align-items:center;justify-content:center}.at-pin.open{display:flex}.at-pin-card{width:300px;background:#fff;border:1px solid #d9e4ef;border-radius:13px;box-shadow:0 18px 46px rgba(14,40,68,.24);padding:14px}.at-pin-top{display:flex;align-items:center;font-weight:900}.at-pin-x{margin-left:auto;border:0;background:#edf3f8;border-radius:7px;width:28px;height:28px;cursor:pointer}.at-pin-digits{display:flex;gap:9px;margin:14px 0}.at-pin-digits input{width:52px;height:48px;text-align:center;font-size:24px;border:1px solid #a9c8e9;border-radius:7px;outline:none}.at-pin-digits input:focus{border-color:#1688f5;box-shadow:0 0 0 2px rgba(22,136,245,.12)}.at-pin-actions{display:flex;justify-content:flex-end;gap:8px}.at-pin-msg{font-size:12px;color:#dc2626;min-height:16px;margin-top:-5px;margin-bottom:6px}.at-preview{position:fixed;z-index:10010;inset:0;background:rgba(4,20,40,.82);display:none;align-items:center;justify-content:center;padding:24px}.at-preview.open{display:flex}.at-preview .at-paper-wrap{width:min(720px,94vw);max-height:92vh;overflow:auto}.at-preview .at-paper{min-height:680px}.at-preview-x{position:fixed;right:24px;top:18px;width:44px;height:44px;border:0;border-radius:50%;background:#fff;font-size:28px;cursor:pointer}
+@media(max-width:1000px){.at-stats{grid-template-columns:1fr}.at-body{grid-template-columns:1fr}.at-paper{min-height:340px}.at-head h2{font-size:24px}}@media(max-width:700px){#panel-atestados{padding:10px!important}.at-list-top{align-items:flex-start;flex-direction:column}.at-tools{flex-direction:column}.at-status-filter{width:100%}.at-grid2,.at-grid3,.at-status-row{grid-template-columns:1fr}.at-body{padding:7px}.at-footer{flex-wrap:wrap}.at-spacer{display:none}.at-footer .at-btn{flex:1;min-width:140px}.at-doc-actions{flex-wrap:wrap}}
+</style>
+<style id="kn-atestados-reference-exact-v1">
+/* Clone visual da referência enviada em 13/09/2026 */
+body.kn-atestados-active{background:#f3f7fc!important;}
+body.kn-atestados-active .wrap{margin:0!important;padding:0!important;width:100%!important;max-width:none!important;background:#f3f7fc!important;}
+body.kn-atestados-active .tabs.no-print{display:none!important;}
+body.kn-atestados-active header{
+  width:100%!important; min-height:70px!important; margin:0!important; padding:13px 30px!important;
+  background:linear-gradient(90deg,#0b477d 0%,#0d5a91 58%,#0c73aa 100%)!important;
+  border:0!important; box-shadow:0 5px 16px rgba(13,71,123,.14)!important;
+  display:flex!important; align-items:center!important; justify-content:space-between!important;
+}
+body.kn-atestados-active header h1{font-size:25px!important;line-height:1.02!important;color:#fff!important;font-weight:900!important;letter-spacing:-.35px!important;}
+body.kn-atestados-active header h1::after{font-size:11px!important;margin-top:5px!important;color:#fff!important;opacity:.88!important;font-weight:600!important;}
+body.kn-atestados-active header .datebox{height:44px!important;padding:7px 10px!important;gap:8px!important;background:#063c69!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:10px!important;box-shadow:none!important;color:#fff!important;}
+body.kn-atestados-active header .datebox input[type=date]{height:30px!important;min-width:118px!important;background:#073b64!important;border:1px solid rgba(255,255,255,.10)!important;color:#fff!important;border-radius:7px!important;padding:2px 7px!important;}
+body.kn-atestados-active header #savedhint{font-size:9px!important;color:#fff!important;background:transparent!important;border:0!important;padding-left:22px!important;}
+body.kn-atestados-active #panel-atestados{padding:0!important;margin:0!important;background:#f3f7fc!important;min-height:calc(100vh - 70px)!important;}
+body.kn-atestados-active #panel-atestados .at-page{max-width:1205px!important;margin:0 auto!important;padding:34px 0 44px!important;}
+body.kn-atestados-active #panel-atestados .at-list-top{align-items:flex-end!important;margin-bottom:28px!important;}
+body.kn-atestados-active #panel-atestados .at-eyebrow{font-size:10px!important;line-height:1!important;letter-spacing:1.35px!important;color:#1e73d1!important;margin-bottom:10px!important;}
+body.kn-atestados-active #panel-atestados .at-list-top h2{font-size:31px!important;line-height:1!important;font-weight:500!important;color:#153b69!important;letter-spacing:-.3px!important;}
+body.kn-atestados-active #panel-atestados .at-list-top p{font-size:13px!important;line-height:1.4!important;margin-top:12px!important;color:#647b9b!important;}
+body.kn-atestados-active #panel-atestados .at-refresh{height:41px!important;padding:0 17px!important;border-radius:10px!important;border-color:#c7d7e8!important;font-size:12px!important;background:#fff!important;color:#176bc4!important;}
+body.kn-atestados-active #panel-atestados .at-stats{grid-template-columns:repeat(3,1fr)!important;gap:18px!important;margin-bottom:24px!important;}
+body.kn-atestados-active #panel-atestados .at-stat{min-height:106px!important;padding:20px 20px!important;border-radius:15px!important;background:#fff!important;border-color:#cfe0ef!important;gap:16px!important;}
+body.kn-atestados-active #panel-atestados .at-stat.wait{background:#fffdfb!important;border-color:#f0d0ad!important;}
+body.kn-atestados-active #panel-atestados .at-stat.ok{background:#fbfffd!important;border-color:#bfe2cf!important;}
+body.kn-atestados-active #panel-atestados .at-stat-ico{width:43px!important;height:43px!important;flex-basis:43px!important;border-radius:10px!important;background:#dfefff!important;color:#0878e4!important;font-size:21px!important;}
+body.kn-atestados-active #panel-atestados .at-stat.wait .at-stat-ico{background:#fff0df!important;color:#f59e0b!important;}
+body.kn-atestados-active #panel-atestados .at-stat.ok .at-stat-ico{background:#ddf5e8!important;color:#12a160!important;}
+body.kn-atestados-active #panel-atestados .at-stat small{font-size:11px!important;color:#516a8c!important;margin-bottom:4px!important;}
+body.kn-atestados-active #panel-atestados .at-stat b{font-size:27px!important;color:#14385f!important;}
+body.kn-atestados-active #panel-atestados .at-stat em{font-size:10px!important;margin-top:7px!important;color:#8a9ab4!important;}
+body.kn-atestados-active #panel-atestados .at-list-card{border-radius:16px!important;border:1px solid #d5e1ee!important;background:#fff!important;box-shadow:0 12px 28px rgba(28,56,91,.08)!important;overflow:hidden!important;}
+body.kn-atestados-active #panel-atestados .at-list-card-head{padding:22px 24px 10px!important;}
+body.kn-atestados-active #panel-atestados .at-list-card-head h3{font-size:17px!important;font-weight:600!important;color:#13395f!important;}
+body.kn-atestados-active #panel-atestados .at-list-card-head p{font-size:11px!important;margin-top:8px!important;color:#7f90a8!important;}
+body.kn-atestados-active #panel-atestados .at-count-chip{font-size:11px!important;padding:7px 10px!important;border-radius:6px!important;background:#f1f5f9!important;}
+body.kn-atestados-active #panel-atestados .at-tools{padding:8px 24px 18px!important;}
+body.kn-atestados-active #panel-atestados .at-searchbox{max-width:285px!important;}
+body.kn-atestados-active #panel-atestados .at-searchbox input,
+body.kn-atestados-active #panel-atestados .at-status-filter{height:36px!important;border-radius:7px!important;font-size:11px!important;border-color:#cfdae8!important;}
+body.kn-atestados-active #panel-atestados .at-status-filter{min-width:162px!important;}
+body.kn-atestados-active #panel-atestados .at-table th{height:42px!important;padding:0 24px!important;font-size:9px!important;letter-spacing:.6px!important;color:#8597b2!important;}
+body.kn-atestados-active #panel-atestados .at-table td{height:65px!important;padding:12px 24px!important;font-size:11px!important;color:#344e70!important;}
+body.kn-atestados-active #panel-atestados .at-avatar{width:29px!important;height:29px!important;border-radius:7px!important;font-size:9px!important;}
+body.kn-atestados-active #panel-atestados .at-person-name{font-size:11px!important;color:#123b69!important;}
+body.kn-atestados-active #panel-atestados .at-sub{font-size:9px!important;margin-top:4px!important;}
+body.kn-atestados-active #panel-atestados .at-status-pill{font-size:9px!important;padding:6px 10px!important;}
+body.kn-atestados-active #panel-atestados .at-open-row{width:34px!important;height:34px!important;font-size:16px!important;border-radius:10px 10px 10px 10px!important;transform:rotate(45deg)!important;}
+body.kn-atestados-active #panel-atestados .at-open-row{color:transparent!important;position:relative!important;}
+body.kn-atestados-active #panel-atestados .at-open-row::after{content:'↘';position:absolute;inset:0;display:grid;place-items:center;color:#6e91b6;transform:rotate(-45deg);font-size:15px;}
+@media(max-width:1250px){body.kn-atestados-active #panel-atestados .at-page{max-width:none!important;padding:28px 28px 38px!important;}}
+@media(max-width:900px){body.kn-atestados-active #panel-atestados .at-page{padding:22px 16px 30px!important;}body.kn-atestados-active #panel-atestados .at-stats{grid-template-columns:1fr!important;}}
+</style>
+<style id="kn-atestados-sidebar-restore-v1">
+/* Atestados: mantém o painel lateral original para navegação entre as abas. */
+body.kn-atestados-active .wrap{
+  width:auto!important;
+  max-width:none!important;
+  margin:0 0 0 238px!important;
+  padding:22px 26px 36px!important;
+  background:#f3f7fc!important;
+  box-sizing:border-box!important;
+}
+body.kn-atestados-active .tabs.no-print{
+  position:fixed!important;
+  z-index:1200!important;
+  left:0!important;top:0!important;bottom:0!important;
+  width:238px!important;height:100vh!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:6px!important;
+  padding:86px 14px 18px!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+  border-right:1px solid var(--kn-border)!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+  overflow:auto!important;
+}
+body.kn-atestados-active header{
+  width:auto!important;
+  margin:-22px -26px 18px!important;
+  padding:13px 30px!important;
+  min-height:70px!important;
+}
+body.kn-atestados-active #panel-atestados{
+  margin:0!important;
+  padding:0!important;
+  min-height:calc(100vh - 110px)!important;
+}
+body.kn-atestados-active #panel-atestados .at-page{
+  max-width:1320px!important;
+  margin:0 auto!important;
+  padding:18px 0 38px!important;
+}
+@media(max-width:900px){
+  body.kn-atestados-active .wrap{margin-left:0!important;padding:14px!important;}
+  body.kn-atestados-active .tabs.no-print{position:static!important;width:100%!important;height:auto!important;padding:12px!important;flex-direction:row!important;overflow-x:auto!important;}
+  body.kn-atestados-active header{margin:-14px -14px 14px!important;}
+}
+</style>
 </head>
 <body>
 <div id="global-scan-toast"></div>
@@ -4431,14 +4562,15 @@ button{
   </header>
 
   <div class="tabs no-print">
-    <button class="tab active" data-tab="scan">Bater presença</button>
-    <button class="tab" data-tab="sheet">Planilha</button>
-    <button class="tab" data-tab="qr">Códigos QR</button>
-    <button class="tab" data-tab="import">Importar folgas</button>
-    <button class="tab" data-tab="grupos">Grupos</button>
-    <button class="tab" data-tab="inativos">Inativos</button>
-    <button class="tab" data-tab="hc">Cards HC</button>
-    <button class="tab te-locked-tab" data-tab="trocas"><span class="te-tab-lock">🔒</span><span class="te-tab-label">Troca de escala</span></button>
+    <button class="tab active" data-tab="scan"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>Bater presença</button>
+    <button class="tab" data-tab="sheet"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Planilha</button>
+    <button class="tab" data-tab="qr"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>Códigos QR</button>
+    <button class="tab" data-tab="import"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Importar folgas</button>
+    <button class="tab" data-tab="grupos"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>Grupos</button>
+    <button class="tab" data-tab="inativos"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>Inativos</button>
+    <button class="tab" data-tab="hc"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg></span>Cards HC</button>
+    <button class="tab" data-tab="atestados"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>Atestados <span id="at-nav-badge" class="at-nav-badge">0</span></button>
+    <button class="tab te-locked-tab" data-tab="trocas"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span><span class="te-tab-label">Troca de escala</span><span class="te-tab-lock">🔒</span></button>
   </div>
   <div id="te-pin-pop" aria-hidden="true">
     <div class="te-pin-title" id="te-pin-title">Senha de 4 dígitos</div>
@@ -5088,6 +5220,46 @@ button{
     </p>
   </div>
 
+  <div id="panel-atestados" class="panel">
+    <div class="at-page">
+      <section class="at-list-view" id="at-list-view">
+        <div class="at-list-top">
+          <div><div class="at-eyebrow">Gestão de documentos</div><h2>Atestados</h2><p>Confira, organize e aprove os atestados enviados pelos colaboradores.</p></div>
+          <button type="button" class="at-refresh" id="at-refresh">↻ &nbsp; Atualizar lista</button>
+        </div>
+        <div class="at-stats">
+          <div class="at-stat"><div class="at-stat-ico">▤</div><div><small>Total de atestados</small><b id="at-stat-total">0</b><em>Documentos cadastrados</em></div></div>
+          <div class="at-stat wait"><div class="at-stat-ico">◷</div><div><small>Aguardando conferência</small><b id="at-stat-wait">0</b><em>Precisam de atenção</em></div></div>
+          <div class="at-stat ok"><div class="at-stat-ico">✓</div><div><small>Atestados aprovados</small><b id="at-stat-approved">0</b><em>Processados pela operação</em></div></div>
+        </div>
+        <div class="at-list-card">
+          <div class="at-list-card-head"><div><h3>Lista de atestados</h3><p>Selecione um documento para ver os detalhes.</p></div><span class="at-count-chip" id="at-list-count">0 registros</span></div>
+          <div class="at-tools"><div class="at-searchbox"><span>⌕</span><input type="search" id="at-search" placeholder="Buscar colaborador..."></div><select id="at-status-filter" class="at-status-filter"><option value="">Todos os status</option><option value="RECEBIDO">Recebido</option><option value="APROVADO">Aprovado</option><option value="RECUSADO">Recusado</option></select></div>
+          <div class="at-table-wrap"><table class="at-table"><thead><tr><th>COLABORADOR</th><th>DATA DA AUSÊNCIA</th><th>PERÍODO DO ATESTADO</th><th>ENVIO</th><th>STATUS</th><th></th></tr></thead><tbody id="at-list-body"></tbody></table></div>
+        </div>
+      </section>
+
+      <section class="at-detail-view" id="at-detail-view">
+        <div class="at-backline"><button type="button" class="at-back" id="at-back">← Voltar para a lista</button></div>
+        <div class="at-wrap"><div class="at-card">
+          <div class="at-head"><div class="at-title-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6M9 16h6"/></svg></div><div><h2>Detalhes do Atestado</h2><p>Confira as informações enviadas pelo colaborador. Os campos podem ser corrigidos antes da aprovação.</p></div><button type="button" class="at-close" id="at-close" title="Fechar">×</button></div>
+          <div class="at-body"><div class="at-left">
+            <div class="at-section"><div class="at-sec-title"><span class="at-blue">♙</span> Dados do colaborador</div><div class="at-grid2">
+              <div class="at-field"><label>Nome completo</label><input class="at-input" id="at-nome"></div><div class="at-field"><label>Matrícula</label><input class="at-input" id="at-matricula"></div>
+              <div class="at-field"><label>Escala atual</label><input class="at-input" id="at-escala"></div><div class="at-field"><label>Coordenador</label><input class="at-input" id="at-coordenador"></div>
+              <div class="at-field"><label>◷ &nbsp;Horário</label><input class="at-input" id="at-horario"></div><div class="at-field"><label>▣ &nbsp;Data do envio</label><input class="at-input" id="at-envio"></div>
+            </div></div>
+            <div class="at-section at-grid3"><div class="at-mini"><label>▣ &nbsp;Início do atestado</label><input class="at-input" id="at-inicio"></div><div class="at-mini"><label>▣ &nbsp;Término do atestado</label><input class="at-input" id="at-fim"></div><div class="at-mini"><label>▦ &nbsp;Quantidade de dias</label><input class="at-input" id="at-dias" inputmode="numeric"></div></div>
+            <div class="at-section"><div class="at-sec-title"><span class="at-blue">▣</span> Observação do colaborador</div><div class="at-obs"><textarea class="at-textarea" id="at-obs"></textarea></div><div class="at-status-row"><div><div class="at-sec-title" style="border:0;padding-left:0">● &nbsp;Status atual</div><span class="at-badge" id="at-status">RECEBIDO</span></div><div><div class="at-sec-title" style="border:0;padding-left:0">▣ &nbsp;Última atualização</div><div id="at-update" style="font-weight:700;padding-top:5px">—</div></div></div></div>
+          </div><div class="at-right"><div class="at-doc-card"><div class="at-doc-head"><b>▣ &nbsp; Documento enviado</b><span>Clique no documento para ampliar</span></div><div class="at-doc-area"><div class="at-paper-wrap" id="at-paper-wrap"><div class="at-paper" id="at-paper" role="button" tabindex="0" title="Clique para ampliar"><div class="at-clinic"><div><b>⚕ Clínica Vida Saúde</b><br><small>Rua das Flores, 123 - Centro<br>Duque de Caxias - RJ<br>Tel: (21) 1234-5678</small></div><div class="at-med-title">ATESTADO MÉDICO</div></div><p style="margin-top:38px">Atesto para os devidos fins que <span class="at-hand" id="at-doc-nome">—</span></p><p>necessita de afastamento de suas atividades laborais por um período de ____</p><p><span class="at-hand"><span id="at-doc-dias">—</span> dias</span>, a partir de <span class="at-hand" id="at-doc-data">—</span>, por motivo de saúde.</p><p style="margin-top:22px">Duque de Caxias, conforme documento enviado.</p><div class="at-sign"><span class="at-hand" style="border:0;font-size:24px">Carlos H. Souza</span><br>Dr. Carlos Henrique Souza<br>CRM 52.12345<br>Clínico Geral</div></div></div></div><div class="at-doc-actions"><button type="button" class="at-btn" id="at-ampliar">⌕ &nbsp;Ampliar</button><button type="button" class="at-btn" id="at-baixar">⇩ &nbsp;Baixar</button><button type="button" class="at-btn" id="at-girar">↻ &nbsp;Girar</button></div></div></div></div>
+          <div class="at-footer"><button type="button" class="at-btn at-reject" id="at-recusar">♲ &nbsp;Recusar atestado</button><div class="at-spacer"></div><button type="button" class="at-btn at-save" id="at-salvar">Salvar alterações</button><button type="button" class="at-btn" id="at-cancelar">Cancelar</button><button type="button" class="at-btn at-primary" id="at-aprovar">✓ &nbsp;Aprovar atestado</button></div>
+        </div></div>
+      </section>
+    </div>
+    <div class="at-pin" id="at-pin" aria-hidden="true"><div class="at-pin-card"><div class="at-pin-top">🔒 &nbsp;Senha para aprovar <button type="button" class="at-pin-x" id="at-pin-x">×</button></div><div class="at-pin-digits"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"></div><div class="at-pin-msg" id="at-pin-msg"></div><div class="at-pin-actions"><button type="button" class="at-btn" id="at-pin-cancel">Cancelar</button><button type="button" class="at-btn at-primary" id="at-pin-ok" style="min-width:105px;height:40px">Confirmar</button></div></div></div>
+    <div class="at-preview" id="at-preview"><button type="button" class="at-preview-x" id="at-preview-x">×</button><div class="at-paper-wrap" id="at-preview-holder"></div></div>
+  </div>
+  
   <div id="panel-trocas" class="panel">
     <div class="card te-page-card">
       <div class="te-page-head">
@@ -14875,5 +15047,379 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 
+<script id="kn-atestados-functional-js">
+(function(){
+var panel=document.getElementById('panel-atestados');if(!panel)return;var $=function(id){return document.getElementById(id)},rot=0,currentId=null;
+var KEY='kn_atestados_demo_v3';
+var seed=[
+ {id:'a1',nome:'Ana Carolina Souza',matricula:'KN-0142',coordenador:'Mariana Bernardes',escala:'SVC - G1 - 22H / 03H / 04H / 08H18',horario:'22:00 às 08:18',ausencia:'10/09/2026',inicio:'10/09/2026',fim:'12/09/2026',dias:'3',envio:'10/09/2026, 05:32',obs:'Repouso conforme orientação médica.',status:'RECEBIDO',update:'10/09/2026 05:32'},
+ {id:'a2',nome:'Bruno Oliveira Lima',matricula:'KN-0087',coordenador:'Jonathan Louvisi',escala:'SVC - C1 - 05H / 09H / 10H / 14H48',horario:'05:00 às 14:48',ausencia:'08/09/2026',inicio:'08/09/2026',fim:'09/09/2026',dias:'2',envio:'08/09/2026, 11:15',obs:'Afastamento por orientação médica.',status:'RECEBIDO',update:'08/09/2026 11:15'},
+ {id:'a3',nome:'Carla Mendes Rocha',matricula:'KN-0231',coordenador:'Aline Odom',escala:'SVC - G2 - 08H / 12H / 13H / 17H48',horario:'08:00 às 17:48',ausencia:'05/09/2026',inicio:'05/09/2026',fim:'09/09/2026',dias:'5',envio:'05/09/2026, 04:45',obs:'Repouso por cinco dias.',status:'APROVADO',update:'05/09/2026 09:20'}
+];
+function load(){try{var x=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(x)&&x.length)return x}catch(e){}return JSON.parse(JSON.stringify(seed))}
+var items=load();function persist(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
+function initials(n){return String(n||'').split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return x[0]}).join('').toUpperCase()}
+function now(){var d=new Date();return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function cls(s){return s==='APROVADO'?'aprovado':s==='RECUSADO'?'recusado':'recebido'}
+function label(s){return s==='APROVADO'?'Aprovado':s==='RECUSADO'?'Recusado':'Recebido'}
+function render(){var q=($('at-search').value||'').trim().toLowerCase(),f=$('at-status-filter').value;var list=items.filter(function(x){return(!q||x.nome.toLowerCase().includes(q)||String(x.matricula).toLowerCase().includes(q))&&(!f||x.status===f)});var waitCount=items.filter(function(x){return x.status==='RECEBIDO'}).length;$('at-list-count').textContent=list.length+' '+(list.length===1?'registro':'registros');$('at-stat-total').textContent=items.length;$('at-stat-wait').textContent=waitCount;$('at-stat-approved').textContent=items.filter(function(x){return x.status==='APROVADO'}).length;var nb=$('at-nav-badge');if(nb){nb.textContent=waitCount;nb.dataset.count=String(waitCount)}var tb=$('at-list-body');if(!list.length){tb.innerHTML='<tr><td colspan="6" class="at-empty">Nenhum atestado encontrado.</td></tr>';return}tb.innerHTML=list.map(function(x){return '<tr><td><div class="at-person"><span class="at-avatar">'+esc(initials(x.nome))+'</span><div><button class="at-person-name" data-at-open="'+esc(x.id)+'">'+esc(x.nome)+'</button><span class="at-sub">Matrícula '+esc(x.matricula)+'</span></div></div></td><td>'+esc(x.ausencia)+'</td><td>'+esc(x.inicio)+' &nbsp;até&nbsp; '+esc(x.fim)+'<span class="at-sub">'+esc(x.dias)+' dias</span></td><td>'+esc(x.envio)+'</td><td><span class="at-status-pill '+cls(x.status)+'"><i class="at-dot"></i>'+label(x.status)+'</span></td><td><button class="at-open-row" data-at-open="'+esc(x.id)+'" title="Abrir">→</button></td></tr>'}).join('')}
+function syncDoc(){var x=items.find(function(i){return i.id===currentId});if(!x)return;$('at-doc-nome').textContent=$('at-nome').value||x.nome;$('at-doc-dias').textContent=$('at-dias').value||x.dias;$('at-doc-data').textContent=$('at-inicio').value||x.inicio}
+function setStatusUI(s){var b=$('at-status');b.textContent=s;b.className='at-badge'+(s==='APROVADO'?' approved':s==='RECUSADO'?' rejected':'');$('at-aprovar').disabled=s==='APROVADO';$('at-aprovar').textContent=s==='APROVADO'?'✓  Atestado aprovado':'✓  Aprovar atestado'}
+function openDetail(id){var x=items.find(function(i){return i.id===id});if(!x)return;currentId=id;['nome','matricula','escala','coordenador','horario','envio','inicio','fim','dias','obs'].forEach(function(k){$('at-'+k).value=x[k]||''});$('at-update').textContent=x.update||x.envio||'—';setStatusUI(x.status);syncDoc();$('at-list-view').style.display='block';document.body.classList.add('at-modal-open');$('at-detail-view').classList.add('open');rot=0;$('at-paper-wrap').style.transform='rotate(0deg)'}
+function back(){closePin();$('at-preview').classList.remove('open');$('at-detail-view').classList.remove('open');document.body.classList.remove('at-modal-open');$('at-list-view').style.display='block';currentId=null;render()}
+function save(showMsg){var x=items.find(function(i){return i.id===currentId});if(!x)return;['nome','matricula','escala','coordenador','horario','envio','inicio','fim','dias','obs'].forEach(function(k){x[k]=$('at-'+k).value.trim()});x.ausencia=x.inicio;x.update=now();$('at-update').textContent=x.update;persist();syncDoc();render();if(showMsg)alert('Alterações do atestado salvas.')}
+function closePin(){$('at-pin').classList.remove('open');$('at-pin').setAttribute('aria-hidden','true');$('at-pin-msg').textContent='';panel.querySelectorAll('.at-pin-digits input').forEach(function(i){i.value=''})}
+function openPin(){save(false);$('at-pin').classList.add('open');$('at-pin').setAttribute('aria-hidden','false');setTimeout(function(){panel.querySelector('.at-pin-digits input').focus()},40)}
+$('at-list-body').addEventListener('click',function(e){var b=e.target.closest('[data-at-open]');if(b)openDetail(b.getAttribute('data-at-open'))});$('at-search').addEventListener('input',render);$('at-status-filter').addEventListener('change',render);$('at-refresh').onclick=render;
+$('at-back').onclick=back;$('at-close').onclick=back;$('at-cancelar').onclick=back;$('at-salvar').onclick=function(){save(true)};$('at-aprovar').onclick=openPin;$('at-pin-x').onclick=closePin;$('at-pin-cancel').onclick=closePin;
+$('at-pin-ok').onclick=function(){var code=Array.from(panel.querySelectorAll('.at-pin-digits input')).map(function(i){return i.value}).join('');if(!/^\d{4}$/.test(code)){$('at-pin-msg').textContent='Digite os 4 números da senha.';return}var x=items.find(function(i){return i.id===currentId});if(x){save(false);x.status='APROVADO';x.update=now();persist();$('at-update').textContent=x.update;setStatusUI(x.status)}closePin();render()};
+var pins=Array.from(panel.querySelectorAll('.at-pin-digits input'));pins.forEach(function(inp,idx){inp.addEventListener('input',function(){inp.value=inp.value.replace(/\D/g,'').slice(0,1);if(inp.value&&pins[idx+1])pins[idx+1].focus()});inp.addEventListener('keydown',function(e){if(e.key==='Backspace'&&!inp.value&&pins[idx-1])pins[idx-1].focus()})});
+$('at-recusar').onclick=function(){if(!currentId)return;if(confirm('Deseja realmente recusar este atestado?')){save(false);var x=items.find(function(i){return i.id===currentId});x.status='RECUSADO';x.update=now();persist();$('at-update').textContent=x.update;setStatusUI(x.status);render()}};
+['at-nome','at-inicio','at-dias'].forEach(function(id){$(id).addEventListener('input',syncDoc)});
+function openPreview(){var p=$('at-preview'),holder=$('at-preview-holder');holder.innerHTML='';var clone=$('at-paper').cloneNode(true);clone.removeAttribute('id');holder.appendChild(clone);holder.style.transform='rotate('+rot+'deg)';p.classList.add('open')}
+$('at-ampliar').onclick=openPreview;$('at-paper').onclick=openPreview;$('at-paper').onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openPreview()}};$('at-preview-x').onclick=function(){$('at-preview').classList.remove('open')};$('at-girar').onclick=function(){rot=(rot+90)%360;$('at-paper-wrap').style.transform='rotate('+rot+'deg)'};
+$('at-baixar').onclick=function(){var html='<!doctype html><meta charset="utf-8"><title>Atestado</title><style>body{font-family:Arial;padding:40px;color:#17375f}.doc{max-width:700px;margin:auto;border:1px solid #ccc;padding:40px}h1{text-align:right}p{line-height:1.8}</style><div class="doc">'+$('at-paper').innerHTML+'</div>';var blob=new Blob([html],{type:'text/html;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='atestado_'+($('at-matricula').value||'colaborador')+'.html';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},100)};
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.tab[data-tab="atestados"]');if(t){setTimeout(function(){closePin();$('at-preview').classList.remove('open');$('at-detail-view').classList.remove('open');document.body.classList.remove('at-modal-open');$('at-list-view').style.display='block';currentId=null;render();},0)}},true);
+window.knAbrirAtestado=function(d){d=d||{};var id='ext_'+Date.now();var x={id:id,nome:d.nome||'Colaborador',matricula:d.matricula||'',coordenador:d.coordenador||'',escala:d.escala||'',horario:d.horario||'',ausencia:d.inicio||'',inicio:d.inicio||'',fim:d.fim||'',dias:d.dias||'',envio:d.envio||now(),obs:d.obs||'',status:d.status||'RECEBIDO',update:d.envio||now()};items.unshift(x);persist();var b=document.querySelector('.tab[data-tab="atestados"]');if(b)b.click();render();openDetail(id)};
+render();
+})();
+</script>
+<style id="kn-atestados-hide-global-cards-css">
+/* Na aba Atestados, exibe somente conteúdo referente a atestados. */
+body.kn-atestados-active #stats-date-label,
+body.kn-atestados-active #main-stat-grid,
+body.kn-atestados-active #horario-pend-label,
+body.kn-atestados-active .horario-import-row{
+  display:none !important;
+}
+body.kn-atestados-active #panel-atestados{
+  margin-top:0 !important;
+}
+</style>
+<script id="kn-atestados-hide-global-cards-js">
+(function(){
+  function syncAtestadosMode(){
+    var active=document.querySelector('.tab.active');
+    document.body.classList.toggle('kn-atestados-active', !!(active && active.dataset.tab==='atestados'));
+  }
+  document.addEventListener('click', function(ev){
+    var tab=ev.target.closest && ev.target.closest('.tab');
+    if(tab) setTimeout(syncAtestadosMode,0);
+  }, true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',syncAtestadosMode);
+  else syncAtestadosMode();
+})();
+</script>
+<style id="kn-atestados-target-exact-v2">
+/* Modo Atestados: reproduz o layout de referência sem os cards gerais e sem a barra lateral. */
+body.kn-atestados-exact{background:#f4f8fc!important;overflow-x:hidden!important;}
+body.kn-atestados-exact .wrap{
+  margin:0!important;
+  padding:0!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:100vh!important;
+  background:#f4f8fc!important;
+}
+body.kn-atestados-exact .tabs.no-print,
+body.kn-atestados-exact #stats-date-label,
+body.kn-atestados-exact #main-stat-grid,
+body.kn-atestados-exact #horario-pend-label,
+body.kn-atestados-exact .horario-import-row{
+  display:none!important;
+}
+body.kn-atestados-exact header{
+  height:70px!important;
+  min-height:70px!important;
+  margin:0!important;
+  padding:12px 29px!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  flex-wrap:nowrap!important;
+  background:linear-gradient(90deg,#114879 0%,#0f6da5 100%)!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+body.kn-atestados-exact header h1{
+  margin:0!important;
+  color:#fff!important;
+  font-size:23px!important;
+  line-height:1.02!important;
+  font-weight:800!important;
+  letter-spacing:-.25px!important;
+}
+body.kn-atestados-exact header h1::after{
+  content:"Dashboard de presença"!important;
+  display:block!important;
+  margin-top:5px!important;
+  color:#fff!important;
+  opacity:.95!important;
+  font-size:11px!important;
+  line-height:1!important;
+  font-weight:600!important;
+}
+body.kn-atestados-exact header .datebox{
+  width:auto!important;
+  min-height:44px!important;
+  padding:0 11px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  flex-wrap:nowrap!important;
+  border-radius:10px!important;
+  background:#063968!important;
+  color:#fff!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  box-shadow:none!important;
+}
+body.kn-atestados-exact header .datebox input[type=date]{
+  width:126px!important;
+  height:31px!important;
+  margin:0!important;
+  padding:0 8px!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  border-radius:7px!important;
+  background:#083b6c!important;
+  color:#fff!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  color-scheme:dark!important;
+}
+body.kn-atestados-exact header .datebox #savedhint{
+  margin:0!important;
+  padding:8px 12px 8px 28px!important;
+  min-width:205px!important;
+  border:0!important;
+  border-radius:7px!important;
+  position:relative!important;
+  background:#063968!important;
+  color:#fff!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+}
+body.kn-atestados-exact header .datebox #savedhint::before{
+  content:""!important;
+  position:absolute!important;
+  width:10px!important;height:10px!important;border-radius:50%!important;
+  left:10px!important;top:50%!important;transform:translateY(-50%)!important;
+  background:#18c67a!important;
+  box-shadow:0 0 0 4px rgba(24,198,122,.10)!important;
+}
+body.kn-atestados-exact #panel-atestados{
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  min-height:calc(100vh - 70px)!important;
+  background:#f4f8fc!important;
+}
+body.kn-atestados-exact #panel-atestados .at-page{
+  width:100%!important;
+  max-width:1245px!important;
+  margin:0 auto!important;
+  padding:48px 0 46px!important;
+  box-sizing:border-box!important;
+}
+body.kn-atestados-exact #panel-atestados .at-list-top{
+  margin-bottom:28px!important;
+  align-items:flex-end!important;
+}
+body.kn-atestados-exact #panel-atestados .at-eyebrow{
+  margin-bottom:11px!important;
+  color:#1974d2!important;
+  font-size:10px!important;
+  line-height:1!important;
+  letter-spacing:1.35px!important;
+  font-weight:900!important;
+}
+body.kn-atestados-exact #panel-atestados .at-list-top h2{
+  margin:0!important;
+  color:#163d6b!important;
+  font-size:30px!important;
+  line-height:1!important;
+  font-weight:500!important;
+}
+body.kn-atestados-exact #panel-atestados .at-list-top p{
+  margin:12px 0 0!important;
+  color:#647b9c!important;
+  font-size:13px!important;
+  line-height:1.35!important;
+}
+body.kn-atestados-exact #panel-atestados .at-refresh{
+  height:41px!important;
+  padding:0 17px!important;
+  border:1px solid #c9d8e8!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#176cc5!important;
+  font-size:12px!important;
+  font-weight:800!important;
+}
+body.kn-atestados-exact #panel-atestados .at-stats{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:18px!important;
+  margin-bottom:24px!important;
+}
+body.kn-atestados-exact #panel-atestados .at-stat{
+  min-height:106px!important;
+  padding:20px!important;
+  border-radius:15px!important;
+  gap:16px!important;
+  box-shadow:none!important;
+}
+body.kn-atestados-exact #panel-atestados .at-stat-ico{
+  width:43px!important;height:43px!important;flex:0 0 43px!important;
+  border-radius:10px!important;font-size:20px!important;
+}
+body.kn-atestados-exact #panel-atestados .at-stat small{font-size:11px!important;margin-bottom:4px!important;color:#526b8c!important;}
+body.kn-atestados-exact #panel-atestados .at-stat b{font-size:27px!important;line-height:1!important;color:#173c68!important;}
+body.kn-atestados-exact #panel-atestados .at-stat em{font-size:10px!important;margin-top:7px!important;color:#8c9ab2!important;}
+body.kn-atestados-exact #panel-atestados .at-list-card{
+  border:1px solid #d6e2ef!important;
+  border-radius:16px!important;
+  box-shadow:0 12px 28px rgba(32,60,94,.08)!important;
+  background:#fff!important;
+}
+body.kn-atestados-exact #panel-atestados .at-list-card-head{padding:22px 24px 10px!important;}
+body.kn-atestados-exact #panel-atestados .at-list-card-head h3{font-size:17px!important;font-weight:600!important;color:#153b66!important;}
+body.kn-atestados-exact #panel-atestados .at-list-card-head p{font-size:11px!important;color:#7f90a9!important;}
+body.kn-atestados-exact #panel-atestados .at-tools{padding:8px 24px 18px!important;}
+body.kn-atestados-exact #panel-atestados .at-searchbox{max-width:285px!important;}
+body.kn-atestados-exact #panel-atestados .at-searchbox input,
+body.kn-atestados-exact #panel-atestados .at-status-filter{
+  height:36px!important;
+  border-radius:7px!important;
+  font-size:11px!important;
+}
+body.kn-atestados-exact #panel-atestados .at-status-filter{min-width:162px!important;}
+body.kn-atestados-exact #panel-atestados .at-table th{
+  height:42px!important;
+  padding:0 24px!important;
+  font-size:9.5px!important;
+  letter-spacing:.55px!important;
+  background:#fff!important;
+}
+body.kn-atestados-exact #panel-atestados .at-table td{
+  padding:13px 24px!important;
+  font-size:11px!important;
+  background:#fff!important;
+}
+body.kn-atestados-exact #panel-atestados .at-avatar{width:29px!important;height:29px!important;border-radius:7px!important;font-size:9px!important;}
+body.kn-atestados-exact #panel-atestados .at-person-name{font-size:11px!important;}
+body.kn-atestados-exact #panel-atestados .at-sub{font-size:9px!important;margin-top:4px!important;}
+body.kn-atestados-exact #panel-atestados .at-status-pill{padding:6px 10px!important;font-size:9px!important;}
+body.kn-atestados-exact #panel-atestados .at-open-row{
+  width:34px!important;height:34px!important;border-radius:8px!important;font-size:0!important;
+  position:relative!important;
+}
+body.kn-atestados-exact #panel-atestados .at-open-row::after{
+  content:'↘'!important;position:absolute!important;inset:0!important;display:grid!important;place-items:center!important;
+  color:#6e91b6!important;transform:rotate(-45deg)!important;font-size:15px!important;
+}
+@media(max-width:1280px){body.kn-atestados-exact #panel-atestados .at-page{padding:36px 28px 40px!important;max-width:none!important;}}
+</style>
+<script id="kn-atestados-target-exact-js-v2">
+(function(){
+  var panel=document.getElementById('panel-atestados');
+  function sync(){
+    var on=!!(panel && panel.classList.contains('active'));
+    document.body.classList.toggle('kn-atestados-exact',on);
+    document.body.classList.toggle('kn-atestados-active',on);
+  }
+  function watch(){
+    if(panel && window.MutationObserver){
+      new MutationObserver(sync).observe(panel,{attributes:true,attributeFilter:['class']});
+    }
+    document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){setTimeout(sync,10)},true)});
+    sync();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
+})();
+</script>
+
+<style id="kn-atestados-user-fixes-v3">
+/* Títulos da tabela em azul-bebê, conforme solicitado */
+body.kn-atestados-exact #panel-atestados .at-table th{
+  background:#eaf4ff!important;
+  color:#6688ad!important;
+  border-bottom:1px solid #d6e6f5!important;
+}
+/* Pequenas faixas/títulos internos dos detalhes no mesmo azul-bebê */
+#panel-atestados .at-sec-title{background:#eef7ff!important;color:#163d6b!important;}
+#panel-atestados .at-grid3{background:#f3f9ff!important;}
+
+/* Detalhes do atestado abrem como janela sobre a lista, sem mover a tela */
+body.at-modal-open{overflow:hidden!important;}
+#panel-atestados .at-detail-view{
+  display:none!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:100000!important;
+  background:rgba(16,40,74,.34)!important;
+  padding:22px!important;
+  overflow:auto!important;
+  overscroll-behavior:contain!important;
+}
+#panel-atestados .at-detail-view.open{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+#panel-atestados .at-detail-view .at-backline{display:none!important;}
+#panel-atestados .at-detail-view .at-wrap{
+  width:min(1220px,calc(100vw - 44px))!important;
+  max-height:calc(100vh - 44px)!important;
+  margin:auto!important;
+}
+#panel-atestados .at-detail-view .at-card{
+  max-height:calc(100vh - 44px)!important;
+  overflow:auto!important;
+  box-shadow:0 24px 70px rgba(15,42,74,.28)!important;
+}
+@media(max-width:900px){
+  #panel-atestados .at-detail-view{padding:10px!important;}
+  #panel-atestados .at-detail-view .at-wrap{width:calc(100vw - 20px)!important;max-height:calc(100vh - 20px)!important;}
+  #panel-atestados .at-detail-view .at-card{max-height:calc(100vh - 20px)!important;}
+}
+</style>
+<style id="kn-atestados-sidebar-force-v4">
+/* O modo "kn-atestados-exact" (mais antigo) volta a esconder o painel lateral
+   e zera a margem do .wrap depois do CSS que restaura o menu. Este bloco vem
+   por último no documento para garantir que o painel lateral sempre apareça
+   na aba Atestados, independente de qual dos dois modos estiver ativo. */
+body.kn-atestados-active .tabs.no-print{
+  display:flex!important;
+  position:fixed!important;
+  z-index:1200!important;
+  left:0!important;top:0!important;bottom:0!important;
+  width:238px!important;height:100vh!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:6px!important;
+  padding:86px 14px 18px!important;
+  box-sizing:border-box!important;
+  background:#fff!important;
+  border-right:1px solid var(--kn-border)!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+  overflow:auto!important;
+}
+body.kn-atestados-active .wrap{
+  width:auto!important;
+  max-width:none!important;
+  margin:0 0 0 238px!important;
+  padding:22px 26px 36px!important;
+  box-sizing:border-box!important;
+}
+@media(max-width:900px){
+  body.kn-atestados-active .tabs.no-print{position:static!important;width:100%!important;height:auto!important;padding:12px!important;flex-direction:row!important;overflow-x:auto!important;}
+  body.kn-atestados-active .wrap{margin-left:0!important;padding:14px!important;}
+}
+</style>
 </body>
 </html>
