@@ -7318,7 +7318,12 @@ function showGlobalScanToast(ok, msg){
       return;
     }
 
-    if(ev.key.length === 1){
+    // Em alguns teclados (principalmente virtuais, de tablet/celular),
+    // o evento de tecla chega sem "key" preenchido — isso quebrava esse
+    // listener global toda vez que isso acontecia digitando em QUALQUER
+    // campo da página (Grupos, Planilha, busca etc.), com um erro no
+    // console a cada tecla nessa condição.
+    if(ev.key && ev.key.length === 1){
       buffer = (gap < FAST_GAP_MS) ? (buffer + ev.key) : ev.key;
     }
   });
@@ -13441,19 +13446,35 @@ window.logActivity = logActivity;
       });
       // Salva a linha sozinho quando o foco sai dela de vez (Tab, clicar em
       // outra linha, trocar de aba) — sem precisar lembrar de clicar em
-      // "Salvar" toda hora. Linha nova (ainda sem Groot ID salvo) fica de
-      // fora — essa continua exigindo o botão, porque o Groot ID é obrigatório.
+      // "Salvar" toda hora. Antes, a linha NOVA (colaborador sendo cadastrado)
+      // ficava de fora dessa regra — só salvava se a pessoa lembrasse de
+      // clicar no botão "Salvar". Na prática, muita gente preenchia Groot ID
+      // e Nome, trocava de aba pra conferir, e a linha nunca tinha sido
+      // realmente salva — sumia e não aparecia na Planilha nem em lugar
+      // nenhum, mesmo parecendo "salva" (os dados digitados continuavam
+      // visíveis na tela até a tabela ser redesenhada). Agora a linha nova
+      // também salva sozinha ao perder o foco, contanto que já tenha pelo
+      // menos Groot ID e Nome preenchidos (os únicos campos obrigatórios).
       body.addEventListener('focusout', function(ev){
         var field=ev.target.closest && ev.target.closest('[data-field]');
         if(!field) return;
         var tr=field.closest('tr[data-db-index]');
-        if(!tr || tr.classList.contains('groups-db-new')) return;
+        if(!tr) return;
+        var isNewRow = tr.classList.contains('groups-db-new');
         var idx=parseInt(tr.dataset.dbIndex,10);
-        if(isNaN(idx) || idx<0) return;
+        if(!isNewRow && (isNaN(idx) || idx<0)) return;
         setTimeout(function(){
           if(!document.body.contains(tr)) return; // linha já foi removida/re-renderizada nesse meio-tempo
           var activeNow=document.activeElement;
           if(activeNow && tr.contains(activeNow)) return; // ainda editando a mesma linha
+          if(isNewRow){
+            var grootField=tr.querySelector('[data-field="grootId"]');
+            var nomeField=tr.querySelector('[data-field="nome"]');
+            // Ainda faltam os campos obrigatórios — não tenta salvar (e não
+            // fica mostrando erro) enquanto a pessoa ainda está preenchendo
+            // a linha nova campo por campo.
+            if(!grootField || !nomeField || !grootField.value.trim() || !nomeField.value.trim()) return;
+          }
           saveRow(tr);
         }, 0);
       });
