@@ -6147,8 +6147,14 @@ var KN_OBSOLETE_IDS_20260906 = {
   "2613457":true
 };
 function knIsAllowedOfficialActive(e){
+  // Antes, isso só liberava quem já estava na lista fixa de 367/369 pessoas
+  // cadastrada em 12/09/2026 — o que apagava, a cada recarregamento ou
+  // sincronização, qualquer colaborador novo adicionado depois dessa data
+  // (o ID dele nunca ia estar naquela lista fixa). Agora só bloqueia mesmo
+  // os poucos IDs antigos e duplicados conhecidos (KN_OBSOLETE_IDS_20260906);
+  // qualquer colaborador novo passa normalmente.
   var id=String((e&&e.id)||'');
-  return !!KN_OFFICIAL_ACTIVE_IDS_369[id] && !KN_OBSOLETE_IDS_20260906[id];
+  return !KN_OBSOLETE_IDS_20260906[id];
 }
 function knRemoveObsoleteFromActive(){
   var before=(ALL||[]).length;
