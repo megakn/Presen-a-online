@@ -5329,6 +5329,10 @@ function initSupabase(){
   }
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   sbReady = true;
+  // Expõe o cliente já conectado em window.sb — a aba Atestados (script
+  // separado, mais abaixo no arquivo) só enxerga o Supabase por aqui; sem
+  // essa linha ela nunca via a conexão, mesmo com tudo certo no banco.
+  window.sb = sb;
 }
 safeInit('conexão com Supabase', initSupabase);
 
@@ -15160,8 +15164,8 @@ function marcarDiasAtestadoNaPlanilha(x){
     if(typeof window.renderSheet==='function')window.renderSheet();
   }catch(e){console.error('[KN Atestados] Falha ao marcar dias na Planilha:',e)}
 }
-async function save(showMsg){var x=items.find(function(i){return i.id===currentId});if(!x)return false;var payload=dbPayload(x),res=await window.sb.from(TABLE).update(payload).eq('id',x.id);if(res.error){console.error(res.error);if(showMsg)alert('Não consegui salvar as alterações no Supabase.\n\n'+(res.error.message||''));return false}x.inicio=$('at-inicio').value.trim();x.fim=$('at-fim').value.trim();x.dias=$('at-dias').value.trim();x.obs=$('at-obs').value.trim();x.update=now();$('at-update').textContent=x.update;render();if(showMsg)alert('Alterações do atestado salvas.');return true}
-async function updateStatus(status){var x=items.find(function(i){return i.id===currentId});if(!x)return false;var res=await window.sb.from(TABLE).update({status:statusParaBanco(status)}).eq('id',x.id);if(res.error){console.error(res.error);alert('Não consegui atualizar o status no Supabase.\n\n'+(res.error.message||''));return false}x.status=status;x.update=now();$('at-update').textContent=x.update;setStatusUI(status);if(status==='APROVADO')marcarDiasAtestadoNaPlanilha(x);render();return true}
+async function save(showMsg){var x=items.find(function(i){return i.id===currentId});if(!x)return false;try{var payload=dbPayload(x),res=await window.sb.from(TABLE).update(payload).eq('id',x.id);if(res.error){console.error(res.error);if(showMsg)alert('Não consegui salvar as alterações no Supabase.\n\n'+(res.error.message||''));return false}x.inicio=$('at-inicio').value.trim();x.fim=$('at-fim').value.trim();x.dias=$('at-dias').value.trim();x.obs=$('at-obs').value.trim();x.update=now();$('at-update').textContent=x.update;render();if(showMsg)alert('Alterações do atestado salvas.');return true}catch(e){console.error('[KN Atestados] Falha ao salvar:',e);if(showMsg)alert('Não consegui salvar as alterações no Supabase.\n\n'+(e.message||e));return false}}
+async function updateStatus(status){var x=items.find(function(i){return i.id===currentId});if(!x)return false;try{var res=await window.sb.from(TABLE).update({status:statusParaBanco(status)}).eq('id',x.id);if(res.error){console.error(res.error);alert('Não consegui atualizar o status no Supabase.\n\n'+(res.error.message||''));return false}x.status=status;x.update=now();$('at-update').textContent=x.update;setStatusUI(status);if(status==='APROVADO')marcarDiasAtestadoNaPlanilha(x);render();return true}catch(e){console.error('[KN Atestados] Falha ao atualizar status:',e);alert('Não consegui atualizar o status no Supabase.\n\n'+(e.message||e));return false}}
 function openPin(){save(false);$('at-pin').classList.add('open');$('at-pin').setAttribute('aria-hidden','false');setTimeout(function(){panel.querySelector('.at-pin-digits input').focus()},40)}
 $('at-list-body').addEventListener('click',function(e){var b=e.target.closest('[data-at-open]');if(b)openDetail(b.getAttribute('data-at-open'))});$('at-search').addEventListener('input',render);$('at-status-filter').addEventListener('change',render);$('at-refresh').onclick=function(){loadReal(true)};
 $('at-back').onclick=back;$('at-close').onclick=back;$('at-cancelar').onclick=back;$('at-salvar').onclick=function(){save(true)};$('at-aprovar').onclick=openPin;$('at-pin-x').onclick=closePin;$('at-pin-cancel').onclick=closePin;
