@@ -1805,7 +1805,7 @@ button.primary{background:#3f82c4!important;border-color:#3f82c4!important;box-s
 }
 .sheet-scroll{overflow:auto!important}
 .sheet-table{font-size:10.5px!important;border-collapse:separate!important;border-spacing:0!important}
-.sheet-table thead th{position:sticky!important;top:0!important;z-index:4;background:#f7f9fc!important;color:#344054!important;border-bottom:1px solid var(--kn-border)!important;padding-top:9px!important;padding-bottom:9px!important}
+.sheet-table thead th{position:sticky!important;top:0!important;z-index:4;background:#cfe7fb!important;color:#1c3d5c!important;border-bottom:1px solid var(--kn-border)!important;padding-top:9px!important;padding-bottom:9px!important}
 .sheet-table tbody td{border-bottom:1px solid #edf1f5!important;background:#fff!important}
 .sheet-table tbody tr:hover td{background:#f8fbff!important}
 /* Outros painéis: cartão branco amplo como dashboard */
@@ -2162,7 +2162,7 @@ header h1::after{font-size:11px!important;margin-top:3px!important}
 #panel-sheet .sheet-table th:nth-child(9),#panel-sheet .sheet-table td:nth-child(9){width:var(--kn-c9)!important;min-width:var(--kn-c9)!important;max-width:var(--kn-c9)!important}
 #panel-sheet .col-nome{left:var(--kn-c1)!important}
 #panel-sheet .sheet-table thead th .kn-col-resizer{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:30;touch-action:none;user-select:none}
-#panel-sheet .sheet-table thead th .kn-col-resizer:after{content:"";position:absolute;right:3px;top:18%;width:1px;height:64%;background:rgba(100,116,139,.45)}
+#panel-sheet .sheet-table thead th .kn-col-resizer:after{content:"";position:absolute;right:3px;top:18%;width:1px;height:64%;background:transparent}
 #panel-sheet .sheet-table thead th:hover .kn-col-resizer:after,#panel-sheet .sheet-table thead th.kn-resizing .kn-col-resizer:after{width:2px;background:#2563eb}
 body.kn-column-resizing,body.kn-column-resizing *{cursor:col-resize!important;user-select:none!important}
 </style>
@@ -15524,6 +15524,22 @@ body.kn-atestados-active .wrap{
   body.kn-atestados-active .tabs.no-print{position:static!important;width:100%!important;height:auto!important;padding:12px!important;flex-direction:row!important;overflow-x:auto!important;}
   body.kn-atestados-active .wrap{margin-left:0!important;padding:14px!important;}
 }
+</style>
+<style id="kn-import-compact-v1">
+/* O "Importar Excel/CSV" usava o botão nativo do navegador (grande, cru,
+   com "Nenhum arquivo escolhido" do lado) — deixa mais discreto, no mesmo
+   estilo dos outros botões da barra (ex.: "Exportar CSV"). */
+.import-quick{display:inline-flex;align-items:center;gap:8px}
+.import-quick-label{font-size:12px;font-weight:700;color:#48566b;white-space:nowrap}
+#import-file{font-size:12px;color:#8891a0;max-width:150px}
+#import-file::file-selector-button{
+  font-family:inherit;font-size:13px;font-weight:600;
+  padding:8px 14px;border-radius:4px;
+  border:1px solid var(--border-strong);
+  background:#fff;color:var(--text);cursor:pointer;margin-right:8px;
+}
+#import-file::file-selector-button:hover{background:#f4f6f4}
+#import-file-status{font-size:11px}
 </style>
 </body>
 </html>
