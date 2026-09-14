@@ -15160,7 +15160,7 @@ function marcarDiasAtestadoNaPlanilha(x){
     if(!emp||!emp.id){console.warn('[KN Atestados] Colaborador não encontrado na Planilha — dias do atestado não foram marcados automaticamente.');return}
     var dias=diasEntreISO(toISO($('at-inicio').value),toISO($('at-fim').value));
     if(!dias.length)return;
-    dias.forEach(function(dt){if(typeof window.applyDayStatus==='function')window.applyDayStatus(emp.id,dt,'AT')});
+    dias.forEach(function(dt){if(typeof window.applyDayStatus==='function')window.applyDayStatus(emp.id,dt,'ATEST')});
     if(typeof window.renderSheet==='function')window.renderSheet();
   }catch(e){console.error('[KN Atestados] Falha ao marcar dias na Planilha:',e)}
 }
