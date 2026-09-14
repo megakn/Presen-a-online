@@ -7634,12 +7634,15 @@ async function openWhatsApp(emp){
     // informar os dias — em vez de misturar tudo num parágrafo só.
     var msg = 'Olá, '+firstName(emp.nome)+', tudo bem? Aqui é da operação KN.\n'+
       'Notamos a sua ausência no expediente de hoje e gostaríamos de saber se está tudo bem com você.\n\n'+
-      'Se tiver atestado ou comprovante médico, envie por aqui:\n'+
+      'Por favor, assim que puder, entre em contato conosco para nos dar um retorno. Caso tenha ocorrido algum imprevisto e você possua atestado ou comprovante médico, envie pelo link abaixo e informe a quantidade de dias de afastamento:\n'+
       link+'\n\n'+
-      'Depois de enviar, nos informe quantos dias de afastamento constam no atestado.\n\n'+
-      'Se não tiver atestado, por favor nos dê um retorno por aqui mesmo.\n'+
       'Ficamos no aguardo!';
-    window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(phone)+'&text='+encodeURIComponent(msg)+'&type=phone_number&app_absent=0', '_blank', 'noopener,noreferrer');
+    // Usa um nome fixo de aba (em vez de '_blank') pra reaproveitar a mesma
+    // aba do WhatsApp Web a cada envio, em vez de abrir uma aba nova cada
+    // vez que clica em mandar mensagem pra outro colaborador. Não pode usar
+    // 'noopener'/'noreferrer' aqui — eles fazem o navegador sempre abrir uma
+    // aba nova, ignorando o nome, o que quebraria o reaproveitamento.
+    window.open('https://web.whatsapp.com/send?phone='+encodeURIComponent(phone)+'&text='+encodeURIComponent(msg)+'&type=phone_number&app_absent=0', 'kn_whatsapp_web');
   }catch(err){
     console.error('[KN] Falha ao gerar link de atestado:', err);
     alert('Não foi possível gerar o link do atestado. Primeiro execute o arquivo supabase_atestados.sql no Supabase e tente novamente.');
@@ -7689,10 +7692,17 @@ function passesSheetColumnFilters(e){
 
 function filteredEmployees(){
   var search = document.getElementById('sheet-search').value.trim().toLowerCase();
+  // Busca por palavra, não só por trecho contínuo: "isis mello" agora acha
+  // "Isis Costa De Mello" mesmo com outro nome no meio (antes só achava se
+  // as palavras estivessem exatamente juntas na ordem digitada).
+  var searchWords = search ? search.split(/\s+/).filter(Boolean) : [];
   var coordFilter = coordSel.value;
   return ALL.filter(function(e){
     var phone = contacts[e.id] || '';
-    var matchSearch = !search || e.nome.toLowerCase().indexOf(search)>-1 || e.id.indexOf(search)>-1 || phone.indexOf(search)>-1;
+    var nomeLower = e.nome.toLowerCase();
+    var matchSearch = !search || searchWords.every(function(w){
+      return nomeLower.indexOf(w)>-1 || e.id.indexOf(w)>-1 || phone.indexOf(w)>-1;
+    });
     var matchCoord = !coordFilter || toTitleCase(e.coordenador)===coordFilter;
     var matchEscala = selectedEscalas.size===0 || selectedEscalas.has(e.escala);
     var matchHorario = selectedHorarios.size===0 || selectedHorarios.has(horarioOperacional(e.horario, e.escala));
