@@ -5324,7 +5324,12 @@ var sbReady = false;
 
 function initSupabase(){
   if(typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function'){
-    console.warn('[KN] Supabase indisponível agora (sem conexão ou CDN bloqueado) — app continua funcionando salvando localmente.');
+    // Antes o app desistia de vez aqui: se a lib do Supabase não tivesse
+    // carregado bem a tempo (rede lenta, CDN bloqueado por um instante),
+    // sbReady nunca mais virava true nessa sessão e toda presença batida
+    // depois era perdida silenciosamente. Agora tenta de novo em 3s.
+    console.warn('[KN] Supabase indisponível agora (sem conexão ou CDN bloqueado) — tentando de novo em instantes. App continua funcionando salvando localmente enquanto isso.');
+    setTimeout(initSupabase, 3000);
     return;
   }
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -5333,6 +5338,9 @@ function initSupabase(){
   // separado, mais abaixo no arquivo) só enxerga o Supabase por aqui; sem
   // essa linha ela nunca via a conexão, mesmo com tudo certo no banco.
   window.sb = sb;
+  // Assim que o Supabase ficar pronto, reenvia qualquer presença que tenha
+  // ficado pendente (batida enquanto offline / CDN bloqueado).
+  knRegQueueFlush();
 }
 safeInit('conexão com Supabase', initSupabase);
 
@@ -5374,16 +5382,92 @@ function rosterRowFor(e, ativo){
     dem_dates: e.demDates || []
   };
 }
+// ---------- Fila de pendências do TB_REG ----------
+// Antes, se o Supabase ainda não estivesse pronto (initSupabase falhou por
+// CDN bloqueado, sem internet no instante do carregamento etc.) ou se o
+// upsert desse erro (rede caiu no meio, etc.), a batida era só logada no
+// console e PERDIDA pra sempre — nada tentava de novo depois. É essa lacuna
+// silenciosa que explica o app mostrar mais batidas do que a planilha
+// principal (Supabase) realmente recebeu. Agora toda falha entra numa fila
+// em localStorage e é reenviada automaticamente até confirmar.
+var KN_REG_QUEUE_KEY = 'kn_presenca_pendentes_v1';
+function knRegQueueLoad(){
+  try{ return JSON.parse(localStorage.getItem(KN_REG_QUEUE_KEY) || '[]'); }
+  catch(err){ return []; }
+}
+function knRegQueueSave(list){
+  try{ localStorage.setItem(KN_REG_QUEUE_KEY, JSON.stringify(list)); }
+  catch(err){ console.error('[KN] não consegui salvar a fila de pendências localmente:', err); }
+}
+function knRegQueuePush(item){
+  var list = knRegQueueLoad();
+  list.push(item);
+  knRegQueueSave(list);
+  console.warn('[KN] presença enfileirada pra reenvio (Supabase indisponível no momento):', item, '— total pendente:', list.length);
+}
+var knRegQueueFlushing = false;
+function knRegQueueFlush(){
+  if(knRegQueueFlushing) return;
+  var list = knRegQueueLoad();
+  if(!list.length || !sbReady) return;
+  knRegQueueFlushing = true;
+  var pending = list.slice();
+  var remaining = [];
+  var i = 0;
+  function next(){
+    if(i >= pending.length){
+      knRegQueueSave(remaining);
+      knRegQueueFlushing = false;
+      if(remaining.length) console.warn('[KN] ainda restam', remaining.length, 'presença(s) pendente(s) de envio ao Supabase.');
+      else console.log('[KN] fila de presenças pendentes zerada — tudo sincronizado com o Supabase.');
+      return;
+    }
+    var item = pending[i++];
+    sb.from(TB_REG).upsert({
+      colaborador_id: String(item.id), data: item.date, status: item.status||'', hora: item.hora||''
+    }, {onConflict:'colaborador_id,data'}).then(function(res){
+      if(res && res.error){
+        console.error('[KN] Supabase: erro ao reenviar presença pendente:', res.error.message);
+        remaining.push(item);
+      }
+      next();
+    }).catch(function(err){
+      console.error('[KN] Supabase: erro ao reenviar presença pendente:', err);
+      remaining.push(item);
+      next();
+    });
+  }
+  next();
+}
+// Tenta esvaziar a fila periodicamente, quando a conexão volta e assim que
+// o Supabase estiver pronto — cobre tanto quedas curtas de rede quanto o
+// CDN do Supabase estar bloqueado só no instante do carregamento da página.
+setInterval(knRegQueueFlush, 20000);
+window.addEventListener('online', knRegQueueFlush);
+
 // Envia um registro de presença (um colaborador, num dia) pro Supabase.
+// Se não der certo agora (Supabase ainda não pronto ou erro de rede), a
+// batida NÃO é mais perdida: cai na fila acima e é reenviada automaticamente
+// assim que a conexão/Supabase voltarem a funcionar.
 function sbSaveRegistro(id, date, status, hora){
-  if(!sbReady) return;
+  var item = {id:id, date:date, status:status||'', hora:hora||''};
+  if(!sbReady){ knRegQueuePush(item); return; }
   try{
     sb.from(TB_REG).upsert({
       colaborador_id: String(id), data: date, status: status||'', hora: hora||''
     }, {onConflict:'colaborador_id,data'}).then(function(res){
-      if(res && res.error) console.error('[KN] Supabase: erro ao salvar presença:', res.error.message);
-    }).catch(function(err){ console.error('[KN] Supabase: erro ao salvar presença:', err); });
-  }catch(err){ console.error('[KN] Supabase: erro ao preparar presença pra salvar:', err); }
+      if(res && res.error){
+        console.error('[KN] Supabase: erro ao salvar presença:', res.error.message);
+        knRegQueuePush(item);
+      }
+    }).catch(function(err){
+      console.error('[KN] Supabase: erro ao salvar presença:', err);
+      knRegQueuePush(item);
+    });
+  }catch(err){
+    console.error('[KN] Supabase: erro ao preparar presença pra salvar:', err);
+    knRegQueuePush(item);
+  }
 }
 
 // Ao reativar um colaborador, remove TODAS as marcações DEM desse ID no banco.
