@@ -15784,15 +15784,14 @@ body.kn-atestados-active .wrap{
         unique.size+' pessoa(s) no arquivo\n'+
         alreadyP.length+' já estão com P\n'+
         missing.length+' estão faltando e serão marcadas como P\n'+
-        conflicts.length+' possuem outro status e NÃO serão alteradas\n'+
+        conflicts.length+' possuem outro status e serão alteradas para P\n'+
         notFound.length+' Groot ID(s) não encontrado(s)\n\n'+
         'Data: '+date;
 
       if(conflicts.length){
-        msg+='\n\nOutros status preservados:\n'+conflicts.slice(0,10).map(function(x){
-          return x.emp.nome+' — '+x.status;
+        msg+='\n\nQUAIS SERÃO ALTERADOS PARA P:\n'+conflicts.map(function(x){
+          return '• '+x.emp.nome+' | Groot ID: '+String(x.rec.groot||x.emp.grootId||x.emp.id||'')+' | Atual: '+x.status+' → P';
         }).join('\n');
-        if(conflicts.length>10)msg+='\n... e mais '+(conflicts.length-10);
       }
       if(notFound.length){
         msg+='\n\nIDs não encontrados:\n'+notFound.slice(0,10).map(function(x){
@@ -15801,32 +15800,33 @@ body.kn-atestados-active .wrap{
         if(notFound.length>10)msg+='\n... e mais '+(notFound.length-10);
       }
 
-      if(!missing.length){
-        alert(msg+'\n\nNão há presenças faltando para preencher.');
-        if(statusEl)statusEl.textContent='Conferido: nenhuma presença faltando.';
+      var toApply=missing.concat(conflicts);
+      if(!toApply.length){
+        alert(msg+'\n\nTodos os colaboradores do arquivo já estão com P.');
+        if(statusEl)statusEl.textContent='Conferido: todos já estão com P.';
         return;
       }
 
-      if(!confirm(msg+'\n\nPreencher somente as '+missing.length+' presenças que estão faltando?'))return;
+      if(!confirm(msg+'\n\nAplicar P para '+toApply.length+' colaborador(es)?'))return;
 
       if(typeof window.applyDayStatus!=='function'){
         throw new Error('A função nativa de presença do Principal não está disponível.');
       }
 
-      missing.forEach(function(x){
+      toApply.forEach(function(x){
         window.applyDayStatus(x.emp.id,date,'P','');
       });
 
       alert(
         'Reconciliação concluída.\n\n'+
-        '✅ '+missing.length+' presença(s) faltante(s) preenchida(s) com P\n'+
+        '✅ '+toApply.length+' colaborador(es) confirmado(s) como P\n'+
         '✓ '+alreadyP.length+' já estavam com P\n'+
-        (conflicts.length?'⚠ '+conflicts.length+' outro(s) status preservado(s)\n':'')+
+        (conflicts.length?'↻ '+conflicts.length+' outro(s) status substituído(s) por P\n':'')+
         (notFound.length?'⚠ '+notFound.length+' ID(s) não encontrado(s)':'')
       );
       if(statusEl)statusEl.textContent=
-        missing.length+' P recuperado(s) • '+alreadyP.length+' já estavam P'+
-        (conflicts.length?' • '+conflicts.length+' status preservado(s)':'')+
+        toApply.length+' P aplicado(s) • '+alreadyP.length+' já estavam P'+
+        (conflicts.length?' • '+conflicts.length+' status substituído(s)':'')+
         (notFound.length?' • '+notFound.length+' não encontrado(s)':'');
     }catch(err){
       console.error('[KN] Reconciliação Reserva:',err);
