@@ -7515,6 +7515,11 @@ function escalaHoraInicial(v){
 // Atraso NÃO substitui Presença.
 // Se a batida ocorrer mais de 20 minutos após o horário operacional cadastrado,
 // o registro continua com status P na Planilha/Supabase e também entra no card Atraso.
+function statusParaPlanilha(status){
+  // Atraso é informação adicional; na Planilha sempre conta/preenche como Presença.
+  return String(status||'').toUpperCase() === 'AT' ? 'P' : status;
+}
+
 function isRegistroAtrasado(emp, rec){
   if(!emp || !rec) return false;
   if(rec.status === 'AT') return true; // mantém compatibilidade com atrasos marcados manualmente
@@ -9960,24 +9965,6 @@ function renderHorarioPendCards(){
   });
 }
 
-
-// Cadastro de teste: permanece utilizável no sistema, mas NÃO entra em nenhuma métrica de HC.
-function knIsTesteHC(e){
-  var n = String((e && e.nome) || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .toUpperCase().replace(/\s+/g,' ').trim();
-  return n === 'ISIS COSTA DE MELLO';
-}
-function knHCEmployees(){
-  var seen = {};
-  return (ALL || []).filter(function(e){
-    if(!e || knIsTesteHC(e)) return false;
-    var key = String(e.id || e.grootId || e.matricula || e.nome || '').trim();
-    if(!key || seen[key]) return false;
-    seen[key] = true;
-    return true;
-  });
-}
-
 // ---------- Aba Cards HC: lógica fiel à aba HC_PLAN da planilha "Cópia de Novo_HC_KN" ----------
 // Reproduz a lógica real da planilha (Visão do dia + Visão semanal planejada), com o que dá
 // pra automatizar já automatizado a partir do cadastro (aba Grupos) e do calendário de folgas:
@@ -10005,6 +9992,21 @@ var HC_DSR_RATE_STORAGE = 'kn_hc_dsr_rate_v1';
 function hcNorm(s){
   return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
 }
+// Normaliza a ESCALA para o HC: remove espaços invisíveis/extras e padroniza separadores.
+// Assim um colaborador ativo não fica fora do HC só porque a escala veio com espaço a mais.
+function hcEscalaKey(s){
+  return hcNorm(String(s||'')
+    .replace(/[\u00A0\u2007\u202F]/g,' ')
+    .replace(/\s+/g,' ')
+    .replace(/\s*-\s*/g,' - ')
+    .replace(/\s*\/\s*/g,' / '));
+}
+function hcIsTeste(e){
+  return hcNorm(e && e.nome) === 'ISIS COSTA DE MELLO';
+}
+function hcBase(){
+  return (ALL||[]).filter(function(e){ return e && !hcIsTeste(e); });
+}
 function hcGetPlanejadoStore(){
   try{ return JSON.parse(localStorage.getItem(HC_PLANEJADO_STORAGE)||'{}') || {}; }catch(e){ return {}; }
 }
@@ -10028,30 +10030,35 @@ function hcSaveDsrRate(rate){
 // início e depois alfabética — mesma ordem visual da planilha.
 function hcEscalaList(){
   var seen = {};
-  knHCEmployees().forEach(function(e){
-    var nm = String(e.escala||'').trim();
-    if(nm) seen[nm] = true;
+  hcBase().forEach(function(e){
+    var raw = String(e.escala||'').trim();
+    var key = hcEscalaKey(raw);
+    if(key && !seen[key]) seen[key] = raw.replace(/[\u00A0\u2007\u202F]/g,' ').replace(/\s+/g,' ').trim();
   });
-  return Object.keys(seen).sort(function(a,b){
+  return Object.keys(seen).map(function(k){ return seen[k]; }).sort(function(a,b){
     var ha = escalaHoraInicial(a), hb = escalaHoraInicial(b);
     if(ha!==hb) return ha-hb;
     return a.localeCompare(b,'pt-BR');
   });
 }
 function hcAtual(escala){
-  var n=0; knHCEmployees().forEach(function(e){ if(String(e.escala||'').trim()===escala) n++; });
+  var key=hcEscalaKey(escala), n=0;
+  hcBase().forEach(function(e){ if(hcEscalaKey(e.escala)===key) n++; });
   return n;
 }
 function hcFerias(escala){
-  var n=0; knHCEmployees().forEach(function(e){ if(String(e.escala||'').trim()===escala && hcNorm(e.obs)==='FERIAS') n++; });
+  var key=hcEscalaKey(escala), n=0;
+  hcBase().forEach(function(e){ if(hcEscalaKey(e.escala)===key && hcNorm(e.obs)==='FERIAS') n++; });
   return n;
 }
 function hcInss(escala){
-  var n=0; knHCEmployees().forEach(function(e){ if(String(e.escala||'').trim()===escala && hcNorm(e.obs)==='INSS') n++; });
+  var key=hcEscalaKey(escala), n=0;
+  hcBase().forEach(function(e){ if(hcEscalaKey(e.escala)===key && hcNorm(e.obs)==='INSS') n++; });
   return n;
 }
 function hcRepEmployee(escala){
-  for(var i=0;i<(ALL||[]).length;i++){ if(String(ALL[i].escala||'').trim()===escala) return ALL[i]; }
+  var key=hcEscalaKey(escala), base=hcBase();
+  for(var i=0;i<base.length;i++){ if(hcEscalaKey(base[i].escala)===key) return base[i]; }
   return null;
 }
 // Escala está de folga nessa data? Usa exatamente a mesma função/calendário da aba Importar
@@ -10161,7 +10168,7 @@ function hcStatusCellClass(n){
 }
 function hcMiniTypeCounts(){
   var fixo=0, contrato=0;
-  knHCEmployees().forEach(function(e){
+  (ALL||[]).forEach(function(e){
     var t=hcNorm(e.tipo);
     if(t==='FIXO') fixo++;
     else if(t==='CONTRATO') contrato++;
@@ -10239,7 +10246,7 @@ function hcRenderTotals(data){
   if(!el) return;
   var totalPlanejado=0, totalAtual=0, totalFerias=0, totalInss=0, fixo=0, contrato=0;
   data.forEach(function(r){ totalPlanejado+=r.planejado; totalAtual+=r.atual; totalFerias+=r.ferias; totalInss+=r.inss; });
-  knHCEmployees().forEach(function(e){
+  (ALL||[]).forEach(function(e){
     var t = hcNorm(e.tipo);
     if(t==='FIXO') fixo++; else if(t==='CONTRATO') contrato++;
   });
