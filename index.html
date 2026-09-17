@@ -10708,6 +10708,10 @@ function removeGroupsFromText(){
   if(!ids.length){ statusEl.textContent = 'Cole ao menos um ID.'; return; }
   var idSet = new Set(ids);
   var before = ALL.length;
+  var removedRows = ALL.filter(function(e){ return idSet.has(e.id); });
+  removedRows.forEach(function(e){
+    if(e && e.id){ markRosterDeleted(e.id); sbDeleteRosterRow(e.id); }
+  });
   ALL = ALL.filter(function(e){ return !idSet.has(e.id); });
   var removed = before - ALL.length;
   rebuildById();
@@ -11222,6 +11226,7 @@ function mergeRosterFromCloud(cloudRows){
   cloudRows.forEach(function(ce){
     if(!ce || ce.id==null) return;
     if(isRosterDeleted(ce.id)) return; // exclusão manual vence cópia antiga da nuvem
+    if(INACTIVE.some(function(x){ return String(x.id||'')===String(ce.id||''); })) return; // Inativos vence ativo antigo da nuvem
     if(!knIsAllowedOfficialActive(ce)) return;
     // Nome/Coordenador vindos da nuvem podem estar em CAIXA ALTA (outro
     // aparelho, importação antiga) — normaliza aqui pra não fazer a mesma
@@ -11317,6 +11322,18 @@ if(window.storage){
     }
   });
 }
+// A lista local salva após alterações em Grupos/Inativos é a fotografia autoritativa
+// deste navegador no carregamento. Ela impede que linhas ATIVAS antigas do Supabase
+// sejam acrescentadas de volta segundos depois e façam o TOTAL subir novamente.
+var KN_LOCAL_ROSTER_SNAPSHOT = null;
+try{
+  var _knLocalSaved = JSON.parse(localStorage.getItem(ROSTER_KEY) || 'null');
+  if(Array.isArray(_knLocalSaved) && _knLocalSaved.length){
+    KN_LOCAL_ROSTER_SNAPSHOT = {};
+    _knLocalSaved.forEach(function(e){ if(e && e.id!=null) KN_LOCAL_ROSTER_SNAPSHOT[String(e.id)] = true; });
+  }
+}catch(_e){}
+
 // Reconcilia com o Supabase (banco compartilhado entre todos os aparelhos/
 // usuários — essencial quando este app é hospedado fora do Claude, tipo
 // GitHub Pages, onde não existe window.storage). Isso nunca trava o app:
@@ -11345,10 +11362,27 @@ if(sbReady){
           }
         });
 
+        // Se já havia uma lista local salva, qualquer ATIVO remoto que não existe
+        // nessa fotografia é sobra antiga do banco (excluído ontem em Grupos). Não
+        // reintroduz no ALL: registra a exclusão e limpa a linha remota.
+        if(KN_LOCAL_ROSTER_SNAPSHOT){
+          rosterRows.filter(function(r){ return r.ativo; }).forEach(function(r){
+            var rid=String(r.id||'');
+            var isInactiveHere=INACTIVE.some(function(x){ return String(x.id||'')===rid; });
+            if(rid && !KN_LOCAL_ROSTER_SNAPSHOT[rid] && !isInactiveHere){
+              markRosterDeleted(rid);
+              sbDeleteRosterRow(rid);
+            }
+          });
+        }
         var ativosRows = rosterRows
           .filter(function(r){ return r.ativo; })
           .map(sbRowToEmp)
-          .filter(knIsAllowedOfficialActive);
+          .filter(function(e){
+            if(isRosterDeleted(e.id)) return false;
+            if(INACTIVE.some(function(x){ return String(x.id||'')===String(e.id||''); })) return false;
+            return knIsAllowedOfficialActive(e);
+          });
         var inativosRows = rosterRows.filter(function(r){ return !r.ativo; }).map(sbRowToEmp);
         if(mergeRosterFromCloud(ativosRows)){ changed = true; }
         if(mergeInactiveFromCloud(inativosRows)){ changed = true; }
