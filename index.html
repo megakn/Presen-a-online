@@ -9960,6 +9960,24 @@ function renderHorarioPendCards(){
   });
 }
 
+
+// Cadastro de teste: permanece utilizável no sistema, mas NÃO entra em nenhuma métrica de HC.
+function knIsTesteHC(e){
+  var n = String((e && e.nome) || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase().replace(/\s+/g,' ').trim();
+  return n === 'ISIS COSTA DE MELLO';
+}
+function knHCEmployees(){
+  var seen = {};
+  return (ALL || []).filter(function(e){
+    if(!e || knIsTesteHC(e)) return false;
+    var key = String(e.id || e.grootId || e.matricula || e.nome || '').trim();
+    if(!key || seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
 // ---------- Aba Cards HC: lógica fiel à aba HC_PLAN da planilha "Cópia de Novo_HC_KN" ----------
 // Reproduz a lógica real da planilha (Visão do dia + Visão semanal planejada), com o que dá
 // pra automatizar já automatizado a partir do cadastro (aba Grupos) e do calendário de folgas:
@@ -10010,7 +10028,7 @@ function hcSaveDsrRate(rate){
 // início e depois alfabética — mesma ordem visual da planilha.
 function hcEscalaList(){
   var seen = {};
-  (ALL||[]).forEach(function(e){
+  knHCEmployees().forEach(function(e){
     var nm = String(e.escala||'').trim();
     if(nm) seen[nm] = true;
   });
@@ -10021,15 +10039,15 @@ function hcEscalaList(){
   });
 }
 function hcAtual(escala){
-  var n=0; (ALL||[]).forEach(function(e){ if(String(e.escala||'').trim()===escala) n++; });
+  var n=0; knHCEmployees().forEach(function(e){ if(String(e.escala||'').trim()===escala) n++; });
   return n;
 }
 function hcFerias(escala){
-  var n=0; (ALL||[]).forEach(function(e){ if(String(e.escala||'').trim()===escala && hcNorm(e.obs)==='FERIAS') n++; });
+  var n=0; knHCEmployees().forEach(function(e){ if(String(e.escala||'').trim()===escala && hcNorm(e.obs)==='FERIAS') n++; });
   return n;
 }
 function hcInss(escala){
-  var n=0; (ALL||[]).forEach(function(e){ if(String(e.escala||'').trim()===escala && hcNorm(e.obs)==='INSS') n++; });
+  var n=0; knHCEmployees().forEach(function(e){ if(String(e.escala||'').trim()===escala && hcNorm(e.obs)==='INSS') n++; });
   return n;
 }
 function hcRepEmployee(escala){
@@ -10143,7 +10161,7 @@ function hcStatusCellClass(n){
 }
 function hcMiniTypeCounts(){
   var fixo=0, contrato=0;
-  (ALL||[]).forEach(function(e){
+  knHCEmployees().forEach(function(e){
     var t=hcNorm(e.tipo);
     if(t==='FIXO') fixo++;
     else if(t==='CONTRATO') contrato++;
@@ -10221,7 +10239,7 @@ function hcRenderTotals(data){
   if(!el) return;
   var totalPlanejado=0, totalAtual=0, totalFerias=0, totalInss=0, fixo=0, contrato=0;
   data.forEach(function(r){ totalPlanejado+=r.planejado; totalAtual+=r.atual; totalFerias+=r.ferias; totalInss+=r.inss; });
-  (ALL||[]).forEach(function(e){
+  knHCEmployees().forEach(function(e){
     var t = hcNorm(e.tipo);
     if(t==='FIXO') fixo++; else if(t==='CONTRATO') contrato++;
   });
