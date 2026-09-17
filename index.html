@@ -6943,10 +6943,11 @@ function onScanSuccess(decodedText){
   playScanBeep(true);
   var hora = nowTime();
   setStatus(id, 'P', hora);
+  var atrasoAgora = isRegistroAtrasado(emp, {status:'P', hora:hora});
   confirmEl.style.display = 'block';
   confirmEl.style.borderColor = 'var(--success)';
   confirmEl.style.background = '#eaf3ee';
-  confirmEl.innerHTML = '<b>'+emp.nome+'</b><br>'+emp.coordenador+' &middot; escala '+emp.turno+'<br>Presença registrada às '+hora;
+  confirmEl.innerHTML = '<b>'+emp.nome+'</b><br>'+emp.coordenador+' &middot; escala '+emp.turno+'<br>Presença registrada às '+hora+(atrasoAgora ? '<br><b>ATRASO identificado — presença mantida.</b>' : '');
   prependLog(emp, hora);
 }
 
@@ -7509,6 +7510,28 @@ function horarioOperacional(v, escala){
 function escalaHoraInicial(v){
   var m = String(v||'').match(/(?:^|\s|-)(\d{1,2})H(?:\s|\/|$)/i);
   return m ? Number(m[1]) : 99;
+}
+
+// Atraso NÃO substitui Presença.
+// Se a batida ocorrer mais de 20 minutos após o horário operacional cadastrado,
+// o registro continua com status P na Planilha/Supabase e também entra no card Atraso.
+function isRegistroAtrasado(emp, rec){
+  if(!emp || !rec) return false;
+  if(rec.status === 'AT') return true; // mantém compatibilidade com atrasos marcados manualmente
+  if(rec.status !== 'P' || !rec.hora) return false;
+
+  var hEscala = horarioOperacional(emp.horario || '', emp.escala || '');
+  var mEsc = String(hEscala || '').match(/^(\d{1,2}):(\d{2})$/);
+  var mBat = String(rec.hora || '').match(/^(\d{1,2}):(\d{2})/);
+  if(!mEsc || !mBat) return false;
+
+  var escMin = Number(mEsc[1]) * 60 + Number(mEsc[2]);
+  var batMin = Number(mBat[1]) * 60 + Number(mBat[2]);
+
+  // Turnos noturnos: evita diferença negativa ao atravessar meia-noite.
+  if(batMin < escMin - 12*60) batMin += 24*60;
+
+  return (batMin - escMin) > 20;
 }
 function escalaHoraClass(v){
   var h = escalaHoraInicial(v);
@@ -8287,6 +8310,13 @@ function rowMatchesStatusFilter(emp){
     return effectiveStatus(emp, date);
   });
   if(filter === 'F_ATEST') return sts.some(function(v){ return v === 'F' || v === 'ATEST'; });
+  if(filter === 'AT'){
+    return selectedSheetDates.some(function(date){
+      var day = (date===currentDate) ? state : (monthStates[date] || {});
+      var rec = day[emp.id];
+      return (rec && rec.status === 'AT') || isRegistroAtrasado(emp, rec);
+    });
+  }
   return sts.some(function(v){ return v === filter; });
 }
 
@@ -9706,7 +9736,10 @@ function updateStatsCards(){
     // Falta e Atestado (isolado ou combinado com falta) contam juntos como
     // ABS no card do topo, em vez de aparecerem separados ou caírem em
     // "Pendentes" (ATEST/F_ATEST não tinham bucket próprio antes).
-    if(st==='P') p++;
+    if(st==='P'){
+      p++;
+      if(isRegistroAtrasado(e, src[e.id])) at++;
+    }
     else if(st==='F' || st==='ATEST' || st==='F_ATEST') f++;
     else if(st==='FO') fo++;
     else if(st==='AT') at++;
