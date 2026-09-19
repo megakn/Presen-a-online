@@ -9730,6 +9730,10 @@ function updateStatsCards(){
   var uniqueMap = {};
   ALL.forEach(function(e){
     if(isRosterDeleted(e.id)) return;
+    // Isis possui cadastros usados apenas para teste. Eles continuam no sistema,
+    // mas não entram no HC oficial exibido no card COLABORADORES.
+    var nomeHC = String(e.nome||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
+    if(nomeHC === 'ISIS COSTA DE MELLO') return;
     var key = String(e.id || e.grootId || e.matricula || e.nome || '').trim();
     if(key) uniqueMap[key] = e;
   });
@@ -11438,12 +11442,18 @@ if(sbReady){
           .map(sbRowToEmp)
           .filter(function(e){
             if(isRosterDeleted(e.id)) return false;
-            if(INACTIVE.some(function(x){ return String(x.id||'')===String(e.id||''); })) return false;
             return knIsAllowedOfficialActive(e);
           });
         var inativosRows = rosterRows.filter(function(r){ return !r.ativo; }).map(sbRowToEmp);
-        if(mergeRosterFromCloud(ativosRows)){ changed = true; }
-        if(mergeInactiveFromCloud(inativosRows)){ changed = true; }
+
+        // O Supabase é a fonte oficial do status Ativo/Inativo. Antes a página
+        // apenas ACRESCENTAVA os ativos da nuvem ao cache local, então pessoas já
+        // desligadas continuavam em ALL e o card ficava preso em 369. Agora a
+        // lista ativa é reconstruída a partir do banco a cada abertura.
+        ALL = ativosRows;
+        INACTIVE = inativosRows;
+        rebuildById();
+        changed = true;
         var contactsFromDb = {};
         rosterRows.forEach(function(r){ if(r.telefone) contactsFromDb[r.id] = r.telefone; });
         contacts = Object.assign({}, contactsFromDb, contacts); // contato local sempre vence
@@ -11464,7 +11474,8 @@ if(sbReady){
     if(changed){
       knRemoveObsoleteFromActive();
       try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(ALL)); }catch(_e){}
-      try{ sbSaveRoster(); }catch(_e){}
+      // Não reenvia o cache local ao banco neste ponto: acabamos de receber
+      // a fotografia oficial do Supabase e ela deve vencer dados antigos do navegador.
       safeInit('filtros (após sincronizar Supabase)', rebuildFilterLists);
       markHeavyViewsDirty();
       safeInit('tabela de presença (após sincronizar Supabase)', renderAll);
