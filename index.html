@@ -6196,7 +6196,11 @@ try{
     var MIGRATION_KEY = 'presenca:official_roster:367:2026-09-12:v4';
     var alreadyMigrated = false;
     try{ alreadyMigrated = localStorage.getItem(MIGRATION_KEY)==='1'; }catch(_e){}
-    if(alreadyMigrated) return;
+    // MIGRAÇÃO LEGADA DESATIVADA (20/09/2026): esta rotina antiga recriava
+    // a lista fixa de 367 e a reenviava ao Supabase antes de carregar o banco,
+    // reativando colaboradores já desligados. O Supabase/aba Grupos agora é
+    // a única fonte oficial do cadastro ativo.
+    return;
 
     var officialRoster = JSON.parse(document.getElementById('emp-data').textContent || '[]');
     if(!Array.isArray(officialRoster) || officialRoster.length !== 367) return;
