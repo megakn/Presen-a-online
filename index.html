@@ -4526,6 +4526,17 @@ body.kn-atestados-active #panel-atestados .at-page{
   body.kn-atestados-active header{margin:-14px -14px 14px!important;}
 }
 </style>
+
+<style id="kn-groups-shift-cards-20260921">
+#panel-grupos .groups-shift-cards{display:grid;grid-template-columns:repeat(8,minmax(88px,1fr));gap:8px;margin:10px 0 12px}
+#panel-grupos .groups-shift-card{appearance:none;border:1px solid #d8e2ec;background:linear-gradient(180deg,#fff,#f7fafc);border-radius:10px;padding:9px 8px;min-height:62px;cursor:pointer;text-align:center;box-shadow:0 2px 8px rgba(19,55,83,.06);transition:.15s ease;color:#17364d}
+#panel-grupos .groups-shift-card:hover{transform:translateY(-1px);border-color:#7dc9e8;box-shadow:0 4px 12px rgba(0,130,190,.12)}
+#panel-grupos .groups-shift-card.active{border-color:#00a3e0;background:linear-gradient(180deg,#eaf9ff,#dff5ff);box-shadow:0 0 0 2px rgba(0,163,224,.12),0 4px 12px rgba(0,130,190,.12)}
+#panel-grupos .groups-shift-card .gsc-label{display:block;font-size:10px;font-weight:800;letter-spacing:.35px;color:#647789;text-transform:uppercase}
+#panel-grupos .groups-shift-card .gsc-value{display:block;font-size:23px;line-height:1.05;font-weight:900;margin-top:4px;color:#073d5c}
+#panel-grupos .groups-shift-card.active .gsc-label,#panel-grupos .groups-shift-card.active .gsc-value{color:#006f9f}
+@media(max-width:1050px){#panel-grupos .groups-shift-cards{grid-template-columns:repeat(4,minmax(88px,1fr))}}
+</style>
 </head>
 <body>
 <div id="global-scan-toast"></div>
@@ -5047,6 +5058,17 @@ body.kn-atestados-active #panel-atestados .at-page{
 
     <div class="groups-db-summary">
       <b id="groups-db-count">0</b> colaborador(es) cadastrados
+    </div>
+
+    <div id="groups-shift-cards" class="groups-shift-cards" aria-label="Resumo por horário">
+      <button type="button" class="groups-shift-card" data-shift-card="TOTAL"><span class="gsc-label">TOTAL</span><span class="gsc-value" data-shift-count="TOTAL">0</span></button>
+      <button type="button" class="groups-shift-card" data-shift-card="05:00"><span class="gsc-label">05:00</span><span class="gsc-value" data-shift-count="05:00">0</span></button>
+      <button type="button" class="groups-shift-card" data-shift-card="06:00"><span class="gsc-label">06:00</span><span class="gsc-value" data-shift-count="06:00">0</span></button>
+      <button type="button" class="groups-shift-card" data-shift-card="08:00"><span class="gsc-label">08:00</span><span class="gsc-value" data-shift-count="08:00">0</span></button>
+      <button type="button" class="groups-shift-card" data-shift-card="13:00"><span class="gsc-label">13:00</span><span class="gsc-value" data-shift-count="13:00">0</span></button>
+      <button type="button" class="groups-shift-card" data-shift-card="14:00"><span class="gsc-label">14:00</span><span class="gsc-value" data-shift-count="14:00">0</span></button>
+      <button type="button" class="groups-shift-card" data-shift-card="22:30"><span class="gsc-label">T3</span><span class="gsc-value" data-shift-count="22:30">0</span></button>
+      <button type="button" class="groups-shift-card" data-shift-card="23:00"><span class="gsc-label">23:00</span><span class="gsc-value" data-shift-count="23:00">0</span></button>
     </div>
 
     <div class="groups-db-wrap">
@@ -13023,6 +13045,48 @@ window.logActivity = logActivity;
   // columnFilters[field] = Set de valores permitidos (string). Coluna sem
   // entrada aqui = sem filtro (mostra tudo).
   var columnFilters = {};
+
+  // Cards de resumo da aba Grupos. Os números são calculados sempre a partir
+  // do cadastro ativo (window.ALL), portanto acompanham importações/Supabase.
+  var GROUP_SHIFT_CARD_KEYS = ['05:00','06:00','08:00','13:00','14:00','22:30','23:00'];
+  function groupCardHour(e){
+    return formatHourHHMM(e && e.horario);
+  }
+  function updateGroupsShiftCards(){
+    var arr=roster();
+    var counts={};
+    GROUP_SHIFT_CARD_KEYS.forEach(function(k){ counts[k]=0; });
+    arr.forEach(function(e){
+      var h=groupCardHour(e);
+      if(Object.prototype.hasOwnProperty.call(counts,h)) counts[h]++;
+    });
+    var totalEl=document.querySelector('[data-shift-count="TOTAL"]');
+    if(totalEl) totalEl.textContent=arr.length;
+    GROUP_SHIFT_CARD_KEYS.forEach(function(k){
+      var el=document.querySelector('[data-shift-count="'+k+'"]');
+      if(el) el.textContent=counts[k]||0;
+    });
+    var hf=columnFilters.horario;
+    document.querySelectorAll('#groups-shift-cards [data-shift-card]').forEach(function(btn){
+      var k=btn.dataset.shiftCard;
+      var active = (k==='TOTAL') ? !hf : !!(hf && hf.size===1 && hf.has(k));
+      btn.classList.toggle('active',active);
+    });
+  }
+  function bindGroupsShiftCards(){
+    document.querySelectorAll('#groups-shift-cards [data-shift-card]').forEach(function(btn){
+      if(btn.dataset.bound) return;
+      btn.dataset.bound='1';
+      btn.addEventListener('click',function(){
+        var key=btn.dataset.shiftCard;
+        if(key==='TOTAL') delete columnFilters.horario;
+        else columnFilters.horario=new Set([key]);
+        updateFilterButtonStates();
+        render();
+      });
+    });
+    updateGroupsShiftCards();
+  }
   function passesColumnFilters(e){
     for(var field in columnFilters){
       var allowed = columnFilters[field];
@@ -13388,6 +13452,7 @@ window.logActivity = logActivity;
     body.innerHTML=html || '<tr><td colspan="17" style="padding:18px;text-align:center;color:#718096">Nenhum colaborador encontrado.</td></tr>';
     var el=document.getElementById('groups-db-count');
     if(el) el.textContent = (shown!==arr.length) ? (shown+' de '+arr.length) : arr.length;
+    bindGroupsShiftCards();
     bindColumnFilterButtons();
     updateFilterButtonStates();
     updatePaintButtonStates();
