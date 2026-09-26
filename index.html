@@ -5518,7 +5518,19 @@ function knRegQueueSave(list){
   try{ localStorage.setItem(KN_REG_QUEUE_KEY, JSON.stringify(list)); }
   catch(err){ console.error('[KN] não consegui salvar a fila de pendências localmente:', err); }
 }
+// Cancela qualquer presença P que tenha ficado pendente para o mesmo colaborador/data.
+// Isso é essencial quando o operador muda a pessoa para Falta/Folga/Atestado antes
+// de uma presença pendente conseguir sincronizar: o P antigo não pode sair depois.
+function knRegQueueCancelPresence(id, date){
+  var sid=String(id), sdate=String(date);
+  var list=knRegQueueLoad().filter(function(x){
+    return !(String((x&&x.id)||'')===sid && String((x&&x.date)||'')===sdate);
+  });
+  knRegQueueSave(list);
+}
 function knRegQueuePush(item){
+  // BLOQUEIO TOTAL: a fila remota aceita SOMENTE presença (P).
+  if(String((item&&item.status)||'').toUpperCase() !== 'P') return;
   var list = knRegQueueLoad();
   list.push(item);
   knRegQueueSave(list);
@@ -5528,6 +5540,9 @@ var knRegQueueFlushing = false;
 function knRegQueueFlush(){
   if(knRegQueueFlushing) return;
   var list = knRegQueueLoad();
+  // Remove pendências antigas de versões anteriores (F, FO, ATEST, TE, DEM etc.).
+  list = list.filter(function(x){ return String((x&&x.status)||'').toUpperCase() === 'P'; });
+  knRegQueueSave(list);
   if(!list.length || !sbReady) return;
   knRegQueueFlushing = true;
   var pending = list.slice();
@@ -5569,7 +5584,13 @@ window.addEventListener('online', knRegQueueFlush);
 // batida NÃO é mais perdida: cai na fila acima e é reenviada automaticamente
 // assim que a conexão/Supabase voltarem a funcionar.
 function sbSaveRegistro(id, date, status, hora){
-  var item = {id:id, date:date, status:status||'', hora:hora||''};
+  // BLOQUEIO TOTAL DO NOVO HC/SHEETS: somente P pode sair da Planilha Principal.
+  status = String(status||'').toUpperCase();
+  if(status !== 'P'){
+    console.log('[KN] Status local não enviado ao Novo HC:', status, id, date);
+    return;
+  }
+  var item = {id:id, date:date, status:'P', hora:hora||''};
   if(!sbReady){ knRegQueuePush(item); return; }
   try{
     sb.from(TB_REG).upsert({
@@ -6846,7 +6867,11 @@ function setStatus(id, status, hora){
   ensureOperator(function(){
     state[id] = {status: status, hora: hora || ''};
     saveState();
-    sbSaveRegistro(id, currentDate, status, hora);
+    if(String(status||'').toUpperCase()==='P'){
+      sbSaveRegistro(id, currentDate, 'P', hora);
+    }else{
+      knRegQueueCancelPresence(id, currentDate);
+    }
     sbBroadcastRegistro(id, currentDate, status, hora);
     logActivity('presenca', (byId[id] ? byId[id].nome : id)+' -> '+status+(hora?(' às '+hora):'')+' ('+currentDate+')');
     renderAll();
@@ -8105,7 +8130,16 @@ function applyDayStatus(id, date, val, obs){
     ds[id] = newRec;
     monthStates[date] = ds;
     saveDayState(date, ds);
-    sbSaveRegistro(id, date, val, newRec.hora);
+    // REGRA DE SINCRONIZAÇÃO: SOMENTE PRESENÇA (P) é enviada ao Supabase/Novo HC/Google Sheets.
+    // Todos os demais status (F, FO, ATEST, TE, DEM, etc.) ficam apenas no controle da Planilha Principal.
+    // Assim, nenhuma ocorrência manual altera o Novo HC; somente uma presença confirmada pode alimentá-lo.
+    if(String(val || '').toUpperCase() === 'P'){
+      sbSaveRegistro(id, date, 'P', newRec.hora);
+    }else{
+      // IMPORTANTE: Falta e qualquer outro status NÃO viram presença no Novo HC.
+      // Também cancela um P que tenha ficado na fila aguardando internet/Supabase.
+      knRegQueueCancelPresence(id, date);
+    }
     logActivity('presenca-planilha', (byId[id] ? byId[id].nome : id)+' -> '+val+' ('+date+')'+(newRec.obs ? ' — obs: '+newRec.obs : ''));
     if(date===currentDate) state = ds;
 
